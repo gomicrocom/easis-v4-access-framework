@@ -15,6 +15,8 @@ Public Function BootstrapApplication(Optional ByVal IniPath As String = vbNullSt
     On Error GoTo ErrorHandler
 
     ResetApplicationState
+    modTenantContext.ClearTenantContext
+    modSessionContext.ClearSessionContext
 
     modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Bootstrap started."
 
@@ -27,6 +29,12 @@ Public Function BootstrapApplication(Optional ByVal IniPath As String = vbNullSt
         Err.Raise vbObjectError + 2201, MODULE_NAME & ".BootstrapApplication", "Licensing initialization failed."
     End If
     modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Licensing initialized."
+
+    modTenantContext.InitializeTenantContext ConfigFilePath
+    modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Tenant context initialized."
+
+    modSessionContext.InitializeSessionContext ConfigFilePath
+    modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Session context initialized."
 
     IsBootstrapped = True
     BootstrapApplication = True
