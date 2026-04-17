@@ -42,15 +42,15 @@ End Function
 Public Function BackendExists() As Boolean
     On Error GoTo ErrorHandler
 
-    Dim backendPath As String
+    Dim BackendPath As String
 
-    backendPath = GetBackendPath()
-    If LenB(backendPath) = 0 Then
+    BackendPath = GetBackendPath()
+    If LenB(BackendPath) = 0 Then
         modLoggingHandler.LogWarning MODULE_NAME & ".BackendExists", "Backend path is not configured."
         Exit Function
     End If
 
-    BackendExists = (LenB(Dir$(backendPath, vbNormal)) > 0)
+    BackendExists = (LenB(Dir$(BackendPath, vbNormal)) > 0)
     Exit Function
 
 ErrorHandler:
@@ -61,13 +61,13 @@ End Function
 Public Function ValidateBackendConfiguration() As Boolean
     On Error GoTo ErrorHandler
 
-    Dim backendPath As String
+    Dim BackendPath As String
     Dim logContext As String
 
-    backendPath = GetBackendPath()
+    BackendPath = GetBackendPath()
     logContext = BuildValidationContext()
 
-    If LenB(backendPath) = 0 Then
+    If LenB(BackendPath) = 0 Then
         modLoggingHandler.LogError MODULE_NAME & ".ValidateBackendConfiguration", _
             "Backend validation failed: no backend path configured. " & logContext
         Exit Function
@@ -75,12 +75,12 @@ Public Function ValidateBackendConfiguration() As Boolean
 
     If Not BackendExists() Then
         modLoggingHandler.LogError MODULE_NAME & ".ValidateBackendConfiguration", _
-            "Backend validation failed: file not found at '" & backendPath & "'. " & logContext
+            "Backend validation failed: file not found at '" & BackendPath & "'. " & logContext
         Exit Function
     End If
 
     modLoggingHandler.LogInfo MODULE_NAME & ".ValidateBackendConfiguration", _
-        "Backend configuration validated successfully for path '" & backendPath & "'. " & logContext
+        "Backend configuration validated successfully for path '" & BackendPath & "'. " & logContext
 
     ValidateBackendConfiguration = True
     Exit Function
@@ -94,7 +94,7 @@ Private Function BuildValidationContext() As String
     Dim contextParts As String
 
     If IsTenantInitialized Then
-        contextParts = "TenantCode=" & CurrentTenantCode
+        contextParts = "TenantCode=" & currentTenantCode
     Else
         contextParts = "TenantCode=<uninitialized>"
     End If

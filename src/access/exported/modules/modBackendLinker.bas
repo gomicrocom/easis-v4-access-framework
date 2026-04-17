@@ -17,7 +17,7 @@ Public Function RelinkBackendTables() As Boolean
 
     Dim db As DAO.Database
     Dim tdf As DAO.TableDef
-    Dim backendPath As String
+    Dim BackendPath As String
     Dim relinkedCount As Long
 
     If Not modDb.ValidateBackendConfiguration() Then
@@ -26,7 +26,7 @@ Public Function RelinkBackendTables() As Boolean
         Exit Function
     End If
 
-    backendPath = GetBackendPath()
+    BackendPath = GetBackendPath()
     Set db = GetCurrentDatabase()
 
     For Each tdf In db.TableDefs
@@ -35,7 +35,7 @@ Public Function RelinkBackendTables() As Boolean
         End If
 
         If IsLinkedAccessTable(tdf) Then
-            If RelinkTable(tdf, backendPath) Then
+            If RelinkTable(tdf, BackendPath) Then
                 relinkedCount = relinkedCount + 1
             End If
         End If

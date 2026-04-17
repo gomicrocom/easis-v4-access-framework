@@ -77,8 +77,8 @@ Public Property Get CurrentTenantId() As String
     CurrentTenantId = mCurrentTenantId
 End Property
 
-Public Property Get CurrentTenantCode() As String
-    CurrentTenantCode = mCurrentTenantCode
+Public Property Get currentTenantCode() As String
+    currentTenantCode = mCurrentTenantCode
 End Property
 
 Public Property Get CurrentTenantName() As String
@@ -93,7 +93,7 @@ Public Property Get CurrentBackendPath() As String
     CurrentBackendPath = mCurrentBackendPath
 End Property
 
-Private Function BuildBackendPath(ByVal BackendRoot As String, ByVal TenantCode As String) As String
+Private Function BuildBackendPath(ByVal BackendRoot As String, ByVal tenantCode As String) As String
     Dim normalizedRoot As String
 
     normalizedRoot = Trim$(BackendRoot)
@@ -101,5 +101,5 @@ Private Function BuildBackendPath(ByVal BackendRoot As String, ByVal TenantCode 
         normalizedRoot = Left$(normalizedRoot, Len(normalizedRoot) - 1)
     End If
 
-    BuildBackendPath = normalizedRoot & "\" & Trim$(TenantCode) & "_be.accdb"
+    BuildBackendPath = normalizedRoot & "\" & Trim$(tenantCode) & "_be.accdb"
 End Function
