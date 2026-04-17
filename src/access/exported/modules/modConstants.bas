@@ -26,6 +26,7 @@ Public Const INI_SECTION_DATABASE As String = "Database"
 Public Const INI_SECTION_TENANT As String = "Tenant"
 Public Const INI_SECTION_DEBUG As String = "Debug"
 Public Const INI_SECTION_LICENSE As String = "License"
+Public Const INI_SECTION_SESSION As String = "Session"
 
 ' Tenant parameter keys
 Public Const TENANT_KEY_ID As String = "TenantId"
