@@ -21,10 +21,11 @@ Public Const APP_PARAM_SESSION_STARTED_AT As String = "SessionStartedAt"
 
 ' INI section names
 Public Const INI_SECTION_APPLICATION As String = "Application"
-Public Const INI_SECTION_LICENSE As String = "License"
-Public Const INI_SECTION_LOGGING As String = "Logging"
+Public Const INI_SECTION_PATHS As String = "Paths"
+Public Const INI_SECTION_DATABASE As String = "Database"
 Public Const INI_SECTION_TENANT As String = "Tenant"
-Public Const INI_SECTION_SESSION As String = "Session"
+Public Const INI_SECTION_DEBUG As String = "Debug"
+Public Const INI_SECTION_LICENSE As String = "License"
 
 ' Tenant parameter keys
 Public Const TENANT_KEY_ID As String = "TenantId"

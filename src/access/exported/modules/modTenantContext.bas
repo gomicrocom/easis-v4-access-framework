@@ -10,6 +10,8 @@ Option Explicit
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modTenantContext"
+Private Const DEFAULT_TENANT_CODE_KEY As String = "DefaultTenantCode"
+Private Const BACKEND_ROOT_KEY As String = "BackendRoot"
 
 Private mCurrentTenantId As String
 Private mCurrentTenantCode As String
@@ -20,10 +22,26 @@ Private mTenantLoaded As Boolean
 Public Sub InitializeTenantContext(Optional ByVal IniPath As String = vbNullString)
     On Error GoTo ErrorHandler
 
+    Dim BackendRoot As String
+
     mCurrentTenantId = modConfigIni.GetConfigValue(INI_SECTION_TENANT, TENANT_KEY_ID, "TENANT-DEFAULT", IniPath)
-    mCurrentTenantCode = modConfigIni.GetConfigValue(INI_SECTION_TENANT, TENANT_KEY_CODE, "DEFAULT", IniPath)
+    mCurrentTenantCode = modConfigIni.GetConfigValue(INI_SECTION_DATABASE, DEFAULT_TENANT_CODE_KEY, "DEFAULT", IniPath)
     mCurrentTenantName = modConfigIni.GetConfigValue(INI_SECTION_TENANT, TENANT_KEY_NAME, "Default Tenant", IniPath)
-    mCurrentBackendPath = modConfigIni.GetConfigValue(INI_SECTION_TENANT, TENANT_KEY_BACKEND_PATH, vbNullString, IniPath)
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".InitializeTenantContext", _
+        "Tenant code initialized as '" & mCurrentTenantCode & "'."
+
+    BackendRoot = Trim$(modConfigIni.GetConfigValue(INI_SECTION_DATABASE, BACKEND_ROOT_KEY, vbNullString, IniPath))
+    If LenB(BackendRoot) = 0 Then
+        mCurrentBackendPath = vbNullString
+        modLoggingHandler.LogWarning MODULE_NAME & ".InitializeTenantContext", _
+            "Backend root configuration is missing."
+    Else
+        mCurrentBackendPath = BuildBackendPath(BackendRoot, mCurrentTenantCode)
+        modLoggingHandler.LogInfo MODULE_NAME & ".InitializeTenantContext", _
+            "Backend path initialized as '" & mCurrentBackendPath & "'."
+    End If
+
     mTenantLoaded = True
 
     modLoggingHandler.LogInfo MODULE_NAME & ".InitializeTenantContext", _
@@ -70,3 +88,18 @@ End Property
 Public Property Get CurrentTenantBackendPath() As String
     CurrentTenantBackendPath = mCurrentBackendPath
 End Property
+
+Public Property Get CurrentBackendPath() As String
+    CurrentBackendPath = mCurrentBackendPath
+End Property
+
+Private Function BuildBackendPath(ByVal BackendRoot As String, ByVal TenantCode As String) As String
+    Dim normalizedRoot As String
+
+    normalizedRoot = Trim$(BackendRoot)
+    If Right$(normalizedRoot, 1) = "\" Then
+        normalizedRoot = Left$(normalizedRoot, Len(normalizedRoot) - 1)
+    End If
+
+    BuildBackendPath = normalizedRoot & "\" & Trim$(TenantCode) & "_be.accdb"
+End Function
