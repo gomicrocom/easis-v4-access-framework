@@ -4,9 +4,9 @@ Option Explicit
 
 '===============================================================================
 ' Module    : modConfigIni
-' Purpose   : Reads framework configuration from INI files.
+' Purpose   : Reads configuration values from INI files.
 ' Author    : Codex
-' Project   : Easis Version 4
+' Version   : 0.1.0
 '===============================================================================
 
 #If VBA7 Then
@@ -41,15 +41,16 @@ Public Function InitializeConfiguration(Optional ByVal IniPath As String = vbNul
     End If
 
     ConfigFilePath = resolvedPath
-    CurrentLanguage = GetIniString(CONFIG_SECTION_APP, "Language", DEFAULT_LANGUAGE, ConfigFilePath)
-    CurrentLogLevel = ParseLogLevel(GetIniString(CONFIG_SECTION_LOGGING, "Level", CStr(DEFAULT_LOG_LEVEL), ConfigFilePath))
+    CurrentLanguage = GetConfigValue(CONFIG_SECTION_APP, "Language", DEFAULT_LANGUAGE, ConfigFilePath)
+    CurrentEnvironment = UCase$(GetConfigValue(CONFIG_SECTION_APP, "Environment", ENV_DEV, ConfigFilePath))
+    CurrentLogLevel = NormalizeLogLevel(GetConfigValue(CONFIG_SECTION_LOGGING, "Level", DEFAULT_LOG_LEVEL, ConfigFilePath))
 
     InitializeConfiguration = True
     Exit Function
 
 ErrorHandler:
     InitializeConfiguration = False
-    modErrorHandler.HandleError MODULE_NAME, "InitializeConfiguration"
+    modErrorHandler.HandleError MODULE_NAME, "InitializeConfiguration", Err
 End Function
 
 Public Function ResolveConfigPath(Optional ByVal IniPath As String = vbNullString) As String
@@ -99,7 +100,11 @@ Public Function GetIniString(ByVal SectionName As String, ByVal KeyName As Strin
 
 ErrorHandler:
     GetIniString = DefaultValue
-    modErrorHandler.HandleError MODULE_NAME, "GetIniString"
+    modErrorHandler.HandleError MODULE_NAME, "GetIniString", Err
+End Function
+
+Public Function GetConfigValue(ByVal SectionName As String, ByVal KeyName As String, Optional ByVal DefaultValue As String = vbNullString, Optional ByVal IniPath As String = vbNullString) As String
+    GetConfigValue = GetIniString(SectionName, KeyName, DefaultValue, IniPath)
 End Function
 
 Public Function GetIniBoolean(ByVal SectionName As String, ByVal KeyName As String, Optional ByVal DefaultValue As Boolean = False, Optional ByVal IniPath As String = vbNullString) As Boolean
@@ -128,23 +133,6 @@ Public Function GetIniLong(ByVal SectionName As String, ByVal KeyName As String,
     End If
 End Function
 
-Private Function ParseLogLevel(ByVal Value As String) As LogLevel
-    Dim normalized As String
-
-    normalized = NormalizeToken(Value)
-
-    Select Case normalized
-        Case "1", "DEBUG"
-            ParseLogLevel = LogLevelDebug
-        Case "3", "WARN", "WARNING"
-            ParseLogLevel = LogLevelWarning
-        Case "4", "ERR", "ERROR"
-            ParseLogLevel = LogLevelError
-        Case Else
-            ParseLogLevel = LogLevelInfo
-    End Select
-End Function
-
 Private Function NormalizeToken(ByVal Value As String) As String
     NormalizeToken = UCase$(Trim$(Value))
 End Function
@@ -155,4 +143,15 @@ Private Function BoolToIni(ByVal Value As Boolean) As String
     Else
         BoolToIni = "0"
     End If
+End Function
+
+Private Function NormalizeLogLevel(ByVal Value As String) As String
+    Select Case NormalizeToken(Value)
+        Case "WARN", "WARNING"
+            NormalizeLogLevel = "WARN"
+        Case "ERROR", "ERR"
+            NormalizeLogLevel = "ERROR"
+        Case Else
+            NormalizeLogLevel = "INFO"
+    End Select
 End Function

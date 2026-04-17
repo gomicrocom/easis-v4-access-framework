@@ -4,23 +4,22 @@ Option Explicit
 
 '===============================================================================
 ' Module    : modLoggingHandler
-' Purpose   : Central logging entry points for the Access framework.
+' Purpose   : Central logging helpers for framework diagnostics.
 ' Author    : Codex
-' Project   : Easis Version 4
+' Version   : 0.1.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modLoggingHandler"
-
-Public Sub LogDebug(ByVal SourceProcedure As String, ByVal Message As String)
-    WriteLog LogLevelDebug, SourceProcedure, Message
-End Sub
+Private Const LOG_LEVEL_INFO As String = "INFO"
+Private Const LOG_LEVEL_WARN As String = "WARN"
+Private Const LOG_LEVEL_ERROR As String = "ERROR"
 
 Public Sub LogInfo(ByVal SourceProcedure As String, ByVal Message As String)
-    WriteLog LogLevelInfo, SourceProcedure, Message
+    WriteLog LOG_LEVEL_INFO, SourceProcedure, Message
 End Sub
 
 Public Sub LogWarning(ByVal SourceProcedure As String, ByVal Message As String)
-    WriteLog LogLevelWarning, SourceProcedure, Message
+    WriteLog LOG_LEVEL_WARN, SourceProcedure, Message
 End Sub
 
 Public Sub LogError(ByVal SourceProcedure As String, ByVal Message As String, Optional ByVal ErrorNumber As Long = 0)
@@ -31,33 +30,39 @@ Public Sub LogError(ByVal SourceProcedure As String, ByVal Message As String, Op
         fullMessage = fullMessage & " (Err " & CStr(ErrorNumber) & ")"
     End If
 
-    WriteLog LogLevelError, SourceProcedure, fullMessage
+    WriteLog LOG_LEVEL_ERROR, SourceProcedure, fullMessage
 End Sub
 
-Public Sub WriteLog(ByVal EntryLevel As LogLevel, ByVal SourceProcedure As String, ByVal Message As String)
+Public Sub WriteLog(ByVal EntryLevel As String, ByVal SourceProcedure As String, ByVal Message As String)
     On Error GoTo SafeExit
 
-    If EntryLevel < CurrentLogLevel Then
+    If ShouldSkipLog(EntryLevel) Then
         Exit Sub
     End If
 
     Debug.Print Format$(Now, "yyyy-mm-dd hh:nn:ss"); " | "; _
-                LevelName(EntryLevel); " | "; _
+                UCase$(Trim$(EntryLevel)); " | "; _
                 SourceProcedure; " | "; _
                 Message
+
+    ' Placeholder: optional table-based logging can be added here later.
 
 SafeExit:
 End Sub
 
-Private Function LevelName(ByVal EntryLevel As LogLevel) As String
-    Select Case EntryLevel
-        Case LogLevelDebug
-            LevelName = "DEBUG"
-        Case LogLevelWarning
-            LevelName = "WARN"
-        Case LogLevelError
-            LevelName = "ERROR"
+Private Function ShouldSkipLog(ByVal EntryLevel As String) As Boolean
+    Dim normalizedEntry As String
+    Dim normalizedCurrent As String
+
+    normalizedEntry = UCase$(Trim$(EntryLevel))
+    normalizedCurrent = UCase$(Trim$(CurrentLogLevel))
+
+    Select Case normalizedCurrent
+        Case LOG_LEVEL_ERROR
+            ShouldSkipLog = (normalizedEntry <> LOG_LEVEL_ERROR)
+        Case LOG_LEVEL_WARN
+            ShouldSkipLog = (normalizedEntry = LOG_LEVEL_INFO)
         Case Else
-            LevelName = "INFO"
+            ShouldSkipLog = False
     End Select
 End Function
