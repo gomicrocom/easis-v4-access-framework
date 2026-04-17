@@ -1,23 +1,23 @@
 # Easis Version 4
 
-Easis Version 4 is an MS Access VBA framework for building tenant-aware business applications with a shared frontend structure and one backend database per tenant.
+Easis Version 4 is an MS Access VBA framework for tenant-aware business applications with a shared frontend pattern and one backend database per tenant.
 
-## Scope
+## Foundation
 
 - MS Access frontend with VBA-based application framework
-- One backend per tenant for data isolation and deployment flexibility
-- INI-based system configuration for environment and tenant settings
-- Multilingual support for user interface text and module labels
-- Feature-based licensing for controlled module activation
+- one backend per tenant for data isolation and deployment flexibility
+- INI-based configuration for environment and tenant settings
+- multilingual support for UI text, captions, and module labels
+- feature-based licensing for controlled module activation
 - Optional domain modules such as `CAMT054`, `PROPERTY_MGMT`, and `WINE_MGMT`
 
-## Repository Structure
+## Repository Layout
 
 - `docs/` contains architecture, roadmap, licensing, and data model notes
 - `src/access/exported/` contains exported Access objects grouped by type
-- `scripts/` is reserved for automation and export/import helper scripts
-- `tests/` is reserved for framework-level validation assets and test utilities
+- `scripts/` contains local automation and Access export/import helpers
+- `tests/` contains validation assets for framework-level checks
 
 ## Current Status
 
-This repository currently contains the initial project scaffold and documentation baseline. Business logic, VBA implementations, and Access object exports will be added incrementally.
+This repository currently provides the initial project scaffold and documentation baseline. Business logic, VBA implementations, and Access object exports will be added incrementally.
