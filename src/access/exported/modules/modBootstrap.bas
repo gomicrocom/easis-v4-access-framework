@@ -16,20 +16,22 @@ Public Function BootstrapApplication(Optional ByVal IniPath As String = vbNullSt
 
     ResetApplicationState
 
+    modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Bootstrap started."
+
     If Not modConfigIni.InitializeConfiguration(IniPath) Then
         Err.Raise vbObjectError + 2200, MODULE_NAME & ".BootstrapApplication", "Configuration initialization failed."
     End If
+    modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Configuration initialized."
 
     If Not modLicenseHandler.InitializeLicensing(ConfigFilePath) Then
         Err.Raise vbObjectError + 2201, MODULE_NAME & ".BootstrapApplication", "Licensing initialization failed."
     End If
-
-    modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Configuration initialized."
     modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Licensing initialized."
-    modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Logging initialized."
 
     IsBootstrapped = True
     BootstrapApplication = True
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Bootstrap completed successfully."
     Exit Function
 
 ErrorHandler:
