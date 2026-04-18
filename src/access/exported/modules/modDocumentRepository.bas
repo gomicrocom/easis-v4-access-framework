@@ -355,6 +355,92 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
+Public Function AssignDocumentNumber(ByVal DocumentId As Long) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rsHeader As DAO.Recordset
+    Dim sqlText As String
+    Dim documentTypeCode As String
+    Dim documentNo As String
+    Dim documentDate As Date
+    Dim nextDocumentNo As String
+
+    AssignDocumentNumber = False
+
+    If DocumentId <= 0 Then
+        Exit Function
+    End If
+
+    If Not modDb.ValidateBackendConfiguration() Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".AssignDocumentNumber", _
+            "Document number assignment skipped because backend configuration is not valid."
+        Exit Function
+    End If
+
+    If Not TableExists(TABLE_DOC_DOCUMENT) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".AssignDocumentNumber", _
+            "Table '" & TABLE_DOC_DOCUMENT & "' is not available yet."
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(sqlText, dbOpenDynaset)
+
+    If rsHeader.BOF And rsHeader.EOF Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".AssignDocumentNumber", _
+            "Document number assignment skipped because DocumentId=" & CStr(DocumentId) & " does not exist."
+        GoTo CleanExit
+    End If
+
+    documentTypeCode = UCase$(Trim$(modDaoHelper.NzString(rsHeader.Fields(FIELD_DOCUMENT_TYPE_CODE).Value)))
+    documentNo = Trim$(modDaoHelper.NzString(rsHeader.Fields(FIELD_DOCUMENT_NO).Value))
+
+    If modDaoHelper.RecordsetHasField(rsHeader, FIELD_DOCUMENT_DATE) Then
+        documentDate = rsHeader.Fields(FIELD_DOCUMENT_DATE).Value
+    Else
+        documentDate = Date
+    End If
+
+    If LenB(documentNo) > 0 Then
+        modLoggingHandler.LogInfo MODULE_NAME & ".AssignDocumentNumber", _
+            "DocumentId=" & CStr(DocumentId) & " already has document number '" & documentNo & "'."
+        AssignDocumentNumber = True
+        GoTo CleanExit
+    End If
+
+    nextDocumentNo = modNumberingHandler.GetNextDocumentNumber(documentTypeCode, documentDate)
+    If LenB(Trim$(nextDocumentNo)) = 0 Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".AssignDocumentNumber", _
+            "Document number assignment failed because no next number could be generated for DocumentId=" & CStr(DocumentId) & "."
+        GoTo CleanExit
+    End If
+
+    rsHeader.Edit
+    SetRecordsetValue rsHeader, FIELD_DOCUMENT_NO, nextDocumentNo
+    rsHeader.Update
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".AssignDocumentNumber", _
+        "Assigned document number '" & nextDocumentNo & "' to DocumentId=" & CStr(DocumentId) & "."
+
+    AssignDocumentNumber = True
+
+CleanExit:
+    On Error Resume Next
+    If Not rsHeader Is Nothing Then rsHeader.Close
+    Set rsHeader = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    AssignDocumentNumber = False
+    modLoggingHandler.LogError MODULE_NAME & ".AssignDocumentNumber", _
+        "Failed to assign document number for DocumentId=" & CStr(DocumentId) & ".", Err.Number
+    modErrorHandler.HandleError MODULE_NAME, "AssignDocumentNumber", Err
+    Resume CleanExit
+End Function
+
 Private Function TableExists(ByVal TableName As String) As Boolean
     On Error GoTo ErrorHandler
 
