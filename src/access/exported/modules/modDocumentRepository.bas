@@ -355,6 +355,68 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
+Public Function DocumentExists(ByVal DocumentId As Long) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rsHeader As DAO.Recordset
+    Dim sqlText As String
+
+    If DocumentId <= 0 Then
+        Exit Function
+    End If
+
+    If Not modDb.ValidateBackendConfiguration() Then
+        Exit Function
+    End If
+
+    If Not TableExists(TABLE_DOC_DOCUMENT) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".DocumentExists", _
+            "Table '" & TABLE_DOC_DOCUMENT & "' is not available yet."
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(sqlText, dbOpenSnapshot)
+
+    DocumentExists = Not (rsHeader.BOF And rsHeader.EOF)
+
+CleanExit:
+    On Error Resume Next
+    If Not rsHeader Is Nothing Then rsHeader.Close
+    Set rsHeader = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    DocumentExists = False
+    modErrorHandler.HandleError MODULE_NAME, "DocumentExists", Err
+    Resume CleanExit
+End Function
+
+Public Function GetDocumentStatus(ByVal DocumentId As Long, Optional ByVal DefaultValue As String = "") As String
+    On Error GoTo ErrorHandler
+
+    GetDocumentStatus = ResolveDocumentFieldValue(DocumentId, FIELD_DOCUMENT_STATUS_CODE, DefaultValue)
+    Exit Function
+
+ErrorHandler:
+    GetDocumentStatus = DefaultValue
+    modErrorHandler.HandleError MODULE_NAME, "GetDocumentStatus", Err
+End Function
+
+Public Function GetDocumentNumber(ByVal DocumentId As Long, Optional ByVal DefaultValue As String = "") As String
+    On Error GoTo ErrorHandler
+
+    GetDocumentNumber = ResolveDocumentFieldValue(DocumentId, FIELD_DOCUMENT_NO, DefaultValue)
+    Exit Function
+
+ErrorHandler:
+    GetDocumentNumber = DefaultValue
+    modErrorHandler.HandleError MODULE_NAME, "GetDocumentNumber", Err
+End Function
+
 Public Function AssignDocumentNumber(ByVal DocumentId As Long) As Boolean
     On Error GoTo ErrorHandler
 
@@ -441,6 +503,99 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
+Public Function SetDocumentStatus(ByVal DocumentId As Long, ByVal StatusCode As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rsHeader As DAO.Recordset
+    Dim sqlText As String
+
+    SetDocumentStatus = False
+
+    If DocumentId <= 0 Then
+        Exit Function
+    End If
+
+    If Not modDb.ValidateBackendConfiguration() Then
+        Exit Function
+    End If
+
+    If Not TableExists(TABLE_DOC_DOCUMENT) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".SetDocumentStatus", _
+            "Table '" & TABLE_DOC_DOCUMENT & "' is not available yet."
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(sqlText, dbOpenDynaset)
+
+    If rsHeader.BOF And rsHeader.EOF Then
+        GoTo CleanExit
+    End If
+
+    rsHeader.Edit
+    SetRecordsetValue rsHeader, FIELD_DOCUMENT_STATUS_CODE, UCase$(Trim$(StatusCode))
+    rsHeader.Update
+
+    SetDocumentStatus = True
+
+CleanExit:
+    On Error Resume Next
+    If Not rsHeader Is Nothing Then rsHeader.Close
+    Set rsHeader = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    SetDocumentStatus = False
+    modErrorHandler.HandleError MODULE_NAME, "SetDocumentStatus", Err
+    Resume CleanExit
+End Function
+
+Public Function CountDocumentPositions(ByVal DocumentId As Long) As Long
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rsPositions As DAO.Recordset
+    Dim sqlText As String
+
+    If DocumentId <= 0 Then
+        Exit Function
+    End If
+
+    If Not modDb.ValidateBackendConfiguration() Then
+        Exit Function
+    End If
+
+    If Not TableExists(TABLE_DOC_DOCUMENT_POSITION) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".CountDocumentPositions", _
+            "Table '" & TABLE_DOC_DOCUMENT_POSITION & "' is not available yet."
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT_POSITION & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsPositions = db.OpenRecordset(sqlText, dbOpenSnapshot)
+
+    If Not (rsPositions.BOF And rsPositions.EOF) Then
+        rsPositions.MoveLast
+        CountDocumentPositions = rsPositions.RecordCount
+    End If
+
+CleanExit:
+    On Error Resume Next
+    If Not rsPositions Is Nothing Then rsPositions.Close
+    Set rsPositions = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    CountDocumentPositions = 0
+    modErrorHandler.HandleError MODULE_NAME, "CountDocumentPositions", Err
+    Resume CleanExit
+End Function
+
 Private Function TableExists(ByVal TableName As String) As Boolean
     On Error GoTo ErrorHandler
 
@@ -483,4 +638,50 @@ Private Function ResolveCreatedBy() As String
     Else
         ResolveCreatedBy = "SYSTEM"
     End If
+End Function
+
+Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal FieldName As String, ByVal DefaultValue As String) As String
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rsHeader As DAO.Recordset
+    Dim sqlText As String
+
+    ResolveDocumentFieldValue = DefaultValue
+
+    If DocumentId <= 0 Then
+        Exit Function
+    End If
+
+    If Not modDb.ValidateBackendConfiguration() Then
+        Exit Function
+    End If
+
+    If Not TableExists(TABLE_DOC_DOCUMENT) Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(sqlText, dbOpenSnapshot)
+
+    If rsHeader.BOF And rsHeader.EOF Then
+        GoTo CleanExit
+    End If
+
+    If modDaoHelper.RecordsetHasField(rsHeader, FieldName) Then
+        ResolveDocumentFieldValue = modDaoHelper.NzString(rsHeader.Fields(FieldName).Value, DefaultValue)
+    End If
+
+CleanExit:
+    On Error Resume Next
+    If Not rsHeader Is Nothing Then rsHeader.Close
+    Set rsHeader = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    ResolveDocumentFieldValue = DefaultValue
+    modErrorHandler.HandleError MODULE_NAME, "ResolveDocumentFieldValue", Err
+    Resume CleanExit
 End Function
