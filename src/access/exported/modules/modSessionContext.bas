@@ -1,4 +1,3 @@
-Attribute VB_Name = "modSessionContext"
 Option Compare Database
 Option Explicit
 
@@ -55,8 +54,8 @@ Public Function IsSessionInitialized() As Boolean
     IsSessionInitialized = mSessionInitialized
 End Function
 
-Public Property Get CurrentUserId() As String
-    CurrentUserId = mCurrentUserId
+Public Property Get currentUserId() As String
+    currentUserId = mCurrentUserId
 End Property
 
 Public Property Get CurrentUserName() As String

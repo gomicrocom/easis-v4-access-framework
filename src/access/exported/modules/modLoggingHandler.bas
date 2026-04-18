@@ -1,4 +1,3 @@
-Attribute VB_Name = "modLoggingHandler"
 Option Compare Database
 Option Explicit
 

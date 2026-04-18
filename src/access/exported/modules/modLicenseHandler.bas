@@ -1,4 +1,3 @@
-Attribute VB_Name = "modLicenseHandler"
 Option Compare Database
 Option Explicit
 

@@ -1,4 +1,3 @@
-Attribute VB_Name = "modDaoHelper"
 Option Compare Database
 Option Explicit
 
@@ -65,18 +64,18 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "NzBoolean", Err
 End Function
 
-Public Function RecordsetHasField(ByVal Rs As DAO.Recordset, ByVal FieldName As String) As Boolean
+Public Function RecordsetHasField(ByVal rs As DAO.Recordset, ByVal FieldName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim fld As DAO.Field
     Dim normalizedFieldName As String
 
     normalizedFieldName = UCase$(Trim$(FieldName))
-    If Rs Is Nothing Or LenB(normalizedFieldName) = 0 Then
+    If rs Is Nothing Or LenB(normalizedFieldName) = 0 Then
         Exit Function
     End If
 
-    For Each fld In Rs.Fields
+    For Each fld In rs.Fields
         If UCase$(fld.Name) = normalizedFieldName Then
             RecordsetHasField = True
             Exit Function

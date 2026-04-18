@@ -1,4 +1,3 @@
-Attribute VB_Name = "modDb"
 Option Compare Database
 Option Explicit
 
@@ -100,7 +99,7 @@ Private Function BuildValidationContext() As String
     End If
 
     If IsSessionInitialized Then
-        contextParts = contextParts & ", UserId=" & CurrentUserId
+        contextParts = contextParts & ", UserId=" & currentUserId
     Else
         contextParts = contextParts & ", UserId=<uninitialized>"
     End If

@@ -1,4 +1,3 @@
-Attribute VB_Name = "modTenantContext"
 Option Compare Database
 Option Explicit
 

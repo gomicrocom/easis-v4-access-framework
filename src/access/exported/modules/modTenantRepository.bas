@@ -1,4 +1,3 @@
-Attribute VB_Name = "modTenantRepository"
 Option Compare Database
 Option Explicit
 
@@ -19,7 +18,7 @@ Public Function GetTenantParameter(ByVal ParameterKey As String, Optional ByVal 
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim Rs As DAO.Recordset
+    Dim rs As DAO.Recordset
 
     If LenB(Trim$(ParameterKey)) = 0 Then
         GetTenantParameter = DefaultValue
@@ -32,14 +31,14 @@ Public Function GetTenantParameter(ByVal ParameterKey As String, Optional ByVal 
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    Set Rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_PARAMETER & "];", dbOpenSnapshot)
+    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_PARAMETER & "];", dbOpenSnapshot)
 
-    GetTenantParameter = ResolveTenantParameterValue(Rs, ParameterKey, DefaultValue)
+    GetTenantParameter = ResolveTenantParameterValue(rs, ParameterKey, DefaultValue)
 
 CleanExit:
     On Error Resume Next
-    If Not Rs Is Nothing Then Rs.Close
-    Set Rs = Nothing
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
     Set db = Nothing
     Exit Function
 
@@ -53,7 +52,7 @@ Public Function HasTenantParameter(ByVal ParameterKey As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim Rs As DAO.Recordset
+    Dim rs As DAO.Recordset
 
     If LenB(Trim$(ParameterKey)) = 0 Then
         HasTenantParameter = False
@@ -66,14 +65,14 @@ Public Function HasTenantParameter(ByVal ParameterKey As String) As Boolean
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    Set Rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_PARAMETER & "];", dbOpenSnapshot)
+    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_PARAMETER & "];", dbOpenSnapshot)
 
-    HasTenantParameter = (LenB(ResolveTenantParameterValue(Rs, ParameterKey, vbNullString)) > 0)
+    HasTenantParameter = (LenB(ResolveTenantParameterValue(rs, ParameterKey, vbNullString)) > 0)
 
 CleanExit:
     On Error Resume Next
-    If Not Rs Is Nothing Then Rs.Close
-    Set Rs = Nothing
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
     Set db = Nothing
     Exit Function
 
@@ -133,7 +132,7 @@ Private Function ResolveTenantCode() As String
     End If
 End Function
 
-Private Function ResolveTenantParameterValue(ByVal Rs As DAO.Recordset, ByVal ParameterKey As String, ByVal DefaultValue As String) As String
+Private Function ResolveTenantParameterValue(ByVal rs As DAO.Recordset, ByVal ParameterKey As String, ByVal DefaultValue As String) As String
     On Error GoTo ErrorHandler
 
     Dim targetKey As String
@@ -147,9 +146,9 @@ Private Function ResolveTenantParameterValue(ByVal Rs As DAO.Recordset, ByVal Pa
     targetKey = UCase$(Trim$(ParameterKey))
     tenantCode = UCase$(Trim$(ResolveTenantCode()))
 
-    hasKeyField = modDaoHelper.RecordsetHasField(Rs, FIELD_PARAMETER_KEY)
-    hasValueField = modDaoHelper.RecordsetHasField(Rs, FIELD_PARAMETER_VALUE)
-    hasTenantField = modDaoHelper.RecordsetHasField(Rs, FIELD_TENANT_CODE)
+    hasKeyField = modDaoHelper.RecordsetHasField(rs, FIELD_PARAMETER_KEY)
+    hasValueField = modDaoHelper.RecordsetHasField(rs, FIELD_PARAMETER_VALUE)
+    hasTenantField = modDaoHelper.RecordsetHasField(rs, FIELD_TENANT_CODE)
 
     If Not hasKeyField Or Not hasValueField Then
         modLoggingHandler.LogWarning MODULE_NAME & ".ResolveTenantParameterValue", _
@@ -159,35 +158,35 @@ Private Function ResolveTenantParameterValue(ByVal Rs As DAO.Recordset, ByVal Pa
         Exit Function
     End If
 
-    If Rs.BOF And Rs.EOF Then
+    If rs.BOF And rs.EOF Then
         ResolveTenantParameterValue = DefaultValue
         Exit Function
     End If
 
-    Rs.MoveFirst
-    Do Until Rs.EOF
-        currentKey = UCase$(Trim$(modDaoHelper.NzString(Rs.Fields(FIELD_PARAMETER_KEY).Value)))
+    rs.MoveFirst
+    Do Until rs.EOF
+        currentKey = UCase$(Trim$(modDaoHelper.NzString(rs.Fields(FIELD_PARAMETER_KEY).Value)))
 
         If currentKey = targetKey Then
             If hasTenantField Then
-                currentTenantCode = UCase$(Trim$(modDaoHelper.NzString(Rs.Fields(FIELD_TENANT_CODE).Value)))
+                currentTenantCode = UCase$(Trim$(modDaoHelper.NzString(rs.Fields(FIELD_TENANT_CODE).Value)))
 
                 If LenB(currentTenantCode) = 0 Then
-                    ResolveTenantParameterValue = modDaoHelper.NzString(Rs.Fields(FIELD_PARAMETER_VALUE).Value, DefaultValue)
+                    ResolveTenantParameterValue = modDaoHelper.NzString(rs.Fields(FIELD_PARAMETER_VALUE).Value, DefaultValue)
                     Exit Function
                 End If
 
                 If LenB(tenantCode) > 0 And currentTenantCode = tenantCode Then
-                    ResolveTenantParameterValue = modDaoHelper.NzString(Rs.Fields(FIELD_PARAMETER_VALUE).Value, DefaultValue)
+                    ResolveTenantParameterValue = modDaoHelper.NzString(rs.Fields(FIELD_PARAMETER_VALUE).Value, DefaultValue)
                     Exit Function
                 End If
             Else
-                ResolveTenantParameterValue = modDaoHelper.NzString(Rs.Fields(FIELD_PARAMETER_VALUE).Value, DefaultValue)
+                ResolveTenantParameterValue = modDaoHelper.NzString(rs.Fields(FIELD_PARAMETER_VALUE).Value, DefaultValue)
                 Exit Function
             End If
         End If
 
-        Rs.MoveNext
+        rs.MoveNext
     Loop
 
     ResolveTenantParameterValue = DefaultValue
@@ -197,4 +196,3 @@ ErrorHandler:
     ResolveTenantParameterValue = DefaultValue
     modErrorHandler.HandleError MODULE_NAME, "ResolveTenantParameterValue", Err
 End Function
-

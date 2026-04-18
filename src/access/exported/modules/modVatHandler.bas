@@ -1,4 +1,3 @@
-Attribute VB_Name = "modVatHandler"
 Option Compare Database
 Option Explicit
 
@@ -78,13 +77,13 @@ Public Function IsValidVatMode(ByVal VatMode As String) As Boolean
     End Select
 End Function
 
-Public Function CalculateGrossFromNet(ByVal netAmount As Currency, ByVal VatRate As Double) As Currency
+Public Function CalculateGrossFromNet(ByVal NetAmount As Currency, ByVal VatRate As Double) As Currency
     On Error GoTo ErrorHandler
 
     Dim vatFactor As Double
 
     vatFactor = GetVatFactor(VatRate)
-    CalculateGrossFromNet = RoundCurrency(CCur(CDbl(netAmount) * (1# + vatFactor)))
+    CalculateGrossFromNet = RoundCurrency(CCur(CDbl(NetAmount) * (1# + vatFactor)))
 
     Exit Function
 
@@ -93,7 +92,7 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "CalculateGrossFromNet", Err
 End Function
 
-Public Function CalculateNetFromGross(ByVal grossAmount As Currency, ByVal VatRate As Double) As Currency
+Public Function CalculateNetFromGross(ByVal GrossAmount As Currency, ByVal VatRate As Double) As Currency
     On Error GoTo ErrorHandler
 
     Dim vatFactor As Double
@@ -101,9 +100,9 @@ Public Function CalculateNetFromGross(ByVal grossAmount As Currency, ByVal VatRa
     vatFactor = GetVatFactor(VatRate)
 
     If vatFactor <= 0 Then
-        CalculateNetFromGross = RoundCurrency(grossAmount)
+        CalculateNetFromGross = RoundCurrency(GrossAmount)
     Else
-        CalculateNetFromGross = RoundCurrency(CCur(CDbl(grossAmount) / (1# + vatFactor)))
+        CalculateNetFromGross = RoundCurrency(CCur(CDbl(GrossAmount) / (1# + vatFactor)))
     End If
 
     Exit Function
@@ -113,13 +112,13 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "CalculateNetFromGross", Err
 End Function
 
-Public Function CalculateVatAmount(ByVal BaseAmount As Currency, ByVal VatRate As Double, ByVal VatMode As String) As Currency
+Public Function CalculateVatAmount(ByVal baseAmount As Currency, ByVal VatRate As Double, ByVal VatMode As String) As Currency
     On Error GoTo ErrorHandler
 
     Dim normalizedMode As String
     Dim vatFactor As Double
-    Dim netAmount As Currency
-    Dim grossAmount As Currency
+    Dim NetAmount As Currency
+    Dim GrossAmount As Currency
 
     normalizedMode = NormalizeVatMode(VatMode)
     vatFactor = GetVatFactor(VatRate)
@@ -129,13 +128,13 @@ Public Function CalculateVatAmount(ByVal BaseAmount As Currency, ByVal VatRate A
             CalculateVatAmount = 0
 
         Case VAT_MODE_INCLUSIVE
-            grossAmount = RoundCurrency(BaseAmount)
-            netAmount = CalculateNetFromGross(grossAmount, VatRate)
-            CalculateVatAmount = RoundCurrency(grossAmount - netAmount)
+            GrossAmount = RoundCurrency(baseAmount)
+            NetAmount = CalculateNetFromGross(GrossAmount, VatRate)
+            CalculateVatAmount = RoundCurrency(GrossAmount - NetAmount)
 
         Case VAT_MODE_EXCLUSIVE
-            netAmount = RoundCurrency(BaseAmount)
-            CalculateVatAmount = RoundCurrency(CCur(CDbl(netAmount) * vatFactor))
+            NetAmount = RoundCurrency(baseAmount)
+            CalculateVatAmount = RoundCurrency(CCur(CDbl(NetAmount) * vatFactor))
 
         Case Else
             CalculateVatAmount = 0

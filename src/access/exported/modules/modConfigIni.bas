@@ -1,4 +1,3 @@
-Attribute VB_Name = "modConfigIni"
 Option Compare Database
 Option Explicit
 
@@ -62,13 +61,13 @@ Public Function ResolveConfigPath(Optional ByVal IniPath As String = vbNullStrin
         Exit Function
     End If
 
-    candidate = CurrentProject.Path & "\config\easis.ini"
+    candidate = CurrentProject.path & "\config\easis.ini"
     If LenB(Dir$(candidate, vbNormal)) > 0 Then
         ResolveConfigPath = candidate
         Exit Function
     End If
 
-    candidate = CurrentProject.Path & "\easis.ini"
+    candidate = CurrentProject.path & "\easis.ini"
     If LenB(Dir$(candidate, vbNormal)) > 0 Then
         ResolveConfigPath = candidate
         Exit Function
