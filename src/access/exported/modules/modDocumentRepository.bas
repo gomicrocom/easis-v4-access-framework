@@ -1,3 +1,4 @@
+Attribute VB_Name = "modDocumentRepository"
 Option Compare Database
 Option Explicit
 
@@ -19,6 +20,7 @@ Private Const FIELD_DOCUMENT_TYPE_CODE As String = "document_type_code"
 Private Const FIELD_DOCUMENT_STATUS_CODE As String = "document_status_code"
 Private Const FIELD_DOCUMENT_NO As String = "document_no"
 Private Const FIELD_DOCUMENT_DATE As String = "document_date"
+Private Const FIELD_CUSTOMER_ADDRESS_ID As String = "customer_address_id"
 Private Const FIELD_CUSTOMER_NAME As String = "customer_name"
 Private Const FIELD_CURRENCY_CODE As String = "currency_code"
 Private Const FIELD_VAT_MODE As String = "vat_mode"
@@ -44,13 +46,14 @@ Private Const FIELD_LINE_TOTAL_GROSS As String = "line_total_gross"
 Private Const DEFAULT_DOCUMENT_STATUS As String = "DRAFT"
 
 Public Function CreateDocumentHeader( _
-    ByVal DocumentTypeCode As String, _
-    Optional ByVal DocumentDate As Date = 0, _
+    ByVal documentTypeCode As String, _
+    Optional ByVal documentDate As Date = 0, _
     Optional ByVal CustomerName As String = "", _
     Optional ByVal TotalNet As Currency = 0, _
     Optional ByVal TotalVat As Currency = 0, _
     Optional ByVal TotalGross As Currency = 0, _
-    Optional ByVal Remarks As String = "" _
+    Optional ByVal Remarks As String = "", _
+    Optional ByVal CustomerAddressId As Long = 0 _
 ) As Long
     On Error GoTo ErrorHandler
 
@@ -58,10 +61,11 @@ Public Function CreateDocumentHeader( _
     Dim rs As DAO.Recordset
     Dim effectiveDate As Date
     Dim documentType As String
+    Dim effectiveCustomerName As String
 
     CreateDocumentHeader = 0
 
-    documentType = UCase$(Trim$(DocumentTypeCode))
+    documentType = UCase$(Trim$(documentTypeCode))
     If Not modDocumentService.ValidateDocumentType(documentType) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CreateDocumentHeader", _
             "Document header creation skipped because document type is not supported."
@@ -80,7 +84,14 @@ Public Function CreateDocumentHeader( _
         Exit Function
     End If
 
-    effectiveDate = IIf(DocumentDate = 0, Date, DocumentDate)
+    effectiveDate = IIf(documentDate = 0, Date, documentDate)
+    effectiveCustomerName = Trim$(CustomerName)
+
+    If CustomerAddressId > 0 Then
+        If modAddressRepository.AddressExists(CustomerAddressId) Then
+            effectiveCustomerName = modAddressRepository.GetAddressDisplayName(CustomerAddressId, effectiveCustomerName)
+        End If
+    End If
 
     Set db = modDb.GetCurrentDatabase()
     Set rs = db.OpenRecordset(TABLE_DOC_DOCUMENT, dbOpenDynaset, dbAppendOnly)
@@ -90,7 +101,8 @@ Public Function CreateDocumentHeader( _
     SetRecordsetValue rs, FIELD_DOCUMENT_STATUS_CODE, DEFAULT_DOCUMENT_STATUS
     SetRecordsetValue rs, FIELD_DOCUMENT_NO, vbNullString
     SetRecordsetValue rs, FIELD_DOCUMENT_DATE, effectiveDate
-    SetRecordsetValue rs, FIELD_CUSTOMER_NAME, Trim$(CustomerName)
+    SetRecordsetValue rs, FIELD_CUSTOMER_ADDRESS_ID, CustomerAddressId
+    SetRecordsetValue rs, FIELD_CUSTOMER_NAME, effectiveCustomerName
     SetRecordsetValue rs, FIELD_CURRENCY_CODE, ResolveCurrencyCode()
     SetRecordsetValue rs, FIELD_VAT_MODE, modVatHandler.GetVatMode()
     SetRecordsetValue rs, FIELD_VAT_RATE, modVatHandler.GetVatRate()
@@ -417,6 +429,34 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "GetDocumentNumber", Err
 End Function
 
+Public Function GetDocumentCustomerDisplayName(ByVal DocumentId As Long, Optional ByVal DefaultValue As String = "") As String
+    On Error GoTo ErrorHandler
+
+    Dim addressId As Long
+    Dim storedCustomerName As String
+    Dim addressDisplayName As String
+
+    GetDocumentCustomerDisplayName = DefaultValue
+
+    storedCustomerName = ResolveDocumentFieldValue(DocumentId, FIELD_CUSTOMER_NAME, DefaultValue)
+    addressId = ResolveDocumentLongValue(DocumentId, FIELD_CUSTOMER_ADDRESS_ID, 0)
+
+    If addressId > 0 Then
+        addressDisplayName = modAddressRepository.GetAddressDisplayName(addressId, vbNullString)
+        If LenB(Trim$(addressDisplayName)) > 0 Then
+            GetDocumentCustomerDisplayName = addressDisplayName
+            Exit Function
+        End If
+    End If
+
+    GetDocumentCustomerDisplayName = storedCustomerName
+    Exit Function
+
+ErrorHandler:
+    GetDocumentCustomerDisplayName = DefaultValue
+    modErrorHandler.HandleError MODULE_NAME, "GetDocumentCustomerDisplayName", Err
+End Function
+
 Public Function AssignDocumentNumber(ByVal DocumentId As Long) As Boolean
     On Error GoTo ErrorHandler
 
@@ -685,3 +725,50 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ResolveDocumentFieldValue", Err
     Resume CleanExit
 End Function
+
+Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal FieldName As String, ByVal DefaultValue As Long) As Long
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rsHeader As DAO.Recordset
+    Dim sqlText As String
+
+    ResolveDocumentLongValue = DefaultValue
+
+    If DocumentId <= 0 Then
+        Exit Function
+    End If
+
+    If Not modDb.ValidateBackendConfiguration() Then
+        Exit Function
+    End If
+
+    If Not TableExists(TABLE_DOC_DOCUMENT) Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(sqlText, dbOpenSnapshot)
+
+    If rsHeader.BOF And rsHeader.EOF Then
+        GoTo CleanExit
+    End If
+
+    If modDaoHelper.RecordsetHasField(rsHeader, FieldName) Then
+        ResolveDocumentLongValue = modDaoHelper.NzLong(rsHeader.Fields(FieldName).Value, DefaultValue)
+    End If
+
+CleanExit:
+    On Error Resume Next
+    If Not rsHeader Is Nothing Then rsHeader.Close
+    Set rsHeader = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    ResolveDocumentLongValue = DefaultValue
+    modErrorHandler.HandleError MODULE_NAME, "ResolveDocumentLongValue", Err
+    Resume CleanExit
+End Function
+
