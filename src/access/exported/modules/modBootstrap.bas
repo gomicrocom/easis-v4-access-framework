@@ -36,6 +36,10 @@ Public Function BootstrapApplication(Optional ByVal IniPath As String = vbNullSt
     modTranslationService.InitializeTranslations
     modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Translations initialized."
 
+    modModuleManager.ResetModuleState
+    modModuleManager.InitializeModules
+    modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Modules initialized."
+
     IsBootstrapped = True
     BootstrapApplication = True
 
