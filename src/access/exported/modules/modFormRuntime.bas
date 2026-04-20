@@ -9,11 +9,13 @@ Option Explicit
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFormRuntime"
+Private Const TAG_PREFIX_MODULE As String = "MOD:"
 
 Public Sub InitializeForm(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
 
     Dim formName As String
+    Dim requiredModule As String
 
     If FormInstance Is Nothing Then
         Exit Sub
@@ -23,6 +25,11 @@ Public Sub InitializeForm(ByVal FormInstance As Access.Form)
 
     modLoggingHandler.LogInfo MODULE_NAME & ".InitializeForm", _
         "Initializing form '" & formName & "'."
+
+    requiredModule = ExtractRequiredModuleFromTag(FormInstance.Tag)
+    If LenB(requiredModule) > 0 Then
+        modModuleManager.RequireModule requiredModule, True
+    End If
 
     modFormLocalization.LocalizeForm FormInstance
 
@@ -48,4 +55,33 @@ Private Function GetFormName(ByVal FormInstance As Access.Form) As String
 ErrorHandler:
     GetFormName = "<unknown>"
     modErrorHandler.HandleError MODULE_NAME, "GetFormName", Err
+End Function
+
+Private Function ExtractRequiredModuleFromTag(ByVal TagValue As String) As String
+    On Error GoTo ErrorHandler
+
+    Dim tokens() As String
+    Dim token As Variant
+    Dim trimmedToken As String
+
+    trimmedToken = Trim$(TagValue)
+    If LenB(trimmedToken) = 0 Then
+        Exit Function
+    End If
+
+    tokens = Split(trimmedToken, ";")
+    For Each token In tokens
+        trimmedToken = Trim$(CStr(token))
+        If LenB(trimmedToken) >= Len(TAG_PREFIX_MODULE) Then
+            If UCase$(Left$(trimmedToken, Len(TAG_PREFIX_MODULE))) = TAG_PREFIX_MODULE Then
+                ExtractRequiredModuleFromTag = UCase$(Trim$(Mid$(trimmedToken, Len(TAG_PREFIX_MODULE) + 1)))
+                Exit Function
+            End If
+        End If
+    Next token
+    Exit Function
+
+ErrorHandler:
+    ExtractRequiredModuleFromTag = vbNullString
+    modErrorHandler.HandleError MODULE_NAME, "ExtractRequiredModuleFromTag", Err
 End Function
