@@ -18,13 +18,13 @@ Intended for property management scenarios such as units, contracts, charges, an
 
 Intended for wine-related operations such as inventory, classification, movements, and domain-specific reporting.
 
-## Module Rules
+## Rules
 
 - modules should be independently licensable
 - modules may add forms, reports, queries, classes, and VBA modules
 - modules should integrate through framework services rather than direct hard coupling
 - multilingual labels and messages should be provided consistently per module
 
-## Future Additions
+## Extension Direction
 
 Additional modules can be added to the catalog once their business boundaries, licensing needs, and backend model extensions are defined.
