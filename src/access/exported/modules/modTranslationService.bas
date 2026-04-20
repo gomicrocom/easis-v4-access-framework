@@ -10,6 +10,11 @@ Option Explicit
 
 Private Const MODULE_NAME As String = "modTranslationService"
 Private Const FALLBACK_LANGUAGE As String = "EN"
+Private Const TABLE_FW_TRANSLATIONS As String = "tblFwTranslations"
+Private Const FIELD_TRANSLATION_KEY As String = "TranslationKey"
+Private Const FIELD_LANGUAGE_CODE As String = "LanguageCode"
+Private Const FIELD_TRANSLATION_VALUE As String = "TranslationValue"
+Private Const FIELD_IS_ACTIVE As String = "IsActive"
 
 Private mTranslations As Object
 Private mCurrentLanguage As String
@@ -24,7 +29,7 @@ Public Sub InitializeTranslations()
     mDefaultLanguage = ResolveDefaultLanguage()
     mCurrentLanguage = mDefaultLanguage
 
-    LoadStubTranslations
+    LoadTranslations
 
     modLoggingHandler.LogInfo MODULE_NAME & ".InitializeTranslations", _
         "Translations initialized for language '" & mCurrentLanguage & "'."
@@ -94,7 +99,11 @@ Public Function T(ByVal TextKey As String, Optional ByVal Fallback As String = "
         Exit Function
     End If
 
-    defaultLanguageCode = ResolveDefaultLanguage()
+    If LenB(mDefaultLanguage) = 0 Then
+        mDefaultLanguage = ResolveDefaultLanguage()
+    End If
+
+    defaultLanguageCode = mDefaultLanguage
     If StrComp(currentLanguageCode, defaultLanguageCode, vbTextCompare) <> 0 Then
         translatedValue = LookupTranslation(defaultLanguageCode, normalizedKey)
         If LenB(translatedValue) > 0 Then
@@ -132,6 +141,26 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "EnsureTranslationStore", Err
 End Sub
 
+Private Sub LoadTranslations()
+    On Error GoTo ErrorHandler
+
+    Dim loadedCount As Long
+
+    loadedCount = LoadTranslationsFromTable()
+    If loadedCount > 0 Then
+        modLoggingHandler.LogInfo MODULE_NAME & ".LoadTranslations", _
+            CStr(loadedCount) & " translation(s) loaded from table '" & TABLE_FW_TRANSLATIONS & "'."
+        Exit Sub
+    End If
+
+    LoadFallbackTranslations
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "LoadTranslations", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
+
 Private Function ResolveDefaultLanguage() As String
     On Error GoTo ErrorHandler
 
@@ -156,7 +185,84 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ResolveDefaultLanguage", Err
 End Function
 
-Private Sub LoadStubTranslations()
+Private Function LoadTranslationsFromTable() As Long
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim sqlText As String
+    Dim hasIsActiveField As Boolean
+
+    If Not TranslationTableExists(TABLE_FW_TRANSLATIONS) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".LoadTranslationsFromTable", _
+            "Translation table '" & TABLE_FW_TRANSLATIONS & "' not found. Falling back to minimal internal translations."
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    If db Is Nothing Then
+        Err.Raise vbObjectError + 2800, MODULE_NAME & ".LoadTranslationsFromTable", _
+            "Current database could not be resolved."
+    End If
+
+    sqlText = "SELECT * FROM [" & TABLE_FW_TRANSLATIONS & "];"
+    Set rs = db.OpenRecordset(sqlText, dbOpenSnapshot)
+
+    If rs.EOF Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".LoadTranslationsFromTable", _
+            "Translation table '" & TABLE_FW_TRANSLATIONS & "' contains no rows. Falling back to minimal internal translations."
+        GoTo CleanExit
+    End If
+
+    If Not modDaoHelper.RecordsetHasField(rs, FIELD_TRANSLATION_KEY) _
+        Or Not modDaoHelper.RecordsetHasField(rs, FIELD_LANGUAGE_CODE) _
+        Or Not modDaoHelper.RecordsetHasField(rs, FIELD_TRANSLATION_VALUE) Then
+        Err.Raise vbObjectError + 2801, MODULE_NAME & ".LoadTranslationsFromTable", _
+            "Translation table '" & TABLE_FW_TRANSLATIONS & "' is missing one or more required fields."
+    End If
+
+    hasIsActiveField = modDaoHelper.RecordsetHasField(rs, FIELD_IS_ACTIVE)
+
+    Do While Not rs.EOF
+        If Not hasIsActiveField Or modDaoHelper.NzBoolean(rs.Fields(FIELD_IS_ACTIVE).Value, True) Then
+            AddTranslation modDaoHelper.NzString(rs.Fields(FIELD_LANGUAGE_CODE).Value), _
+                           modDaoHelper.NzString(rs.Fields(FIELD_TRANSLATION_KEY).Value), _
+                           modDaoHelper.NzString(rs.Fields(FIELD_TRANSLATION_VALUE).Value)
+
+            If LenB(NormalizeLanguageCode(modDaoHelper.NzString(rs.Fields(FIELD_LANGUAGE_CODE).Value))) > 0 _
+                And LenB(NormalizeTextKey(modDaoHelper.NzString(rs.Fields(FIELD_TRANSLATION_KEY).Value))) > 0 Then
+                LoadTranslationsFromTable = LoadTranslationsFromTable + 1
+            End If
+        End If
+        rs.MoveNext
+    Loop
+
+    If LoadTranslationsFromTable = 0 Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".LoadTranslationsFromTable", _
+            "Translation table '" & TABLE_FW_TRANSLATIONS & "' contains no active translation rows. Falling back to minimal internal translations."
+    End If
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then
+        rs.Close
+    End If
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    On Error Resume Next
+    If Not rs Is Nothing Then
+        rs.Close
+    End If
+    Set rs = Nothing
+    Set db = Nothing
+    modErrorHandler.HandleError MODULE_NAME, "LoadTranslationsFromTable", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
+End Function
+
+Private Sub LoadFallbackTranslations()
     On Error GoTo ErrorHandler
 
     AddTranslation "EN", "APP_TITLE", "Easis Version 4"
@@ -168,11 +274,11 @@ Private Sub LoadStubTranslations()
     AddTranslation "DE", "DOCUMENT", "Beleg"
     AddTranslation "DE", "CUSTOMER", "Kunde"
     AddTranslation "DE", "TOTAL", "Total"
-
     Exit Sub
 
 ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "LoadStubTranslations", Err
+    modErrorHandler.HandleError MODULE_NAME, "LoadFallbackTranslations", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
 
 Private Sub AddTranslation(ByVal LanguageCode As String, ByVal TextKey As String, ByVal TextValue As String)
@@ -232,4 +338,39 @@ End Function
 
 Private Function NormalizeTextKey(ByVal TextKey As String) As String
     NormalizeTextKey = UCase$(Trim$(TextKey))
+End Function
+
+Private Function TranslationTableExists(ByVal TableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim tableDef As DAO.TableDef
+    Dim normalizedTableName As String
+
+    normalizedTableName = UCase$(Trim$(TableName))
+    If LenB(normalizedTableName) = 0 Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    If db Is Nothing Then
+        Err.Raise vbObjectError + 2802, MODULE_NAME & ".TranslationTableExists", _
+            "Current database could not be resolved."
+    End If
+
+    For Each tableDef In db.TableDefs
+        If UCase$(tableDef.Name) = normalizedTableName Then
+            TranslationTableExists = True
+            Exit For
+        End If
+    Next tableDef
+
+    Set tableDef = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    TranslationTableExists = False
+    modErrorHandler.HandleError MODULE_NAME, "TranslationTableExists", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Function
