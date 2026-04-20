@@ -28,7 +28,12 @@ Public Sub InitializeForm(ByVal FormInstance As Access.Form)
 
     requiredModule = ExtractRequiredModuleFromTag(FormInstance.Tag)
     If LenB(requiredModule) > 0 Then
-        modModuleManager.RequireModule requiredModule, True
+        If Not modModuleManager.IsModuleActive(requiredModule) Then
+            TryShowMissingModuleMessage requiredModule, formName
+            modLoggingHandler.LogWarning MODULE_NAME & ".InitializeForm", _
+                "Form '" & formName & "' requires inactive module '" & requiredModule & "'."
+            Exit Sub
+        End If
     End If
 
     modFormLocalization.LocalizeForm FormInstance
@@ -85,3 +90,24 @@ ErrorHandler:
     ExtractRequiredModuleFromTag = vbNullString
     modErrorHandler.HandleError MODULE_NAME, "ExtractRequiredModuleFromTag", Err
 End Function
+
+Private Sub TryShowMissingModuleMessage(ByVal RequiredModule As String, ByVal FormName As String)
+    On Error Resume Next
+
+    Dim messageText As String
+    Dim baseMessage As String
+
+    baseMessage = "The required module is not active"
+    messageText = modTranslationService.T("MSG_MODULE_NOT_ACTIVE", baseMessage)
+    If LenB(Trim$(messageText)) = 0 Then
+        messageText = baseMessage
+    End If
+
+    messageText = messageText & ": " & Trim$(RequiredModule)
+
+    If LenB(Trim$(FormName)) > 0 And FormName <> "<unknown>" Then
+        messageText = messageText & vbCrLf & "(" & FormName & ")"
+    End If
+
+    MsgBox messageText, vbExclamation, APP_NAME
+End Sub
