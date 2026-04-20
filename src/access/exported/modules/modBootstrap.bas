@@ -24,9 +24,7 @@ Public Function BootstrapApplication(Optional ByVal IniPath As String = vbNullSt
     End If
     modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Configuration initialized."
 
-    If Not modLicenseHandler.InitializeLicensing(ConfigFilePath) Then
-        Err.Raise vbObjectError + 2201, MODULE_NAME & ".BootstrapApplication", "Licensing initialization failed."
-    End If
+    modLicenseHandler.InitializeLicenses
     modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Licensing initialized."
 
     modTenantContext.InitializeTenantContext ConfigFilePath
@@ -34,6 +32,9 @@ Public Function BootstrapApplication(Optional ByVal IniPath As String = vbNullSt
 
     modSessionContext.InitializeSessionContext ConfigFilePath
     modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Session context initialized."
+
+    modTranslationService.InitializeTranslations
+    modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Translations initialized."
 
     IsBootstrapped = True
     BootstrapApplication = True

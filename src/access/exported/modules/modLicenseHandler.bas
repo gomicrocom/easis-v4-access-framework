@@ -3,48 +3,114 @@ Option Explicit
 
 '===============================================================================
 ' Module    : modLicenseHandler
-' Purpose   : Feature-based licensing helpers with placeholder logic.
+' Purpose   : Runtime feature licensing service for framework modules.
 ' Author    : Codex
-' Version   : 0.1.0
+' Version   : 0.2.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modLicenseHandler"
+Private Const ERR_FEATURE_REQUIRED As Long = vbObjectError + 2600
 
 Public Const FEATURE_CORE As String = "CORE"
 Public Const FEATURE_CAMT054 As String = "CAMT054"
 Public Const FEATURE_PROPERTY_MGMT As String = "PROPERTY_MGMT"
 Public Const FEATURE_WINE_MGMT As String = "WINE_MGMT"
-Public FeatureLicenses As Object
 
+Public Sub InitializeLicenses()
+    On Error GoTo ErrorHandler
+
+    LoadRuntimeLicenses ConfigFilePath
+    modLoggingHandler.LogInfo MODULE_NAME & ".InitializeLicenses", _
+                              "Licensing initialized with " & CStr(GetLicenseStore().Count) & " active feature(s)."
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "InitializeLicenses", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
+
+Public Function IsFeatureLicensed(ByVal FeatureName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim normalizedFeature As String
+
+    normalizedFeature = NormalizeFeatureCode(FeatureName)
+    If LenB(normalizedFeature) = 0 Then
+        IsFeatureLicensed = False
+        Exit Function
+    End If
+
+    IsFeatureLicensed = GetLicenseStore().Exists(normalizedFeature)
+    Exit Function
+
+ErrorHandler:
+    IsFeatureLicensed = False
+    modErrorHandler.HandleError MODULE_NAME, "IsFeatureLicensed", Err
+End Function
+
+Public Function GetLicensedFeatures() As Collection
+    On Error GoTo ErrorHandler
+
+    Dim licensedFeatures As Collection
+    Dim featureKey As Variant
+
+    Set licensedFeatures = New Collection
+
+    For Each featureKey In GetLicenseStore().Keys
+        licensedFeatures.Add CStr(featureKey)
+    Next featureKey
+
+    Set GetLicensedFeatures = licensedFeatures
+    Exit Function
+
+ErrorHandler:
+    Set GetLicensedFeatures = New Collection
+    modErrorHandler.HandleError MODULE_NAME, "GetLicensedFeatures", Err
+End Function
+
+Public Sub RequireFeature(ByVal FeatureName As String, Optional ByVal RaiseError As Boolean = True)
+    On Error GoTo ErrorHandler
+
+    Dim normalizedFeature As String
+    Dim messageText As String
+
+    normalizedFeature = NormalizeFeatureCode(FeatureName)
+    If LenB(normalizedFeature) = 0 Then
+        messageText = "Feature name is required."
+        modLoggingHandler.LogWarning MODULE_NAME & ".RequireFeature", messageText
+
+        If RaiseError Then
+            Err.Raise ERR_FEATURE_REQUIRED, MODULE_NAME & ".RequireFeature", messageText
+        End If
+        Exit Sub
+    End If
+
+    If IsFeatureLicensed(normalizedFeature) Then
+        Exit Sub
+    End If
+
+    messageText = "Feature is not licensed: " & normalizedFeature
+    modLoggingHandler.LogWarning MODULE_NAME & ".RequireFeature", messageText
+
+    If RaiseError Then
+        Err.Raise ERR_FEATURE_REQUIRED, MODULE_NAME & ".RequireFeature", messageText
+    End If
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "RequireFeature", Err
+
+    If RaiseError Then
+        Err.Raise Err.Number, Err.Source, Err.Description
+    End If
+End Sub
 
 Public Function InitializeLicensing(Optional ByVal IniPath As String = vbNullString) As Boolean
     On Error GoTo ErrorHandler
 
-    Dim FeatureList As String
-
-    EnsureLicenseStore
-
-    FeatureLicenses.RemoveAll
-
-    ' Core standardmäßig aktivieren
-    GrantFeature FEATURE_CORE
-
-    FeatureList = modConfigIni.GetIniString(CONFIG_SECTION_LICENSE, "EnabledFeatures", vbNullString, IniPath)
-    LoadFeatureList FeatureList
-
-    If modConfigIni.GetIniBoolean(CONFIG_SECTION_LICENSE, FEATURE_CAMT054, False, IniPath) Then
-        GrantFeature FEATURE_CAMT054
-    End If
-
-    If modConfigIni.GetIniBoolean(CONFIG_SECTION_LICENSE, FEATURE_PROPERTY_MGMT, False, IniPath) Then
-        GrantFeature FEATURE_PROPERTY_MGMT
-    End If
-
-    If modConfigIni.GetIniBoolean(CONFIG_SECTION_LICENSE, FEATURE_WINE_MGMT, False, IniPath) Then
-        GrantFeature FEATURE_WINE_MGMT
-    End If
-
-    modLoggingHandler.LogInfo MODULE_NAME & ".InitializeLicensing", "Licensing initialized."
+    LoadRuntimeLicenses IniPath
+    modLoggingHandler.LogInfo MODULE_NAME & ".InitializeLicensing", _
+                              "Licensing initialized with " & CStr(GetLicenseStore().Count) & " active feature(s)."
     InitializeLicensing = True
     Exit Function
 
@@ -54,57 +120,38 @@ ErrorHandler:
 End Function
 
 Public Function IsFeatureEnabled(ByVal FeatureName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim normalizedFeature As String
-
-    EnsureLicenseStore
-
-    normalizedFeature = NormalizeFeatureCode(FeatureName)
-    If LenB(normalizedFeature) = 0 Then
-        IsFeatureEnabled = False
-        Exit Function
-    End If
-
-    If Not IsKnownFeature(normalizedFeature) Then
-        modLoggingHandler.LogWarning MODULE_NAME & ".IsFeatureEnabled", "Unknown feature requested: " & normalizedFeature
-        IsFeatureEnabled = False
-        Exit Function
-    End If
-
-    IsFeatureEnabled = FeatureLicenses.Exists(normalizedFeature)
-    Exit Function
-
-ErrorHandler:
-    IsFeatureEnabled = False
-    modErrorHandler.HandleError MODULE_NAME, "IsFeatureEnabled", Err
+    IsFeatureEnabled = IsFeatureLicensed(FeatureName)
 End Function
 
-Public Sub GrantFeature(ByVal FeatureCode As String)
+Private Sub LoadRuntimeLicenses(Optional ByVal IniPath As String = vbNullString)
     On Error GoTo ErrorHandler
 
-    Dim normalizedCode As String
+    Dim featureList As String
 
-    EnsureLicenseStore
+    ClearLicenseStore
 
-    normalizedCode = NormalizeFeatureCode(FeatureCode)
-    If LenB(normalizedCode) = 0 Then
-        Exit Sub
+    AddLicensedFeature FEATURE_CORE
+
+    featureList = modConfigIni.GetIniString(CONFIG_SECTION_LICENSE, "EnabledFeatures", vbNullString, IniPath)
+    LoadFeatureList featureList
+
+    If modConfigIni.GetIniBoolean(CONFIG_SECTION_LICENSE, FEATURE_CAMT054, False, IniPath) Then
+        AddLicensedFeature FEATURE_CAMT054
     End If
 
-    If Not IsKnownFeature(normalizedCode) Then
-        modLoggingHandler.LogWarning MODULE_NAME & ".GrantFeature", "Unknown feature ignored: " & normalizedCode
-        Exit Sub
+    If modConfigIni.GetIniBoolean(CONFIG_SECTION_LICENSE, FEATURE_PROPERTY_MGMT, False, IniPath) Then
+        AddLicensedFeature FEATURE_PROPERTY_MGMT
     End If
 
-    If Not FeatureLicenses.Exists(normalizedCode) Then
-        FeatureLicenses.Add normalizedCode, True
+    If modConfigIni.GetIniBoolean(CONFIG_SECTION_LICENSE, FEATURE_WINE_MGMT, False, IniPath) Then
+        AddLicensedFeature FEATURE_WINE_MGMT
     End If
 
     Exit Sub
 
 ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "GrantFeature", Err
+    modErrorHandler.HandleError MODULE_NAME, "LoadRuntimeLicenses", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
 
 Private Sub LoadFeatureList(ByVal FeatureList As String)
@@ -120,9 +167,9 @@ Private Sub LoadFeatureList(ByVal FeatureList As String)
 
     tokens = Split(Replace(FeatureList, ";", ","), ",")
     For index = LBound(tokens) To UBound(tokens)
-        token = Trim$(tokens(index))
+        token = NormalizeFeatureCode(tokens(index))
         If LenB(token) > 0 Then
-            GrantFeature token
+            AddLicensedFeature token
         End If
     Next index
 
@@ -130,22 +177,41 @@ Private Sub LoadFeatureList(ByVal FeatureList As String)
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "LoadFeatureList", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
 
-Private Function IsKnownFeature(ByVal FeatureCode As String) As Boolean
-    Select Case FeatureCode
-        Case FEATURE_CORE, FEATURE_CAMT054, FEATURE_PROPERTY_MGMT, FEATURE_WINE_MGMT
-            IsKnownFeature = True
-        Case Else
-            IsKnownFeature = False
-    End Select
-End Function
+Private Sub AddLicensedFeature(ByVal FeatureName As String)
+    On Error GoTo ErrorHandler
 
-Private Sub EnsureLicenseStore()
-    If FeatureLicenses Is Nothing Then
-        Set FeatureLicenses = CreateObject("Scripting.Dictionary")
+    Dim normalizedFeature As String
+
+    normalizedFeature = NormalizeFeatureCode(FeatureName)
+    If LenB(normalizedFeature) = 0 Then
+        Exit Sub
     End If
+
+    If Not GetLicenseStore().Exists(normalizedFeature) Then
+        GetLicenseStore().Add normalizedFeature, True
+    End If
+
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "AddLicensedFeature", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
-Private Function NormalizeFeatureCode(ByVal FeatureCode As String) As String
-    NormalizeFeatureCode = UCase$(Trim$(FeatureCode))
+
+Private Sub ClearLicenseStore()
+    On Error GoTo ErrorHandler
+
+    GetLicenseStore().RemoveAll
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ClearLicenseStore", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
+
+Private Function GetLicenseStore() As Object
+    Set GetLicenseStore = modGlobals.FeatureLicenses
 End Function
