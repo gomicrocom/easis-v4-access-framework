@@ -1,3 +1,4 @@
+Attribute VB_Name = "modFormRuntime"
 Option Compare Database
 Option Explicit
 
@@ -10,41 +11,58 @@ Option Explicit
 
 Private Const MODULE_NAME As String = "modFormRuntime"
 Private Const TAG_PREFIX_MODULE As String = "MOD:"
+Private Const TAG_TOKEN_READONLY As String = "READONLY"
 
 Public Sub InitializeForm(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
 
-    Dim formName As String
-    Dim requiredModule As String
+    Dim FormName As String
+    Dim RequiredModule As String
 
     If FormInstance Is Nothing Then
         Exit Sub
     End If
 
-    formName = GetFormName(FormInstance)
+    FormName = GetFormName(FormInstance)
 
     modLoggingHandler.LogInfo MODULE_NAME & ".InitializeForm", _
-        "Initializing form '" & formName & "'."
+        "Initializing form '" & FormName & "'."
 
-    requiredModule = ExtractRequiredModuleFromTag(FormInstance.Tag)
-    If LenB(requiredModule) > 0 Then
-        If Not modModuleManager.IsModuleActive(requiredModule) Then
-            TryShowMissingModuleMessage requiredModule, formName
+    RequiredModule = ExtractRequiredModuleFromTag(FormInstance.Tag)
+    If LenB(RequiredModule) > 0 Then
+        If Not modModuleManager.IsModuleActive(RequiredModule) Then
+            TryShowMissingModuleMessage RequiredModule, FormName
             modLoggingHandler.LogWarning MODULE_NAME & ".InitializeForm", _
-                "Form '" & formName & "' requires inactive module '" & requiredModule & "'."
+                "Form '" & FormName & "' requires inactive module '" & RequiredModule & "'."
             Exit Sub
         End If
     End If
 
     modFormLocalization.LocalizeForm FormInstance
 
+    If HasReadOnlyTag(FormInstance.Tag) Then
+        ApplyReadOnlyPolicy FormInstance
+        modLoggingHandler.LogInfo MODULE_NAME & ".InitializeForm", _
+            "Read-only policy applied to form '" & FormName & "'."
+    End If
+
     modLoggingHandler.LogInfo MODULE_NAME & ".InitializeForm", _
-        "Form '" & formName & "' initialized successfully."
+        "Form '" & FormName & "' initialized successfully."
     Exit Sub
 
 ErrorHandler:
+    Dim savedErrNumber As Long
+    Dim savedErrSource As String
+    Dim savedErrDescription As String
+
+    savedErrNumber = Err.Number
+    savedErrSource = Err.Source
+    savedErrDescription = Err.Description
+
     modErrorHandler.HandleError MODULE_NAME, "InitializeForm", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+
+    On Error GoTo 0
+    Err.Raise savedErrNumber, savedErrSource, savedErrDescription
 End Sub
 
 Private Function GetFormName(ByVal FormInstance As Access.Form) As String
@@ -90,6 +108,50 @@ ErrorHandler:
     ExtractRequiredModuleFromTag = vbNullString
     modErrorHandler.HandleError MODULE_NAME, "ExtractRequiredModuleFromTag", Err
 End Function
+
+Private Function HasReadOnlyTag(ByVal TagValue As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tokens() As String
+    Dim token As Variant
+    Dim trimmedToken As String
+
+    trimmedToken = Trim$(TagValue)
+    If LenB(trimmedToken) = 0 Then
+        Exit Function
+    End If
+
+    tokens = Split(trimmedToken, ";")
+    For Each token In tokens
+        trimmedToken = UCase$(Trim$(CStr(token)))
+        If trimmedToken = TAG_TOKEN_READONLY Then
+            HasReadOnlyTag = True
+            Exit Function
+        End If
+    Next token
+    Exit Function
+
+ErrorHandler:
+    HasReadOnlyTag = False
+    modErrorHandler.HandleError MODULE_NAME, "HasReadOnlyTag", Err
+End Function
+
+Private Sub ApplyReadOnlyPolicy(ByVal FormInstance As Access.Form)
+    On Error GoTo ErrorHandler
+
+    If FormInstance Is Nothing Then
+        Exit Sub
+    End If
+
+    FormInstance.AllowEdits = False
+    FormInstance.AllowAdditions = False
+    FormInstance.AllowDeletions = False
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ApplyReadOnlyPolicy", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
 
 Private Sub TryShowMissingModuleMessage(ByVal RequiredModule As String, ByVal FormName As String)
     On Error Resume Next
