@@ -10,13 +10,13 @@ Option Explicit
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFormRuntime"
-Private Const TAG_PREFIX_MODULE As String = "MOD:"
 Private Const TAG_TOKEN_READONLY As String = "READONLY"
 Private Const TAG_TOKEN_LOCKED As String = "LOCKED"
 Private Const TAG_TOKEN_DISABLED As String = "DISABLED"
 Private Const TAG_TOKEN_ROLE As String = "ROLE"
 Private Const TAG_TOKEN_HIDDEN As String = "HIDDEN"
 Private Const TAG_TOKEN_SETFOCUS As String = "SETFOCUS"
+Private Const TAG_TOKEN_REQUIRED As String = "REQUIRED"
 
 Public Sub InitializeForm(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
@@ -211,6 +211,7 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
     Dim disabledCount As Long
     Dim roleHiddenCount As Long
     Dim hiddenCount As Long
+    Dim requiredCount As Long
 
     If FormInstance Is Nothing Then
         Exit Sub
@@ -244,13 +245,20 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
                 hiddenCount = hiddenCount + 1
             End If
         End If
+
+        If controlTokens.Exists(TAG_TOKEN_REQUIRED) Then
+            If TryApplyRequiredPolicy(FormInstance, ctl) Then
+                requiredCount = requiredCount + 1
+            End If
+        End If
     Next ctl
 
-    If lockedCount > 0 Or disabledCount > 0 Or roleHiddenCount > 0 Or hiddenCount > 0 Then
+    If lockedCount > 0 Or disabledCount > 0 Or roleHiddenCount > 0 Or hiddenCount > 0 Or requiredCount > 0 Then
         modLoggingHandler.LogInfo MODULE_NAME & ".ApplyControlPolicies", _
             "Control policies applied on form '" & GetFormName(FormInstance) & "': " & _
             "LOCKED=" & CStr(lockedCount) & ", DISABLED=" & CStr(disabledCount) & _
-            ", ROLE_HIDDEN=" & CStr(roleHiddenCount) & ", HIDDEN=" & CStr(hiddenCount) & "."
+            ", ROLE_HIDDEN=" & CStr(roleHiddenCount) & ", HIDDEN=" & CStr(hiddenCount) & _
+            ", REQUIRED=" & CStr(requiredCount) & "."
     End If
     Exit Sub
 
@@ -384,6 +392,56 @@ Private Function TryApplyHiddenPolicy(ByVal ControlInstance As Control) As Boole
 SafeExit:
 End Function
 
+Private Function TryApplyRequiredPolicy(ByVal FormInstance As Access.Form, ByVal ControlInstance As Control) As Boolean
+    On Error GoTo SafeExit
+
+    Dim associatedLabel As Control
+    Dim labelCaption As String
+
+    If FormInstance Is Nothing Then
+        Exit Function
+    End If
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    Set associatedLabel = GetAssociatedLabel(FormInstance, ControlInstance)
+    If associatedLabel Is Nothing Then
+        Exit Function
+    End If
+
+    labelCaption = CStr(associatedLabel.Caption)
+    If Right$(Trim$(labelCaption), 1) = "*" Then
+        Exit Function
+    End If
+
+    associatedLabel.Caption = RTrim$(labelCaption) & " *"
+    TryApplyRequiredPolicy = True
+
+SafeExit:
+End Function
+
+Private Function GetAssociatedLabel(ByVal FormInstance As Access.Form, ByVal ControlInstance As Control) As Control
+    On Error GoTo SafeExit
+
+    Dim ctl As Control
+
+    If FormInstance Is Nothing Then Exit Function
+    If ControlInstance Is Nothing Then Exit Function
+
+    For Each ctl In FormInstance.Controls
+        If ctl.ControlType = acLabel Then
+            If StrComp(ctl.ControlName, ControlInstance.Name, vbTextCompare) = 0 Then
+                Set GetAssociatedLabel = ctl
+                Exit Function
+            End If
+        End If
+    Next ctl
+
+SafeExit:
+    Set GetAssociatedLabel = Nothing
+End Function
 Private Function GetControlName(ByVal ControlInstance As Control) As String
     On Error GoTo SafeExit
 
