@@ -192,17 +192,17 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
 
     Dim ctl As Control
     Dim controlTokens As Object
+    Dim currentUserRoles As Collection
     Dim lockedCount As Long
     Dim disabledCount As Long
     Dim roleHiddenCount As Long
     Dim hiddenCount As Long
-    Dim CurrentRole As String
 
     If FormInstance Is Nothing Then
         Exit Sub
     End If
 
-    CurrentRole = UCase$(Trim$(modSessionContext.CurrentRoleCode))
+    Set currentUserRoles = modSessionContext.GetCurrentUserRoles()
 
     For Each ctl In FormInstance.Controls
         Set controlTokens = ParseTagTokens(ctl.Tag)
@@ -220,7 +220,7 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
         End If
 
         If controlTokens.Exists(TAG_TOKEN_ROLE) Then
-            If TryApplyRolePolicy(ctl, controlTokens, CurrentRole) Then
+            If TryApplyRolePolicy(ctl, controlTokens, currentUserRoles) Then
                 roleHiddenCount = roleHiddenCount + 1
             End If
         End If
@@ -281,7 +281,7 @@ Private Function TryApplyDisabledPolicy(ByVal ControlInstance As Control) As Boo
 SafeExit:
 End Function
 
-Private Function TryApplyRolePolicy(ByVal ControlInstance As Control, ByVal controlTokens As Object, ByVal CurrentRole As String) As Boolean
+Private Function TryApplyRolePolicy(ByVal ControlInstance As Control, ByVal controlTokens As Object, ByVal CurrentUserRoles As Collection) As Boolean
     On Error GoTo SafeExit
 
     Dim AllowedRoles As String
@@ -299,7 +299,7 @@ Private Function TryApplyRolePolicy(ByVal ControlInstance As Control, ByVal cont
     End If
 
     AllowedRoles = CStr(controlTokens(TAG_TOKEN_ROLE))
-    If IsRoleAllowed(AllowedRoles, CurrentRole) Then
+    If IsRoleAllowed(AllowedRoles, CurrentUserRoles) Then
         Exit Function
     End If
 
@@ -309,16 +309,15 @@ Private Function TryApplyRolePolicy(ByVal ControlInstance As Control, ByVal cont
 SafeExit:
 End Function
 
-Private Function IsRoleAllowed(ByVal AllowedRoles As String, ByVal CurrentRole As String) As Boolean
+Private Function IsRoleAllowed(ByVal AllowedRoles As String, ByVal CurrentUserRoles As Collection) As Boolean
     On Error GoTo ErrorHandler
 
     Dim roleParts() As String
     Dim roleItem As Variant
-    Dim normalizedCurrentRole As String
     Dim normalizedAllowedRole As String
+    Dim currentRole As Variant
 
-    normalizedCurrentRole = UCase$(Trim$(CurrentRole))
-    If LenB(normalizedCurrentRole) = 0 Then
+    If CurrentUserRoles Is Nothing Then
         Exit Function
     End If
 
@@ -326,10 +325,12 @@ Private Function IsRoleAllowed(ByVal AllowedRoles As String, ByVal CurrentRole A
     For Each roleItem In roleParts
         normalizedAllowedRole = UCase$(Trim$(CStr(roleItem)))
         If LenB(normalizedAllowedRole) > 0 Then
-            If normalizedAllowedRole = normalizedCurrentRole Then
-                IsRoleAllowed = True
-                Exit Function
-            End If
+            For Each currentRole In CurrentUserRoles
+                If normalizedAllowedRole = UCase$(Trim$(CStr(currentRole))) Then
+                    IsRoleAllowed = True
+                    Exit Function
+                End If
+            Next currentRole
         End If
     Next roleItem
     Exit Function
