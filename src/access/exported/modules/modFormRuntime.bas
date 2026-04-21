@@ -10,7 +10,6 @@ Option Explicit
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFormRuntime"
-Private Const TAG_PREFIX_MODULE As String = "MOD:"
 Private Const TAG_TOKEN_READONLY As String = "READONLY"
 Private Const TAG_TOKEN_LOCKED As String = "LOCKED"
 Private Const TAG_TOKEN_DISABLED As String = "DISABLED"
@@ -23,7 +22,9 @@ Public Sub InitializeForm(ByVal FormInstance As Access.Form)
 
     Dim FormName As String
     Dim RequiredModule As String
+    Dim AllowedRoles As String
     Dim formTokens As Object
+    Dim CurrentUserRoles As Collection
 
     If FormInstance Is Nothing Then
         Exit Sub
@@ -31,6 +32,7 @@ Public Sub InitializeForm(ByVal FormInstance As Access.Form)
 
     FormName = GetFormName(FormInstance)
     Set formTokens = ParseTagTokens(FormInstance.Tag)
+    Set CurrentUserRoles = modSessionContext.GetCurrentUserRoles()
 
     modLoggingHandler.LogInfo MODULE_NAME & ".InitializeForm", _
         "Initializing form '" & FormName & "'."
@@ -44,6 +46,17 @@ Public Sub InitializeForm(ByVal FormInstance As Access.Form)
             TryShowMissingModuleMessage RequiredModule, FormName
             modLoggingHandler.LogWarning MODULE_NAME & ".InitializeForm", _
                 "Form '" & FormName & "' requires inactive module '" & RequiredModule & "'."
+            Exit Sub
+        End If
+    End If
+
+    If formTokens.Exists(TAG_TOKEN_ROLE) Then
+        AllowedRoles = CStr(formTokens(TAG_TOKEN_ROLE))
+        If Not IsRoleAllowed(AllowedRoles, CurrentUserRoles) Then
+            TryShowRoleDeniedMessage FormName
+            modLoggingHandler.LogWarning MODULE_NAME & ".InitializeForm", _
+                "Form '" & FormName & "' denied by ROLE policy '" & AllowedRoles & "'."
+            DoCmd.Close acForm, FormName, acSaveNo
             Exit Sub
         End If
     End If
@@ -192,7 +205,7 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
 
     Dim ctl As Control
     Dim controlTokens As Object
-    Dim currentUserRoles As Collection
+    Dim CurrentUserRoles As Collection
     Dim lockedCount As Long
     Dim disabledCount As Long
     Dim roleHiddenCount As Long
@@ -202,7 +215,7 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
         Exit Sub
     End If
 
-    Set currentUserRoles = modSessionContext.GetCurrentUserRoles()
+    Set CurrentUserRoles = modSessionContext.GetCurrentUserRoles()
 
     For Each ctl In FormInstance.Controls
         Set controlTokens = ParseTagTokens(ctl.Tag)
@@ -220,7 +233,7 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
         End If
 
         If controlTokens.Exists(TAG_TOKEN_ROLE) Then
-            If TryApplyRolePolicy(ctl, controlTokens, currentUserRoles) Then
+            If TryApplyRolePolicy(ctl, controlTokens, CurrentUserRoles) Then
                 roleHiddenCount = roleHiddenCount + 1
             End If
         End If
@@ -425,6 +438,25 @@ Private Sub TryShowMissingModuleMessage(ByVal RequiredModule As String, ByVal Fo
     End If
 
     messageText = messageText & ": " & Trim$(RequiredModule)
+
+    If LenB(Trim$(FormName)) > 0 And FormName <> "<unknown>" Then
+        messageText = messageText & vbCrLf & "(" & FormName & ")"
+    End If
+
+    MsgBox messageText, vbExclamation, APP_NAME
+End Sub
+
+Private Sub TryShowRoleDeniedMessage(ByVal FormName As String)
+    On Error Resume Next
+
+    Dim messageText As String
+    Dim baseMessage As String
+
+    baseMessage = "You are not authorized to open this form"
+    messageText = modTranslationService.T("MSG_ROLE_NOT_ALLOWED", baseMessage)
+    If LenB(Trim$(messageText)) = 0 Then
+        messageText = baseMessage
+    End If
 
     If LenB(Trim$(FormName)) > 0 And FormName <> "<unknown>" Then
         messageText = messageText & vbCrLf & "(" & FormName & ")"
