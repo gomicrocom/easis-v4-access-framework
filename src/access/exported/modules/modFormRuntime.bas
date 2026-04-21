@@ -17,6 +17,8 @@ Private Const TAG_TOKEN_ROLE As String = "ROLE"
 Private Const TAG_TOKEN_HIDDEN As String = "HIDDEN"
 Private Const TAG_TOKEN_SETFOCUS As String = "SETFOCUS"
 Private Const TAG_TOKEN_REQUIRED As String = "REQUIRED"
+Private Const TAG_TOKEN_NUMERIC As String = "NUMERIC"
+Private Const TAG_TOKEN_DATE As String = "DATE"
 
 Public Sub InitializeForm(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
@@ -151,6 +153,78 @@ ErrorHandler:
     Err.Raise savedErrNumber, savedErrSource, savedErrDescription
 End Function
 
+Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim ctl As Control
+    Dim controlTokens As Object
+    Dim missingRequiredControls As Collection
+    Dim missingRequiredFieldNames As Collection
+    Dim invalidFormatControls As Collection
+    Dim invalidFormatFieldNames As Collection
+    Dim firstInvalidControl As Control
+    Dim isValueMissing As Boolean
+
+    ValidateFormPolicies = True
+
+    If FormInstance Is Nothing Then
+        Exit Function
+    End If
+
+    Set missingRequiredControls = New Collection
+    Set missingRequiredFieldNames = New Collection
+    Set invalidFormatControls = New Collection
+    Set invalidFormatFieldNames = New Collection
+
+    For Each ctl In FormInstance.Controls
+        Set controlTokens = ParseTagTokens(ctl.Tag)
+
+        isValueMissing = IsControlValueMissing(ctl)
+
+        If IsControlRequired(controlTokens) And isValueMissing Then
+            missingRequiredControls.Add ctl
+            missingRequiredFieldNames.Add GetDisplayNameForRequiredControl(FormInstance, ctl)
+        ElseIf IsControlValueInvalidForPolicies(ctl, controlTokens) Then
+            invalidFormatControls.Add ctl
+            invalidFormatFieldNames.Add GetDisplayNameForRequiredControl(FormInstance, ctl)
+        End If
+    Next ctl
+
+    If missingRequiredControls.Count = 0 And invalidFormatControls.Count = 0 Then
+        Exit Function
+    End If
+
+    ValidateFormPolicies = False
+    TryShowValidationSummaryMessage missingRequiredFieldNames, invalidFormatFieldNames, GetFormName(FormInstance)
+
+    If missingRequiredControls.Count > 0 Then
+        Set firstInvalidControl = missingRequiredControls.Item(1)
+    Else
+        Set firstInvalidControl = invalidFormatControls.Item(1)
+    End If
+
+    Call TryFocusControl(firstInvalidControl)
+
+    modLoggingHandler.LogWarning MODULE_NAME & ".ValidateFormPolicies", _
+        "Form policy validation failed on form '" & GetFormName(FormInstance) & "' for " & _
+        CStr(missingRequiredControls.Count + invalidFormatControls.Count) & " control(s)."
+    Exit Function
+
+ErrorHandler:
+    Dim savedErrNumber As Long
+    Dim savedErrSource As String
+    Dim savedErrDescription As String
+
+    savedErrNumber = Err.Number
+    savedErrSource = Err.Source
+    savedErrDescription = Err.Description
+
+    modErrorHandler.HandleError MODULE_NAME, "ValidateFormPolicies", Err
+
+    On Error GoTo 0
+    Err.Raise savedErrNumber, savedErrSource, savedErrDescription
+End Function
+
 Private Function GetFormName(ByVal FormInstance As Access.Form) As String
     On Error GoTo ErrorHandler
 
@@ -273,6 +347,36 @@ Private Function IsControlRequired(ByVal controlTokens As Object) As Boolean
 ErrorHandler:
     IsControlRequired = False
     modErrorHandler.HandleError MODULE_NAME, "IsControlRequired", Err
+End Function
+
+Private Function IsControlNumericTag(ByVal controlTokens As Object) As Boolean
+    On Error GoTo ErrorHandler
+
+    If controlTokens Is Nothing Then
+        Exit Function
+    End If
+
+    IsControlNumericTag = controlTokens.Exists(TAG_TOKEN_NUMERIC)
+    Exit Function
+
+ErrorHandler:
+    IsControlNumericTag = False
+    modErrorHandler.HandleError MODULE_NAME, "IsControlNumericTag", Err
+End Function
+
+Private Function IsControlDateTag(ByVal controlTokens As Object) As Boolean
+    On Error GoTo ErrorHandler
+
+    If controlTokens Is Nothing Then
+        Exit Function
+    End If
+
+    IsControlDateTag = controlTokens.Exists(TAG_TOKEN_DATE)
+    Exit Function
+
+ErrorHandler:
+    IsControlDateTag = False
+    modErrorHandler.HandleError MODULE_NAME, "IsControlDateTag", Err
 End Function
 
 Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
@@ -519,6 +623,96 @@ Private Function IsControlValueMissing(ByVal ControlInstance As Control) As Bool
 SafeExit:
 End Function
 
+Private Function IsControlValueInvalidForPolicies(ByVal ControlInstance As Control, ByVal controlTokens As Object) As Boolean
+    On Error GoTo SafeExit
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    If controlTokens Is Nothing Then
+        Exit Function
+    End If
+
+    If IsControlRequired(controlTokens) Then
+        If IsControlValueMissing(ControlInstance) Then
+            IsControlValueInvalidForPolicies = True
+            Exit Function
+        End If
+    End If
+
+    If IsControlNumericTag(controlTokens) Then
+        If Not IsControlValueNumericValid(ControlInstance) Then
+            IsControlValueInvalidForPolicies = True
+            Exit Function
+        End If
+    End If
+
+    If IsControlDateTag(controlTokens) Then
+        If Not IsControlValueDateValid(ControlInstance) Then
+            IsControlValueInvalidForPolicies = True
+        End If
+    End If
+
+SafeExit:
+End Function
+
+Private Function IsControlValueNumericValid(ByVal ControlInstance As Control) As Boolean
+    On Error GoTo SafeExit
+
+    Dim controlValue As Variant
+
+    IsControlValueNumericValid = True
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    controlValue = ControlInstance.Value
+
+    If IsNull(controlValue) Or IsEmpty(controlValue) Then
+        Exit Function
+    End If
+
+    If VarType(controlValue) = vbString Then
+        If LenB(Trim$(CStr(controlValue))) = 0 Then
+            Exit Function
+        End If
+    End If
+
+    IsControlValueNumericValid = IsNumeric(controlValue)
+
+SafeExit:
+End Function
+
+Private Function IsControlValueDateValid(ByVal ControlInstance As Control) As Boolean
+    On Error GoTo SafeExit
+
+    Dim controlValue As Variant
+
+    IsControlValueDateValid = True
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    controlValue = ControlInstance.Value
+
+    If IsNull(controlValue) Or IsEmpty(controlValue) Then
+        Exit Function
+    End If
+
+    If VarType(controlValue) = vbString Then
+        If LenB(Trim$(CStr(controlValue))) = 0 Then
+            Exit Function
+        End If
+    End If
+
+    IsControlValueDateValid = IsDate(controlValue)
+
+SafeExit:
+End Function
+
 Private Function GetAssociatedLabel(ByVal FormInstance As Access.Form, ByVal ControlInstance As Control) As Control
     On Error GoTo SafeExit
 
@@ -735,5 +929,112 @@ Private Sub TryShowRequiredFieldsMessage(ByVal MissingFieldNames As Collection, 
 
     MsgBox messageText, vbExclamation, APP_NAME
 End Sub
+
+Private Sub TryShowInvalidFieldsMessage(ByVal InvalidFieldNames As Collection, ByVal FormName As String)
+    On Error Resume Next
+
+    Dim messageText As String
+    Dim baseMessage As String
+    Dim fieldName As Variant
+    Dim fieldList As String
+    Dim fieldCount As Long
+
+    baseMessage = "Please correct invalid field values."
+    messageText = modTranslationService.T("MSG_INVALID_FIELD_VALUES", baseMessage)
+    If LenB(Trim$(messageText)) = 0 Then
+        messageText = baseMessage
+    End If
+
+    If Not InvalidFieldNames Is Nothing Then
+        For Each fieldName In InvalidFieldNames
+            fieldCount = fieldCount + 1
+
+            If fieldCount > 5 Then
+                Exit For
+            End If
+
+            fieldList = fieldList & vbCrLf & "- " & CStr(fieldName)
+        Next fieldName
+    End If
+
+    If LenB(fieldList) > 0 Then
+        messageText = messageText & vbCrLf & fieldList
+    End If
+
+    If LenB(Trim$(FormName)) > 0 And FormName <> "<unknown>" Then
+        messageText = messageText & vbCrLf & "(" & FormName & ")"
+    End If
+
+    MsgBox messageText, vbExclamation, APP_NAME
+End Sub
+
+Private Sub TryShowValidationSummaryMessage(ByVal MissingFieldNames As Collection, ByVal InvalidFieldNames As Collection, ByVal FormName As String)
+    On Error Resume Next
+
+    Dim messageText As String
+    Dim requiredMessage As String
+    Dim invalidMessage As String
+    Dim requiredFieldList As String
+    Dim invalidFieldList As String
+
+    requiredMessage = modTranslationService.T("MSG_REQUIRED_FIELDS_MISSING", "Please fill in all required fields.")
+    If LenB(Trim$(requiredMessage)) = 0 Then
+        requiredMessage = "Please fill in all required fields."
+    End If
+
+    invalidMessage = modTranslationService.T("MSG_INVALID_FIELD_VALUES", "Please correct invalid field values.")
+    If LenB(Trim$(invalidMessage)) = 0 Then
+        invalidMessage = "Please correct invalid field values."
+    End If
+
+    requiredFieldList = BuildValidationFieldList(MissingFieldNames)
+    invalidFieldList = BuildValidationFieldList(InvalidFieldNames)
+
+    If LenB(requiredFieldList) > 0 Then
+        messageText = requiredMessage & vbCrLf & requiredFieldList
+    End If
+
+    If LenB(invalidFieldList) > 0 Then
+        If LenB(messageText) > 0 Then
+            messageText = messageText & vbCrLf & vbCrLf
+        End If
+        messageText = messageText & invalidMessage & vbCrLf & invalidFieldList
+    End If
+
+    If LenB(Trim$(FormName)) > 0 And FormName <> "<unknown>" Then
+        messageText = messageText & vbCrLf & vbCrLf & "(" & FormName & ")"
+    End If
+
+    If LenB(Trim$(messageText)) > 0 Then
+        MsgBox messageText, vbExclamation, APP_NAME
+    End If
+End Sub
+
+Private Function BuildValidationFieldList(ByVal FieldNames As Collection) As String
+    On Error GoTo SafeExit
+
+    Dim fieldName As Variant
+    Dim fieldCount As Long
+
+    If FieldNames Is Nothing Then
+        Exit Function
+    End If
+
+    For Each fieldName In FieldNames
+        fieldCount = fieldCount + 1
+
+        If fieldCount > 5 Then
+            Exit For
+        End If
+
+        BuildValidationFieldList = BuildValidationFieldList & "- " & CStr(fieldName) & vbCrLf
+    Next fieldName
+
+    If LenB(BuildValidationFieldList) > 0 Then
+        BuildValidationFieldList = Left$(BuildValidationFieldList, Len(BuildValidationFieldList) - Len(vbCrLf))
+    End If
+
+SafeExit:
+End Function
 
 
