@@ -10,6 +10,7 @@ Option Explicit
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFormRuntime"
+Private Const TAG_PREFIX_MODULE As String = "MOD:"
 Private Const TAG_TOKEN_READONLY As String = "READONLY"
 Private Const TAG_TOKEN_LOCKED As String = "LOCKED"
 Private Const TAG_TOKEN_DISABLED As String = "DISABLED"
@@ -452,7 +453,7 @@ Private Sub TryShowRoleDeniedMessage(ByVal FormName As String)
     Dim messageText As String
     Dim baseMessage As String
 
-    baseMessage = "You are not authorized to open this form"
+    baseMessage = "You do not have permission to open this form"
     messageText = modTranslationService.T("MSG_ROLE_NOT_ALLOWED", baseMessage)
     If LenB(Trim$(messageText)) = 0 Then
         messageText = baseMessage
@@ -464,3 +465,5 @@ Private Sub TryShowRoleDeniedMessage(ByVal FormName As String)
 
     MsgBox messageText, vbExclamation, APP_NAME
 End Sub
+
+
