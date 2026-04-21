@@ -12,6 +12,7 @@ Option Explicit
 Private Const MODULE_NAME As String = "modFormRuntime"
 Private Const TAG_PREFIX_MODULE As String = "MOD:"
 Private Const TAG_TOKEN_READONLY As String = "READONLY"
+Private Const TAG_TOKEN_LOCKED As String = "LOCKED"
 
 Public Sub InitializeForm(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
@@ -45,6 +46,8 @@ Public Sub InitializeForm(ByVal FormInstance As Access.Form)
         modLoggingHandler.LogInfo MODULE_NAME & ".InitializeForm", _
             "Read-only policy applied to form '" & FormName & "'."
     End If
+
+    ApplyControlPolicies FormInstance
 
     modLoggingHandler.LogInfo MODULE_NAME & ".InitializeForm", _
         "Form '" & FormName & "' initialized successfully."
@@ -134,6 +137,75 @@ Private Function HasReadOnlyTag(ByVal TagValue As String) As Boolean
 ErrorHandler:
     HasReadOnlyTag = False
     modErrorHandler.HandleError MODULE_NAME, "HasReadOnlyTag", Err
+End Function
+
+Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
+    On Error GoTo ErrorHandler
+
+    Dim ctl As Control
+    Dim lockedCount As Long
+
+    If FormInstance Is Nothing Then
+        Exit Sub
+    End If
+
+    For Each ctl In FormInstance.Controls
+        If ControlHasLockedTag(ctl.Tag) Then
+            If TryApplyLockedPolicy(ctl) Then
+                lockedCount = lockedCount + 1
+            End If
+        End If
+    Next ctl
+
+    If lockedCount > 0 Then
+        modLoggingHandler.LogInfo MODULE_NAME & ".ApplyControlPolicies", _
+            "Locked policy applied to " & CStr(lockedCount) & " control(s) on form '" & GetFormName(FormInstance) & "'."
+    End If
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ApplyControlPolicies", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
+
+Private Function ControlHasLockedTag(ByVal TagValue As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tokens() As String
+    Dim token As Variant
+    Dim trimmedToken As String
+
+    trimmedToken = Trim$(TagValue)
+    If LenB(trimmedToken) = 0 Then
+        Exit Function
+    End If
+
+    tokens = Split(trimmedToken, ";")
+    For Each token In tokens
+        trimmedToken = UCase$(Trim$(CStr(token)))
+        If trimmedToken = TAG_TOKEN_LOCKED Then
+            ControlHasLockedTag = True
+            Exit Function
+        End If
+    Next token
+    Exit Function
+
+ErrorHandler:
+    ControlHasLockedTag = False
+    modErrorHandler.HandleError MODULE_NAME, "ControlHasLockedTag", Err
+End Function
+
+Private Function TryApplyLockedPolicy(ByVal ControlInstance As Control) As Boolean
+    On Error GoTo SafeExit
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    ControlInstance.Locked = True
+    TryApplyLockedPolicy = True
+
+SafeExit:
 End Function
 
 Private Sub ApplyReadOnlyPolicy(ByVal FormInstance As Access.Form)
