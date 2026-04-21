@@ -14,6 +14,7 @@ Private Const TAG_PREFIX_MODULE As String = "MOD:"
 Private Const TAG_TOKEN_READONLY As String = "READONLY"
 Private Const TAG_TOKEN_LOCKED As String = "LOCKED"
 Private Const TAG_TOKEN_DISABLED As String = "DISABLED"
+Private Const TAG_TOKEN_ROLE As String = "ROLE"
 Private Const TAG_TOKEN_HIDDEN As String = "HIDDEN"
 Private Const TAG_TOKEN_SETFOCUS As String = "SETFOCUS"
 
@@ -172,8 +173,18 @@ Private Sub ApplyInitialFocusPolicy(ByVal FormInstance As Access.Form)
     Exit Sub
 
 ErrorHandler:
+    Dim savedErrNumber As Long
+    Dim savedErrSource As String
+    Dim savedErrDescription As String
+
+    savedErrNumber = Err.Number
+    savedErrSource = Err.Source
+    savedErrDescription = Err.Description
+
     modErrorHandler.HandleError MODULE_NAME, "ApplyInitialFocusPolicy", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    
+    On Error GoTo 0
+    Err.Raise savedErrNumber, savedErrSource, savedErrDescription
 End Sub
 
 Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
@@ -183,11 +194,15 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
     Dim controlTokens As Object
     Dim lockedCount As Long
     Dim disabledCount As Long
+    Dim roleHiddenCount As Long
     Dim hiddenCount As Long
+    Dim CurrentRole As String
 
     If FormInstance Is Nothing Then
         Exit Sub
     End If
+
+    CurrentRole = UCase$(Trim$(modSessionContext.CurrentRoleCode))
 
     For Each ctl In FormInstance.Controls
         Set controlTokens = ParseTagTokens(ctl.Tag)
@@ -204,18 +219,24 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
             End If
         End If
 
+        If controlTokens.Exists(TAG_TOKEN_ROLE) Then
+            If TryApplyRolePolicy(ctl, controlTokens, CurrentRole) Then
+                roleHiddenCount = roleHiddenCount + 1
+            End If
+        End If
+
         If controlTokens.Exists(TAG_TOKEN_HIDDEN) Then
-            If TryApplyHiddenPolicy(FormInstance, ctl) Then
+            If TryApplyHiddenPolicy(ctl) Then
                 hiddenCount = hiddenCount + 1
             End If
         End If
     Next ctl
 
-    If lockedCount > 0 Or disabledCount > 0 Or hiddenCount > 0 Then
+    If lockedCount > 0 Or disabledCount > 0 Or roleHiddenCount > 0 Or hiddenCount > 0 Then
         modLoggingHandler.LogInfo MODULE_NAME & ".ApplyControlPolicies", _
             "Control policies applied on form '" & GetFormName(FormInstance) & "': " & _
             "LOCKED=" & CStr(lockedCount) & ", DISABLED=" & CStr(disabledCount) & _
-            ", HIDDEN=" & CStr(hiddenCount) & "."
+            ", ROLE_HIDDEN=" & CStr(roleHiddenCount) & ", HIDDEN=" & CStr(hiddenCount) & "."
     End If
     Exit Sub
 
@@ -260,6 +281,64 @@ Private Function TryApplyDisabledPolicy(ByVal ControlInstance As Control) As Boo
 SafeExit:
 End Function
 
+Private Function TryApplyRolePolicy(ByVal ControlInstance As Control, ByVal controlTokens As Object, ByVal CurrentRole As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim AllowedRoles As String
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    If controlTokens Is Nothing Then
+        Exit Function
+    End If
+
+    If Not controlTokens.Exists(TAG_TOKEN_ROLE) Then
+        Exit Function
+    End If
+
+    AllowedRoles = CStr(controlTokens(TAG_TOKEN_ROLE))
+    If IsRoleAllowed(AllowedRoles, CurrentRole) Then
+        Exit Function
+    End If
+
+    ControlInstance.Visible = False
+    TryApplyRolePolicy = True
+
+SafeExit:
+End Function
+
+Private Function IsRoleAllowed(ByVal AllowedRoles As String, ByVal CurrentRole As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim roleParts() As String
+    Dim roleItem As Variant
+    Dim normalizedCurrentRole As String
+    Dim normalizedAllowedRole As String
+
+    normalizedCurrentRole = UCase$(Trim$(CurrentRole))
+    If LenB(normalizedCurrentRole) = 0 Then
+        Exit Function
+    End If
+
+    roleParts = Split(AllowedRoles, ",")
+    For Each roleItem In roleParts
+        normalizedAllowedRole = UCase$(Trim$(CStr(roleItem)))
+        If LenB(normalizedAllowedRole) > 0 Then
+            If normalizedAllowedRole = normalizedCurrentRole Then
+                IsRoleAllowed = True
+                Exit Function
+            End If
+        End If
+    Next roleItem
+    Exit Function
+
+ErrorHandler:
+    IsRoleAllowed = False
+    modErrorHandler.HandleError MODULE_NAME, "IsRoleAllowed", Err
+End Function
+
 Private Function TrySetInitialFocus(ByVal ControlInstance As Control) As Boolean
     On Error GoTo SafeExit
 
@@ -273,10 +352,14 @@ Private Function TrySetInitialFocus(ByVal ControlInstance As Control) As Boolean
 SafeExit:
 End Function
 
-Private Function TryApplyHiddenPolicy(ByVal FormInstance As Access.Form, ByVal ControlInstance As Control) As Boolean
+Private Function TryApplyHiddenPolicy(ByVal ControlInstance As Control) As Boolean
     On Error GoTo SafeExit
 
     If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    If ControlInstance.Visible = False Then
         Exit Function
     End If
 
