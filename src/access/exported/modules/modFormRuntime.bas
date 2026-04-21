@@ -13,6 +13,8 @@ Private Const MODULE_NAME As String = "modFormRuntime"
 Private Const TAG_PREFIX_MODULE As String = "MOD:"
 Private Const TAG_TOKEN_READONLY As String = "READONLY"
 Private Const TAG_TOKEN_LOCKED As String = "LOCKED"
+Private Const TAG_TOKEN_HIDDEN As String = "HIDDEN"
+Private Const TAG_TOKEN_SETFOCUS As String = "SETFOCUS"
 
 Public Sub InitializeForm(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
@@ -47,6 +49,7 @@ Public Sub InitializeForm(ByVal FormInstance As Access.Form)
             "Read-only policy applied to form '" & FormName & "'."
     End If
 
+    ApplyInitialFocusPolicy FormInstance
     ApplyControlPolicies FormInstance
 
     modLoggingHandler.LogInfo MODULE_NAME & ".InitializeForm", _
@@ -139,11 +142,40 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "HasReadOnlyTag", Err
 End Function
 
+Private Sub ApplyInitialFocusPolicy(ByVal FormInstance As Access.Form)
+    On Error GoTo ErrorHandler
+
+    Dim ctl As Control
+
+    If FormInstance Is Nothing Then
+        Exit Sub
+    End If
+
+    For Each ctl In FormInstance.Controls
+        If ControlHasSetFocusTag(ctl.Tag) Then
+            If TrySetInitialFocus(ctl) Then
+                modLoggingHandler.LogInfo MODULE_NAME & ".ApplyInitialFocusPolicy", _
+                    "Initial focus set to control '" & GetControlName(ctl) & "' on form '" & GetFormName(FormInstance) & "'."
+            Else
+                modLoggingHandler.LogWarning MODULE_NAME & ".ApplyInitialFocusPolicy", _
+                    "Initial focus could not be set to control '" & GetControlName(ctl) & "' on form '" & GetFormName(FormInstance) & "'."
+            End If
+            Exit Sub
+        End If
+    Next ctl
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ApplyInitialFocusPolicy", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
+
 Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
 
     Dim ctl As Control
     Dim lockedCount As Long
+    Dim hiddenCount As Long
 
     If FormInstance Is Nothing Then
         Exit Sub
@@ -155,17 +187,34 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
                 lockedCount = lockedCount + 1
             End If
         End If
+
+        If ControlHasHiddenTag(ctl.Tag) Then
+            If TryApplyHiddenPolicy(FormInstance, ctl) Then
+                hiddenCount = hiddenCount + 1
+            End If
+        End If
     Next ctl
 
-    If lockedCount > 0 Then
+    If lockedCount > 0 Or hiddenCount > 0 Then
         modLoggingHandler.LogInfo MODULE_NAME & ".ApplyControlPolicies", _
-            "Locked policy applied to " & CStr(lockedCount) & " control(s) on form '" & GetFormName(FormInstance) & "'."
+            "Control policies applied on form '" & GetFormName(FormInstance) & "': " & _
+            "LOCKED=" & CStr(lockedCount) & ", HIDDEN=" & CStr(hiddenCount) & "."
     End If
     Exit Sub
 
 ErrorHandler:
+    Dim savedErrNumber As Long
+    Dim savedErrSource As String
+    Dim savedErrDescription As String
+
+    savedErrNumber = Err.Number
+    savedErrSource = Err.Source
+    savedErrDescription = Err.Description
+
     modErrorHandler.HandleError MODULE_NAME, "ApplyControlPolicies", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+
+    On Error GoTo 0
+    Err.Raise savedErrNumber, savedErrSource, savedErrDescription
 End Sub
 
 Private Function ControlHasLockedTag(ByVal TagValue As String) As Boolean
@@ -195,6 +244,60 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ControlHasLockedTag", Err
 End Function
 
+Private Function ControlHasHiddenTag(ByVal TagValue As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tokens() As String
+    Dim token As Variant
+    Dim trimmedToken As String
+
+    trimmedToken = Trim$(TagValue)
+    If LenB(trimmedToken) = 0 Then
+        Exit Function
+    End If
+
+    tokens = Split(trimmedToken, ";")
+    For Each token In tokens
+        trimmedToken = UCase$(Trim$(CStr(token)))
+        If trimmedToken = TAG_TOKEN_HIDDEN Then
+            ControlHasHiddenTag = True
+            Exit Function
+        End If
+    Next token
+    Exit Function
+
+ErrorHandler:
+    ControlHasHiddenTag = False
+    modErrorHandler.HandleError MODULE_NAME, "ControlHasHiddenTag", Err
+End Function
+
+Private Function ControlHasSetFocusTag(ByVal TagValue As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tokens() As String
+    Dim token As Variant
+    Dim trimmedToken As String
+
+    trimmedToken = Trim$(TagValue)
+    If LenB(trimmedToken) = 0 Then
+        Exit Function
+    End If
+
+    tokens = Split(trimmedToken, ";")
+    For Each token In tokens
+        trimmedToken = UCase$(Trim$(CStr(token)))
+        If trimmedToken = TAG_TOKEN_SETFOCUS Then
+            ControlHasSetFocusTag = True
+            Exit Function
+        End If
+    Next token
+    Exit Function
+
+ErrorHandler:
+    ControlHasSetFocusTag = False
+    modErrorHandler.HandleError MODULE_NAME, "ControlHasSetFocusTag", Err
+End Function
+
 Private Function TryApplyLockedPolicy(ByVal ControlInstance As Control) As Boolean
     On Error GoTo SafeExit
 
@@ -206,6 +309,47 @@ Private Function TryApplyLockedPolicy(ByVal ControlInstance As Control) As Boole
     TryApplyLockedPolicy = True
 
 SafeExit:
+End Function
+
+Private Function TrySetInitialFocus(ByVal ControlInstance As Control) As Boolean
+    On Error GoTo SafeExit
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    ControlInstance.SetFocus
+    TrySetInitialFocus = True
+
+SafeExit:
+End Function
+
+Private Function TryApplyHiddenPolicy(ByVal FormInstance As Access.Form, ByVal ControlInstance As Control) As Boolean
+    On Error GoTo SafeExit
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    ControlInstance.Visible = False
+    TryApplyHiddenPolicy = True
+
+SafeExit:
+End Function
+
+Private Function GetControlName(ByVal ControlInstance As Control) As String
+    On Error GoTo SafeExit
+
+    If ControlInstance Is Nothing Then
+        GetControlName = "<unknown>"
+        Exit Function
+    End If
+
+    GetControlName = ControlInstance.Name
+    Exit Function
+
+SafeExit:
+    GetControlName = "<unknown>"
 End Function
 
 Private Sub ApplyReadOnlyPolicy(ByVal FormInstance As Access.Form)
@@ -221,8 +365,18 @@ Private Sub ApplyReadOnlyPolicy(ByVal FormInstance As Access.Form)
     Exit Sub
 
 ErrorHandler:
+    Dim savedErrNumber As Long
+    Dim savedErrSource As String
+    Dim savedErrDescription As String
+
+    savedErrNumber = Err.Number
+    savedErrSource = Err.Source
+    savedErrDescription = Err.Description
+
     modErrorHandler.HandleError MODULE_NAME, "ApplyReadOnlyPolicy", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+
+    On Error GoTo 0
+    Err.Raise savedErrNumber, savedErrSource, savedErrDescription
 End Sub
 
 Private Sub TryShowMissingModuleMessage(ByVal RequiredModule As String, ByVal FormName As String)
