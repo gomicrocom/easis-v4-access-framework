@@ -13,6 +13,7 @@ Private Const MODULE_NAME As String = "modFormRuntime"
 Private Const TAG_PREFIX_MODULE As String = "MOD:"
 Private Const TAG_TOKEN_READONLY As String = "READONLY"
 Private Const TAG_TOKEN_LOCKED As String = "LOCKED"
+Private Const TAG_TOKEN_DISABLED As String = "DISABLED"
 Private Const TAG_TOKEN_HIDDEN As String = "HIDDEN"
 Private Const TAG_TOKEN_SETFOCUS As String = "SETFOCUS"
 
@@ -21,17 +22,22 @@ Public Sub InitializeForm(ByVal FormInstance As Access.Form)
 
     Dim FormName As String
     Dim RequiredModule As String
+    Dim formTokens As Object
 
     If FormInstance Is Nothing Then
         Exit Sub
     End If
 
     FormName = GetFormName(FormInstance)
+    Set formTokens = ParseTagTokens(FormInstance.Tag)
 
     modLoggingHandler.LogInfo MODULE_NAME & ".InitializeForm", _
         "Initializing form '" & FormName & "'."
 
-    RequiredModule = ExtractRequiredModuleFromTag(FormInstance.Tag)
+    If formTokens.Exists("MOD") Then
+        RequiredModule = UCase$(Trim$(CStr(formTokens("MOD"))))
+    End If
+
     If LenB(RequiredModule) > 0 Then
         If Not modModuleManager.IsModuleActive(RequiredModule) Then
             TryShowMissingModuleMessage RequiredModule, FormName
@@ -43,7 +49,7 @@ Public Sub InitializeForm(ByVal FormInstance As Access.Form)
 
     modFormLocalization.LocalizeForm FormInstance
 
-    If HasReadOnlyTag(FormInstance.Tag) Then
+    If formTokens.Exists(TAG_TOKEN_READONLY) Then
         ApplyReadOnlyPolicy FormInstance
         modLoggingHandler.LogInfo MODULE_NAME & ".InitializeForm", _
             "Read-only policy applied to form '" & FormName & "'."
@@ -86,73 +92,73 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "GetFormName", Err
 End Function
 
-Private Function ExtractRequiredModuleFromTag(ByVal TagValue As String) As String
+Private Function ParseTagTokens(ByVal TagValue As String) As Object
     On Error GoTo ErrorHandler
 
-    Dim tokens() As String
+    Dim parsedTokens As Object
+    Dim tagParts() As String
     Dim token As Variant
     Dim trimmedToken As String
+    Dim separatorPosition As Long
+    Dim tokenKey As String
+    Dim tokenValue As String
+
+    Set parsedTokens = CreateObject("Scripting.Dictionary")
+    parsedTokens.CompareMode = vbTextCompare
 
     trimmedToken = Trim$(TagValue)
     If LenB(trimmedToken) = 0 Then
+        Set ParseTagTokens = parsedTokens
         Exit Function
     End If
 
-    tokens = Split(trimmedToken, ";")
-    For Each token In tokens
+    tagParts = Split(trimmedToken, ";")
+    For Each token In tagParts
         trimmedToken = Trim$(CStr(token))
-        If LenB(trimmedToken) >= Len(TAG_PREFIX_MODULE) Then
-            If UCase$(Left$(trimmedToken, Len(TAG_PREFIX_MODULE))) = TAG_PREFIX_MODULE Then
-                ExtractRequiredModuleFromTag = UCase$(Trim$(Mid$(trimmedToken, Len(TAG_PREFIX_MODULE) + 1)))
-                Exit Function
+        If LenB(trimmedToken) = 0 Then
+            GoTo NextToken
+        End If
+
+        separatorPosition = InStr(1, trimmedToken, ":", vbTextCompare)
+        If separatorPosition > 0 Then
+            tokenKey = UCase$(Trim$(Left$(trimmedToken, separatorPosition - 1)))
+            tokenValue = Trim$(Mid$(trimmedToken, separatorPosition + 1))
+
+            If LenB(tokenKey) > 0 Then
+                parsedTokens(tokenKey) = tokenValue
+            End If
+        Else
+            tokenKey = UCase$(trimmedToken)
+            If LenB(tokenKey) > 0 Then
+                parsedTokens(tokenKey) = True
             End If
         End If
+
+NextToken:
     Next token
+
+    Set ParseTagTokens = parsedTokens
     Exit Function
 
 ErrorHandler:
-    ExtractRequiredModuleFromTag = vbNullString
-    modErrorHandler.HandleError MODULE_NAME, "ExtractRequiredModuleFromTag", Err
-End Function
-
-Private Function HasReadOnlyTag(ByVal TagValue As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim tokens() As String
-    Dim token As Variant
-    Dim trimmedToken As String
-
-    trimmedToken = Trim$(TagValue)
-    If LenB(trimmedToken) = 0 Then
-        Exit Function
-    End If
-
-    tokens = Split(trimmedToken, ";")
-    For Each token In tokens
-        trimmedToken = UCase$(Trim$(CStr(token)))
-        If trimmedToken = TAG_TOKEN_READONLY Then
-            HasReadOnlyTag = True
-            Exit Function
-        End If
-    Next token
-    Exit Function
-
-ErrorHandler:
-    HasReadOnlyTag = False
-    modErrorHandler.HandleError MODULE_NAME, "HasReadOnlyTag", Err
+    Set ParseTagTokens = CreateObject("Scripting.Dictionary")
+    ParseTagTokens.CompareMode = vbTextCompare
+    modErrorHandler.HandleError MODULE_NAME, "ParseTagTokens", Err
 End Function
 
 Private Sub ApplyInitialFocusPolicy(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
 
     Dim ctl As Control
+    Dim controlTokens As Object
 
     If FormInstance Is Nothing Then
         Exit Sub
     End If
 
     For Each ctl In FormInstance.Controls
-        If ControlHasSetFocusTag(ctl.Tag) Then
+        Set controlTokens = ParseTagTokens(ctl.Tag)
+        If controlTokens.Exists(TAG_TOKEN_SETFOCUS) Then
             If TrySetInitialFocus(ctl) Then
                 modLoggingHandler.LogInfo MODULE_NAME & ".ApplyInitialFocusPolicy", _
                     "Initial focus set to control '" & GetControlName(ctl) & "' on form '" & GetFormName(FormInstance) & "'."
@@ -174,7 +180,9 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
 
     Dim ctl As Control
+    Dim controlTokens As Object
     Dim lockedCount As Long
+    Dim disabledCount As Long
     Dim hiddenCount As Long
 
     If FormInstance Is Nothing Then
@@ -182,23 +190,32 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
     End If
 
     For Each ctl In FormInstance.Controls
-        If ControlHasLockedTag(ctl.Tag) Then
+        Set controlTokens = ParseTagTokens(ctl.Tag)
+
+        If controlTokens.Exists(TAG_TOKEN_LOCKED) Then
             If TryApplyLockedPolicy(ctl) Then
                 lockedCount = lockedCount + 1
             End If
         End If
 
-        If ControlHasHiddenTag(ctl.Tag) Then
+        If controlTokens.Exists(TAG_TOKEN_DISABLED) Then
+            If TryApplyDisabledPolicy(ctl) Then
+                disabledCount = disabledCount + 1
+            End If
+        End If
+
+        If controlTokens.Exists(TAG_TOKEN_HIDDEN) Then
             If TryApplyHiddenPolicy(FormInstance, ctl) Then
                 hiddenCount = hiddenCount + 1
             End If
         End If
     Next ctl
 
-    If lockedCount > 0 Or hiddenCount > 0 Then
+    If lockedCount > 0 Or disabledCount > 0 Or hiddenCount > 0 Then
         modLoggingHandler.LogInfo MODULE_NAME & ".ApplyControlPolicies", _
             "Control policies applied on form '" & GetFormName(FormInstance) & "': " & _
-            "LOCKED=" & CStr(lockedCount) & ", HIDDEN=" & CStr(hiddenCount) & "."
+            "LOCKED=" & CStr(lockedCount) & ", DISABLED=" & CStr(disabledCount) & _
+            ", HIDDEN=" & CStr(hiddenCount) & "."
     End If
     Exit Sub
 
@@ -217,87 +234,6 @@ ErrorHandler:
     Err.Raise savedErrNumber, savedErrSource, savedErrDescription
 End Sub
 
-Private Function ControlHasLockedTag(ByVal TagValue As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim tokens() As String
-    Dim token As Variant
-    Dim trimmedToken As String
-
-    trimmedToken = Trim$(TagValue)
-    If LenB(trimmedToken) = 0 Then
-        Exit Function
-    End If
-
-    tokens = Split(trimmedToken, ";")
-    For Each token In tokens
-        trimmedToken = UCase$(Trim$(CStr(token)))
-        If trimmedToken = TAG_TOKEN_LOCKED Then
-            ControlHasLockedTag = True
-            Exit Function
-        End If
-    Next token
-    Exit Function
-
-ErrorHandler:
-    ControlHasLockedTag = False
-    modErrorHandler.HandleError MODULE_NAME, "ControlHasLockedTag", Err
-End Function
-
-Private Function ControlHasHiddenTag(ByVal TagValue As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim tokens() As String
-    Dim token As Variant
-    Dim trimmedToken As String
-
-    trimmedToken = Trim$(TagValue)
-    If LenB(trimmedToken) = 0 Then
-        Exit Function
-    End If
-
-    tokens = Split(trimmedToken, ";")
-    For Each token In tokens
-        trimmedToken = UCase$(Trim$(CStr(token)))
-        If trimmedToken = TAG_TOKEN_HIDDEN Then
-            ControlHasHiddenTag = True
-            Exit Function
-        End If
-    Next token
-    Exit Function
-
-ErrorHandler:
-    ControlHasHiddenTag = False
-    modErrorHandler.HandleError MODULE_NAME, "ControlHasHiddenTag", Err
-End Function
-
-Private Function ControlHasSetFocusTag(ByVal TagValue As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim tokens() As String
-    Dim token As Variant
-    Dim trimmedToken As String
-
-    trimmedToken = Trim$(TagValue)
-    If LenB(trimmedToken) = 0 Then
-        Exit Function
-    End If
-
-    tokens = Split(trimmedToken, ";")
-    For Each token In tokens
-        trimmedToken = UCase$(Trim$(CStr(token)))
-        If trimmedToken = TAG_TOKEN_SETFOCUS Then
-            ControlHasSetFocusTag = True
-            Exit Function
-        End If
-    Next token
-    Exit Function
-
-ErrorHandler:
-    ControlHasSetFocusTag = False
-    modErrorHandler.HandleError MODULE_NAME, "ControlHasSetFocusTag", Err
-End Function
-
 Private Function TryApplyLockedPolicy(ByVal ControlInstance As Control) As Boolean
     On Error GoTo SafeExit
 
@@ -307,6 +243,19 @@ Private Function TryApplyLockedPolicy(ByVal ControlInstance As Control) As Boole
 
     ControlInstance.Locked = True
     TryApplyLockedPolicy = True
+
+SafeExit:
+End Function
+
+Private Function TryApplyDisabledPolicy(ByVal ControlInstance As Control) As Boolean
+    On Error GoTo SafeExit
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    ControlInstance.Enabled = False
+    TryApplyDisabledPolicy = True
 
 SafeExit:
 End Function
