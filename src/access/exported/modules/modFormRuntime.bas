@@ -92,6 +92,65 @@ ErrorHandler:
     Err.Raise savedErrNumber, savedErrSource, savedErrDescription
 End Sub
 
+Public Function ValidateRequiredFields(ByVal FormInstance As Access.Form) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim ctl As Control
+    Dim controlTokens As Object
+    Dim missingControls As Collection
+    Dim missingFieldNames As Collection
+    Dim firstMissingControl As Control
+
+    ValidateRequiredFields = True
+
+    If FormInstance Is Nothing Then
+        Exit Function
+    End If
+
+    Set missingControls = New Collection
+    Set missingFieldNames = New Collection
+
+    For Each ctl In FormInstance.Controls
+        Set controlTokens = ParseTagTokens(ctl.Tag)
+
+        If IsControlRequired(controlTokens) Then
+            If IsControlValueMissing(ctl) Then
+                missingControls.Add ctl
+                missingFieldNames.Add GetDisplayNameForRequiredControl(FormInstance, ctl)
+            End If
+        End If
+    Next ctl
+
+    If missingControls.Count = 0 Then
+        Exit Function
+    End If
+
+    ValidateRequiredFields = False
+    TryShowRequiredFieldsMessage missingFieldNames, GetFormName(FormInstance)
+
+    Set firstMissingControl = missingControls.Item(1)
+    Call TryFocusControl(firstMissingControl)
+
+    modLoggingHandler.LogWarning MODULE_NAME & ".ValidateRequiredFields", _
+        "Required-field validation failed on form '" & GetFormName(FormInstance) & "' for " & _
+        CStr(missingControls.Count) & " control(s)."
+    Exit Function
+
+ErrorHandler:
+    Dim savedErrNumber As Long
+    Dim savedErrSource As String
+    Dim savedErrDescription As String
+
+    savedErrNumber = Err.Number
+    savedErrSource = Err.Source
+    savedErrDescription = Err.Description
+
+    modErrorHandler.HandleError MODULE_NAME, "ValidateRequiredFields", Err
+
+    On Error GoTo 0
+    Err.Raise savedErrNumber, savedErrSource, savedErrDescription
+End Function
+
 Private Function GetFormName(ByVal FormInstance As Access.Form) As String
     On Error GoTo ErrorHandler
 
@@ -200,6 +259,21 @@ ErrorHandler:
     On Error GoTo 0
     Err.Raise savedErrNumber, savedErrSource, savedErrDescription
 End Sub
+
+Private Function IsControlRequired(ByVal controlTokens As Object) As Boolean
+    On Error GoTo ErrorHandler
+
+    If controlTokens Is Nothing Then
+        Exit Function
+    End If
+
+    IsControlRequired = controlTokens.Exists(TAG_TOKEN_REQUIRED)
+    Exit Function
+
+ErrorHandler:
+    IsControlRequired = False
+    modErrorHandler.HandleError MODULE_NAME, "IsControlRequired", Err
+End Function
 
 Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
@@ -422,26 +496,126 @@ Private Function TryApplyRequiredPolicy(ByVal FormInstance As Access.Form, ByVal
 SafeExit:
 End Function
 
+Private Function IsControlValueMissing(ByVal ControlInstance As Control) As Boolean
+    On Error GoTo SafeExit
+
+    Dim controlValue As Variant
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    controlValue = ControlInstance.Value
+
+    If IsNull(controlValue) Or IsEmpty(controlValue) Then
+        IsControlValueMissing = True
+        Exit Function
+    End If
+
+    If VarType(controlValue) = vbString Then
+        IsControlValueMissing = (LenB(Trim$(CStr(controlValue))) = 0)
+    End If
+
+SafeExit:
+End Function
+
 Private Function GetAssociatedLabel(ByVal FormInstance As Access.Form, ByVal ControlInstance As Control) As Control
     On Error GoTo SafeExit
 
     Dim ctl As Control
+    Dim childControl As Control
+    Dim labelControlName As String
 
     If FormInstance Is Nothing Then Exit Function
     If ControlInstance Is Nothing Then Exit Function
 
+    On Error Resume Next
+    For Each childControl In ControlInstance.Controls
+        If Err.Number <> 0 Then
+            Err.Clear
+            Exit For
+        End If
+
+        If childControl.ControlType = acLabel Then
+            Set GetAssociatedLabel = childControl
+            On Error GoTo SafeExit
+            Exit Function
+        End If
+    Next childControl
+    On Error GoTo SafeExit
+
     For Each ctl In FormInstance.Controls
         If ctl.ControlType = acLabel Then
-            If StrComp(ctl.ControlName, ControlInstance.Name, vbTextCompare) = 0 Then
+            labelControlName = vbNullString
+
+            On Error Resume Next
+            labelControlName = CStr(ctl.ControlName)
+            If Err.Number <> 0 Then
+                Err.Clear
+                On Error GoTo SafeExit
+                GoTo NextControl
+            End If
+            On Error GoTo SafeExit
+
+            If StrComp(Trim$(labelControlName), Trim$(ControlInstance.Name), vbTextCompare) = 0 Then
                 Set GetAssociatedLabel = ctl
                 Exit Function
             End If
         End If
+
+NextControl:
     Next ctl
 
 SafeExit:
-    Set GetAssociatedLabel = Nothing
+    If GetAssociatedLabel Is Nothing Then
+        Set GetAssociatedLabel = Nothing
+    End If
 End Function
+
+Private Function TryFocusControl(ByVal ControlInstance As Control) As Boolean
+    On Error GoTo SafeExit
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    ControlInstance.SetFocus
+    TryFocusControl = True
+
+SafeExit:
+End Function
+
+Private Function GetDisplayNameForRequiredControl(ByVal FormInstance As Access.Form, ByVal ControlInstance As Control) As String
+    On Error GoTo SafeExit
+
+    Dim associatedLabel As Control
+    Dim displayName As String
+
+    If ControlInstance Is Nothing Then
+        GetDisplayNameForRequiredControl = "<unknown>"
+        Exit Function
+    End If
+
+    Set associatedLabel = GetAssociatedLabel(FormInstance, ControlInstance)
+    If Not associatedLabel Is Nothing Then
+        displayName = Trim$(CStr(associatedLabel.Caption))
+        If Right$(displayName, 1) = "*" Then
+            displayName = RTrim$(Left$(displayName, Len(displayName) - 1))
+        End If
+
+        If LenB(displayName) > 0 Then
+            GetDisplayNameForRequiredControl = displayName
+            Exit Function
+        End If
+    End If
+
+    GetDisplayNameForRequiredControl = GetControlName(ControlInstance)
+    Exit Function
+
+SafeExit:
+    GetDisplayNameForRequiredControl = GetControlName(ControlInstance)
+End Function
+
 Private Function GetControlName(ByVal ControlInstance As Control) As String
     On Error GoTo SafeExit
 
@@ -515,6 +689,44 @@ Private Sub TryShowRoleDeniedMessage(ByVal FormName As String)
     messageText = modTranslationService.T("MSG_ROLE_NOT_ALLOWED", baseMessage)
     If LenB(Trim$(messageText)) = 0 Then
         messageText = baseMessage
+    End If
+
+    If LenB(Trim$(FormName)) > 0 And FormName <> "<unknown>" Then
+        messageText = messageText & vbCrLf & "(" & FormName & ")"
+    End If
+
+    MsgBox messageText, vbExclamation, APP_NAME
+End Sub
+
+Private Sub TryShowRequiredFieldsMessage(ByVal MissingFieldNames As Collection, ByVal FormName As String)
+    On Error Resume Next
+
+    Dim messageText As String
+    Dim baseMessage As String
+    Dim fieldName As Variant
+    Dim fieldList As String
+    Dim fieldCount As Long
+
+    baseMessage = "Please fill in all required fields."
+    messageText = modTranslationService.T("MSG_REQUIRED_FIELDS_MISSING", baseMessage)
+    If LenB(Trim$(messageText)) = 0 Then
+        messageText = baseMessage
+    End If
+
+    If Not MissingFieldNames Is Nothing Then
+        For Each fieldName In MissingFieldNames
+            fieldCount = fieldCount + 1
+
+            If fieldCount > 5 Then
+                Exit For
+            End If
+
+            fieldList = fieldList & vbCrLf & "- " & CStr(fieldName)
+        Next fieldName
+    End If
+
+    If LenB(fieldList) > 0 Then
+        messageText = messageText & vbCrLf & fieldList
     End If
 
     If LenB(Trim$(FormName)) > 0 And FormName <> "<unknown>" Then
