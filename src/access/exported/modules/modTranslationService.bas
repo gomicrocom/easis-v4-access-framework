@@ -375,18 +375,35 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.Description
 End Function
 
-Public Function TEx(ByVal Key As String, _
-                    ByVal DefaultText As String, _
-                    ParamArray Args() As Variant) As String
+Public Function TEx(ByVal TextKey As String, ByVal Fallback As String, ParamArray Args() As Variant) As String
+    On Error GoTo ErrorHandler
 
-    Dim result As String
+    Dim resultText As String
     Dim i As Long
 
-    result = T(Key, DefaultText)
+    resultText = T(TextKey, Fallback)
 
     For i = LBound(Args) To UBound(Args)
-        result = Replace(result, "{" & i & "}", CStr(Args(i)))
+        resultText = Replace(resultText, "{" & CStr(i) & "}", NzArgumentValue(Args(i)))
     Next i
 
-    TEx = result
+    TEx = resultText
+    Exit Function
+
+ErrorHandler:
+    TEx = T(TextKey, Fallback)
+End Function
+
+Private Function NzArgumentValue(ByVal Value As Variant) As String
+    On Error GoTo SafeExit
+
+    If IsNull(Value) Or IsEmpty(Value) Then
+        NzArgumentValue = vbNullString
+    Else
+        NzArgumentValue = CStr(Value)
+    End If
+    Exit Function
+
+SafeExit:
+    NzArgumentValue = vbNullString
 End Function

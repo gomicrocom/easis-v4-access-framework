@@ -205,7 +205,7 @@ Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boole
             
             If LenB(errorMessage) > 0 Then
                 invalidFormatFieldNames.Add _
-                    GetDisplayNameForRequiredControl(FormInstance, ctl) & " ? " & errorMessage
+                    GetDisplayNameForRequiredControl(FormInstance, ctl) & ": " & errorMessage
             End If
         End If
 
@@ -1312,7 +1312,6 @@ Private Function BuildValidationFieldList(ByVal FieldNames As Collection) As Str
 SafeExit:
 End Function
 
-
 Private Function GetMinLenValue(ByVal controlTokens As Object, ByRef minLenValue As Long) As Boolean
     On Error GoTo SafeExit
 
@@ -1398,13 +1397,13 @@ Private Function IsControlValueMaxLenValid(ByVal ControlInstance As Control, ByV
 
 SafeExit:
 End Function
+
 Private Function BuildControlValidationMessage( _
     ByVal ControlInstance As Control, _
     ByVal controlTokens As Object) As String
 
     On Error GoTo SafeExit
 
-    Dim msg As String
     Dim minValue As Double
     Dim maxValue As Double
     Dim minLenValue As Long
@@ -1438,18 +1437,14 @@ Private Function BuildControlValidationMessage( _
     If IsControlNumericTag(controlTokens) Then
         If GetMinValue(controlTokens, minValue) Then
             If Not IsControlValueMinValid(ControlInstance, minValue) Then
-                BuildControlValidationMessage = Replace( _
-                    modTranslationService.T("ERR_MIN", "must be = {0}"), _
-                    "{0}", CStr(minValue))
+                BuildControlValidationMessage = modTranslationService.TEx("ERR_MIN", "must be >= {0}", minValue)
                 Exit Function
             End If
         End If
 
         If GetMaxValue(controlTokens, maxValue) Then
             If Not IsControlValueMaxValid(ControlInstance, maxValue) Then
-                BuildControlValidationMessage = Replace( _
-                    modTranslationService.T("ERR_MAX", "must be = {0}"), _
-                    "{0}", CStr(maxValue))
+                BuildControlValidationMessage = modTranslationService.TEx("ERR_MAX", "must be <= {0}", maxValue)
                 Exit Function
             End If
         End If
@@ -1458,18 +1453,14 @@ Private Function BuildControlValidationMessage( _
     ' MINLEN / MAXLEN
     If GetMinLenValue(controlTokens, minLenValue) Then
         If Not IsControlValueMinLenValid(ControlInstance, minLenValue) Then
-            BuildControlValidationMessage = Replace( _
-                modTranslationService.T("ERR_MINLEN", "minimum length is {0}"), _
-                "{0}", CStr(minLenValue))
+            BuildControlValidationMessage = modTranslationService.TEx("ERR_MINLEN", "minimum length is {0}", minLenValue)
             Exit Function
         End If
     End If
 
     If GetMaxLenValue(controlTokens, maxLenValue) Then
         If Not IsControlValueMaxLenValid(ControlInstance, maxLenValue) Then
-            BuildControlValidationMessage = Replace( _
-                modTranslationService.T("ERR_MAXLEN", "maximum length is {0}"), _
-                "{0}", CStr(maxLenValue))
+            BuildControlValidationMessage = modTranslationService.TEx("ERR_MAXLEN", "maximum length is {0}", maxLenValue)
             Exit Function
         End If
     End If
