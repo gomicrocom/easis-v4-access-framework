@@ -100,7 +100,7 @@ Public Function ValidateRequiredFields(ByVal FormInstance As Access.Form) As Boo
     Dim ctl As Control
     Dim controlTokens As Object
     Dim missingControls As Collection
-    Dim missingFieldNames As Collection
+    Dim MissingFieldNames As Collection
     Dim firstMissingControl As Control
 
     ValidateRequiredFields = True
@@ -110,17 +110,23 @@ Public Function ValidateRequiredFields(ByVal FormInstance As Access.Form) As Boo
     End If
 
     Set missingControls = New Collection
-    Set missingFieldNames = New Collection
+    Set MissingFieldNames = New Collection
 
     For Each ctl In FormInstance.Controls
+        If Not ShouldValidateControl(ctl) Then
+            GoTo NextControl
+        End If
+
         Set controlTokens = ParseTagTokens(ctl.Tag)
 
         If IsControlRequired(controlTokens) Then
             If IsControlValueMissing(ctl) Then
                 missingControls.Add ctl
-                missingFieldNames.Add GetDisplayNameForRequiredControl(FormInstance, ctl)
+                MissingFieldNames.Add GetDisplayNameForRequiredControl(FormInstance, ctl)
             End If
         End If
+
+NextControl:
     Next ctl
 
     If missingControls.Count = 0 Then
@@ -128,7 +134,7 @@ Public Function ValidateRequiredFields(ByVal FormInstance As Access.Form) As Boo
     End If
 
     ValidateRequiredFields = False
-    TryShowRequiredFieldsMessage missingFieldNames, GetFormName(FormInstance)
+    TryShowRequiredFieldsMessage MissingFieldNames, GetFormName(FormInstance)
 
     Set firstMissingControl = missingControls.Item(1)
     Call TryFocusControl(firstMissingControl)
@@ -177,6 +183,10 @@ Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boole
     Set invalidFormatFieldNames = New Collection
 
     For Each ctl In FormInstance.Controls
+        If Not ShouldValidateControl(ctl) Then
+            GoTo NextControl
+        End If
+
         Set controlTokens = ParseTagTokens(ctl.Tag)
 
         isValueMissing = IsControlValueMissing(ctl)
@@ -188,6 +198,8 @@ Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boole
             invalidFormatControls.Add ctl
             invalidFormatFieldNames.Add GetDisplayNameForRequiredControl(FormInstance, ctl)
         End If
+
+NextControl:
     Next ctl
 
     If missingRequiredControls.Count = 0 And invalidFormatControls.Count = 0 Then
@@ -223,6 +235,36 @@ ErrorHandler:
 
     On Error GoTo 0
     Err.Raise savedErrNumber, savedErrSource, savedErrDescription
+End Function
+
+Private Function ShouldValidateControl(ByVal ControlInstance As Control) As Boolean
+    On Error GoTo SafeExit
+
+    If ControlInstance Is Nothing Then Exit Function
+
+    On Error Resume Next
+    Dim isVisible As Variant
+    Dim isEnabled As Variant
+
+    isVisible = ControlInstance.Visible
+    If Err.Number <> 0 Then
+        Err.Clear
+        Exit Function
+    End If
+
+    isEnabled = ControlInstance.Enabled
+    If Err.Number <> 0 Then
+        Err.Clear
+        Exit Function
+    End If
+    On Error GoTo SafeExit
+
+    If isVisible = False Then Exit Function
+    If isEnabled = False Then Exit Function
+
+    ShouldValidateControl = True
+
+SafeExit:
 End Function
 
 Private Function GetFormName(ByVal FormInstance As Access.Form) As String
