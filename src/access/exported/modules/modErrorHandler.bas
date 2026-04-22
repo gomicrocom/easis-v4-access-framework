@@ -10,14 +10,14 @@ Option Explicit
 
 Private Const MODULE_NAME As String = "modErrorHandler"
 
-Public Function HandleError(ByVal ModuleName As String, ByVal ProcedureName As String, ByVal SourceError As ErrObject) As String
+Public Function HandleError(ByVal moduleName As String, ByVal ProcedureName As String, ByVal SourceError As ErrObject) As String
     Dim errorMessage As String
 
-    errorMessage = ModuleName & "." & ProcedureName & " failed"
+    errorMessage = moduleName & "." & ProcedureName & " failed"
 
     If SourceError Is Nothing Then
         HandleError = errorMessage
-        modLoggingHandler.LogError ModuleName & "." & ProcedureName, errorMessage
+        modLoggingHandler.LogError moduleName & "." & ProcedureName, errorMessage
         Exit Function
     End If
 
@@ -26,7 +26,7 @@ Public Function HandleError(ByVal ModuleName As String, ByVal ProcedureName As S
     End If
 
     HandleError = errorMessage
-    modLoggingHandler.LogError ModuleName & "." & ProcedureName, errorMessage, SourceError.Number
+    modLoggingHandler.LogError moduleName & "." & ProcedureName, errorMessage, SourceError.Number
 End Function
 
 Public Function ExecuteSafely(ByVal ProcedureName As String) As Boolean

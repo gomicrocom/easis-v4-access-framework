@@ -1,4 +1,3 @@
-Attribute VB_Name = "modNumberingHandler"
 Option Compare Database
 Option Explicit
 
@@ -18,33 +17,33 @@ Private Const FIELD_PREFIX As String = "prefix"
 Private Const FIELD_FORMAT_MASK As String = "format_mask"
 Private Const FIELD_IS_ACTIVE As String = "is_active"
 
-Public Function GetNextDocumentNumber(ByVal DocumentTypeCode As String, Optional ByVal DocumentDate As Date = 0) As String
+Public Function GetNextDocumentNumber(ByVal documentTypeCode As String, Optional ByVal documentDate As Date = 0) As String
     On Error GoTo ErrorHandler
 
-    Dim fiscalYear As Long
+    Dim FiscalYear As Long
     Dim nextValue As Long
-    Dim prefix As String
-    Dim formatMask As String
+    Dim Prefix As String
+    Dim FormatMask As String
     Dim normalizedType As String
 
-    normalizedType = UCase$(Trim$(DocumentTypeCode))
+    normalizedType = UCase$(Trim$(documentTypeCode))
     If LenB(normalizedType) = 0 Then
         Exit Function
     End If
 
-    fiscalYear = ResolveFiscalYear(DocumentDate)
-    nextValue = modNumberRangeRepository.IncrementNumberValue(normalizedType, fiscalYear)
+    FiscalYear = ResolveFiscalYear(documentDate)
+    nextValue = modNumberRangeRepository.IncrementNumberValue(normalizedType, FiscalYear)
 
     If nextValue <= 0 Then
         modLoggingHandler.LogWarning MODULE_NAME & ".GetNextDocumentNumber", _
-            "Next document number could not be generated for DocumentType='" & normalizedType & "', FiscalYear=" & CStr(fiscalYear) & "."
+            "Next document number could not be generated for DocumentType='" & normalizedType & "', FiscalYear=" & CStr(FiscalYear) & "."
         Exit Function
     End If
 
-    prefix = ResolvePrefix(normalizedType, fiscalYear)
-    formatMask = ResolveFormatMask(normalizedType, fiscalYear)
+    Prefix = ResolvePrefix(normalizedType, FiscalYear)
+    FormatMask = ResolveFormatMask(normalizedType, FiscalYear)
 
-    GetNextDocumentNumber = BuildFormattedDocumentNumber(prefix, fiscalYear, nextValue, formatMask)
+    GetNextDocumentNumber = BuildFormattedDocumentNumber(Prefix, FiscalYear, nextValue, FormatMask)
     Exit Function
 
 ErrorHandler:
@@ -52,59 +51,83 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "GetNextDocumentNumber", Err
 End Function
 
-Public Function BuildFormattedDocumentNumber(ByVal Prefix As String, ByVal FiscalYear As Long, ByVal NumberValue As Long, Optional ByVal FormatMask As String = "") As String
+Public Function BuildFormattedDocumentNumber( _
+    ByVal Prefix As String, _
+    ByVal FiscalYear As Long, _
+    ByVal NumberValue As Long, _
+    Optional ByVal FormatMask As String = "" _
+) As String
     On Error GoTo ErrorHandler
 
     Dim effectiveMask As String
-    Dim paddedValue As String
+    Dim resultText As String
+    Dim numberStartPos As Long
+    Dim numberEndPos As Long
+    Dim numberToken As String
+    Dim numberPattern As String
+    Dim formattedNumber As String
 
-    paddedValue = Format$(NumberValue, "000000")
     effectiveMask = Trim$(FormatMask)
-
     If LenB(effectiveMask) = 0 Then
-        BuildFormattedDocumentNumber = UCase$(Trim$(Prefix)) & "-" & CStr(FiscalYear) & "-" & paddedValue
-        Exit Function
+        effectiveMask = "{PREFIX}-{YEAR}-{NUMBER:000001}"
     End If
 
-    effectiveMask = Replace(effectiveMask, "{PREFIX}", UCase$(Trim$(Prefix)))
-    effectiveMask = Replace(effectiveMask, "{YEAR}", CStr(FiscalYear))
-    effectiveMask = Replace(effectiveMask, "{NUMBER}", paddedValue)
-    effectiveMask = Replace(effectiveMask, "PREFIX", UCase$(Trim$(Prefix)))
-    effectiveMask = Replace(effectiveMask, "YEAR", CStr(FiscalYear))
-    effectiveMask = Replace(effectiveMask, "000001", paddedValue)
+    resultText = effectiveMask
+    resultText = Replace(resultText, "{PREFIX}", Trim$(Prefix))
+    resultText = Replace(resultText, "{YEAR}", CStr(FiscalYear))
 
-    BuildFormattedDocumentNumber = effectiveMask
+    numberStartPos = InStr(1, resultText, "{NUMBER:", vbTextCompare)
+
+    If numberStartPos > 0 Then
+        numberEndPos = InStr(numberStartPos, resultText, "}", vbTextCompare)
+
+        If numberEndPos > numberStartPos Then
+            numberToken = Mid$(resultText, numberStartPos, numberEndPos - numberStartPos + 1)
+            numberPattern = Mid$(resultText, numberStartPos + 8, numberEndPos - numberStartPos - 8)
+
+            If LenB(numberPattern) = 0 Then
+                numberPattern = "000001"
+            End If
+
+            formattedNumber = Format$(NumberValue, numberPattern)
+            resultText = Replace(resultText, numberToken, formattedNumber)
+        End If
+    Else
+        resultText = resultText & "-" & Format$(NumberValue, "000001")
+    End If
+
+    BuildFormattedDocumentNumber = resultText
     Exit Function
 
 ErrorHandler:
-    BuildFormattedDocumentNumber = vbNullString
-    modErrorHandler.HandleError MODULE_NAME, "BuildFormattedDocumentNumber", Err
+    BuildFormattedDocumentNumber = Trim$(Prefix) & "-" & CStr(FiscalYear) & "-" & Format$(NumberValue, "000001")
+    modErrorHandler.HandleError "modNumberingHandler", "BuildFormattedDocumentNumber", Err
 End Function
 
-Private Function ResolveFiscalYear(ByVal DocumentDate As Date) As Long
-    If DocumentDate = 0 Then
+Private Function ResolveFiscalYear(ByVal documentDate As Date) As Long
+    If documentDate = 0 Then
         ResolveFiscalYear = Year(Date)
     Else
-        ResolveFiscalYear = Year(DocumentDate)
+        ResolveFiscalYear = Year(documentDate)
     End If
 End Function
 
-Private Function ResolvePrefix(ByVal DocumentTypeCode As String, ByVal FiscalYear As Long) As String
+Private Function ResolvePrefix(ByVal documentTypeCode As String, ByVal FiscalYear As Long) As String
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
 
-    ResolvePrefix = modTenantRepository.GetTenantParameter("NR_PREFIX_" & UCase$(Trim$(DocumentTypeCode)), UCase$(Trim$(DocumentTypeCode)))
+    ResolvePrefix = modTenantRepository.GetTenantParameter("NR_PREFIX_" & UCase$(Trim$(documentTypeCode)), UCase$(Trim$(documentTypeCode)))
 
-    If Not modNumberRangeRepository.NumberRangeExists(DocumentTypeCode, FiscalYear) Then
+    If Not modNumberRangeRepository.NumberRangeExists(documentTypeCode, FiscalYear) Then
         Exit Function
     End If
 
     Set db = modDb.GetCurrentDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_NUMBERRANGE & "];", dbOpenSnapshot)
 
-    ResolvePrefix = ResolveTextField(rs, DocumentTypeCode, FiscalYear, FIELD_PREFIX, ResolvePrefix)
+    ResolvePrefix = ResolveTextField(rs, documentTypeCode, FiscalYear, FIELD_PREFIX, ResolvePrefix)
 
 CleanExit:
     On Error Resume Next
@@ -118,22 +141,22 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Function ResolveFormatMask(ByVal DocumentTypeCode As String, ByVal FiscalYear As Long) As String
+Private Function ResolveFormatMask(ByVal documentTypeCode As String, ByVal FiscalYear As Long) As String
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
 
-    ResolveFormatMask = modTenantRepository.GetTenantParameter("NR_FORMATMASK_" & UCase$(Trim$(DocumentTypeCode)), vbNullString)
+    ResolveFormatMask = modTenantRepository.GetTenantParameter("NR_FORMATMASK_" & UCase$(Trim$(documentTypeCode)), vbNullString)
 
-    If Not modNumberRangeRepository.NumberRangeExists(DocumentTypeCode, FiscalYear) Then
+    If Not modNumberRangeRepository.NumberRangeExists(documentTypeCode, FiscalYear) Then
         Exit Function
     End If
 
     Set db = modDb.GetCurrentDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_NUMBERRANGE & "];", dbOpenSnapshot)
 
-    ResolveFormatMask = ResolveTextField(rs, DocumentTypeCode, FiscalYear, FIELD_FORMAT_MASK, ResolveFormatMask)
+    ResolveFormatMask = ResolveTextField(rs, documentTypeCode, FiscalYear, FIELD_FORMAT_MASK, ResolveFormatMask)
 
 CleanExit:
     On Error Resume Next
@@ -147,12 +170,12 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Function ResolveTextField(ByVal rs As DAO.Recordset, ByVal DocumentTypeCode As String, ByVal FiscalYear As Long, ByVal FieldName As String, ByVal DefaultValue As String) As String
+Private Function ResolveTextField(ByVal rs As DAO.Recordset, ByVal documentTypeCode As String, ByVal FiscalYear As Long, ByVal fieldName As String, ByVal DefaultValue As String) As String
     On Error GoTo ErrorHandler
 
     Dim targetType As String
 
-    targetType = UCase$(Trim$(DocumentTypeCode))
+    targetType = UCase$(Trim$(documentTypeCode))
     ResolveTextField = DefaultValue
 
     If rs.BOF And rs.EOF Then
@@ -161,7 +184,7 @@ Private Function ResolveTextField(ByVal rs As DAO.Recordset, ByVal DocumentTypeC
 
     If Not modDaoHelper.RecordsetHasField(rs, FIELD_DOCUMENT_TYPE_CODE) _
         Or Not modDaoHelper.RecordsetHasField(rs, FIELD_FISCAL_YEAR) _
-        Or Not modDaoHelper.RecordsetHasField(rs, FieldName) Then
+        Or Not modDaoHelper.RecordsetHasField(rs, fieldName) Then
         Exit Function
     End If
 
@@ -177,7 +200,7 @@ Private Function ResolveTextField(ByVal rs As DAO.Recordset, ByVal DocumentTypeC
                 End If
             End If
 
-            ResolveTextField = modDaoHelper.NzString(rs.Fields(FieldName).Value, DefaultValue)
+            ResolveTextField = modDaoHelper.NzString(rs.Fields(fieldName).Value, DefaultValue)
             Exit Function
         End If
 

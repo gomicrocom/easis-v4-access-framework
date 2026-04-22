@@ -1,4 +1,3 @@
-Attribute VB_Name = "modNumberRangeRepository"
 Option Compare Database
 Option Explicit
 
@@ -19,7 +18,7 @@ Private Const FIELD_CURRENT_VALUE As String = "current_value"
 Private Const FIELD_FORMAT_MASK As String = "format_mask"
 Private Const FIELD_IS_ACTIVE As String = "is_active"
 
-Public Function GetCurrentNumberValue(ByVal DocumentTypeCode As String, ByVal FiscalYear As Long) As Long
+Public Function GetCurrentNumberValue(ByVal documentTypeCode As String, ByVal FiscalYear As Long) As Long
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -32,7 +31,7 @@ Public Function GetCurrentNumberValue(ByVal DocumentTypeCode As String, ByVal Fi
     Set db = modDb.GetCurrentDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_NUMBERRANGE & "];", dbOpenDynaset)
 
-    GetCurrentNumberValue = ResolveCurrentValue(rs, DocumentTypeCode, FiscalYear)
+    GetCurrentNumberValue = ResolveCurrentValue(rs, documentTypeCode, FiscalYear)
 
 CleanExit:
     On Error Resume Next
@@ -47,7 +46,7 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Public Function IncrementNumberValue(ByVal DocumentTypeCode As String, ByVal FiscalYear As Long) As Long
+Public Function IncrementNumberValue(ByVal documentTypeCode As String, ByVal FiscalYear As Long) As Long
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -61,9 +60,9 @@ Public Function IncrementNumberValue(ByVal DocumentTypeCode As String, ByVal Fis
     Set db = modDb.GetCurrentDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_NUMBERRANGE & "];", dbOpenDynaset)
 
-    If Not FindNumberRangeRow(rs, DocumentTypeCode, FiscalYear) Then
+    If Not FindNumberRangeRow(rs, documentTypeCode, FiscalYear) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".IncrementNumberValue", _
-            "No active number range found for DocumentType='" & UCase$(Trim$(DocumentTypeCode)) & "', FiscalYear=" & CStr(FiscalYear) & "."
+            "No active number range found for DocumentType='" & UCase$(Trim$(documentTypeCode)) & "', FiscalYear=" & CStr(FiscalYear) & "."
         GoTo CleanExit
     End If
 
@@ -75,7 +74,7 @@ Public Function IncrementNumberValue(ByVal DocumentTypeCode As String, ByVal Fis
     IncrementNumberValue = nextValue
 
     modLoggingHandler.LogInfo MODULE_NAME & ".IncrementNumberValue", _
-        "Incremented number range for DocumentType='" & UCase$(Trim$(DocumentTypeCode)) & "', FiscalYear=" & CStr(FiscalYear) & " to " & CStr(nextValue) & "."
+        "Incremented number range for DocumentType='" & UCase$(Trim$(documentTypeCode)) & "', FiscalYear=" & CStr(FiscalYear) & " to " & CStr(nextValue) & "."
 
 CleanExit:
     On Error Resume Next
@@ -90,7 +89,7 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Public Function NumberRangeExists(ByVal DocumentTypeCode As String, ByVal FiscalYear As Long) As Boolean
+Public Function NumberRangeExists(ByVal documentTypeCode As String, ByVal FiscalYear As Long) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -103,7 +102,7 @@ Public Function NumberRangeExists(ByVal DocumentTypeCode As String, ByVal Fiscal
     Set db = modDb.GetCurrentDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_NUMBERRANGE & "];", dbOpenSnapshot)
 
-    NumberRangeExists = FindNumberRangeRow(rs, DocumentTypeCode, FiscalYear)
+    NumberRangeExists = FindNumberRangeRow(rs, documentTypeCode, FiscalYear)
 
 CleanExit:
     On Error Resume Next
@@ -138,7 +137,7 @@ Private Function TableExists(ByVal TableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim tdf As DAO.TableDef
+    Dim tdf As DAO.tableDef
 
     Set db = modDb.GetCurrentDatabase()
     For Each tdf In db.TableDefs
@@ -159,12 +158,12 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Function FindNumberRangeRow(ByVal rs As DAO.Recordset, ByVal DocumentTypeCode As String, ByVal FiscalYear As Long) As Boolean
+Private Function FindNumberRangeRow(ByVal rs As DAO.Recordset, ByVal documentTypeCode As String, ByVal FiscalYear As Long) As Boolean
     On Error GoTo ErrorHandler
 
     Dim targetType As String
 
-    targetType = UCase$(Trim$(DocumentTypeCode))
+    targetType = UCase$(Trim$(documentTypeCode))
     If LenB(targetType) = 0 Then
         Exit Function
     End If
@@ -207,10 +206,10 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "FindNumberRangeRow", Err
 End Function
 
-Private Function ResolveCurrentValue(ByVal rs As DAO.Recordset, ByVal DocumentTypeCode As String, ByVal FiscalYear As Long) As Long
+Private Function ResolveCurrentValue(ByVal rs As DAO.Recordset, ByVal documentTypeCode As String, ByVal FiscalYear As Long) As Long
     On Error GoTo ErrorHandler
 
-    If FindNumberRangeRow(rs, DocumentTypeCode, FiscalYear) Then
+    If FindNumberRangeRow(rs, documentTypeCode, FiscalYear) Then
         ResolveCurrentValue = modDaoHelper.NzLong(rs.Fields(FIELD_CURRENT_VALUE).Value, 0)
     End If
     Exit Function

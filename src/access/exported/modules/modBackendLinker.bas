@@ -15,7 +15,7 @@ Public Function RelinkBackendTables() As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim tdf As DAO.TableDef
+    Dim tdf As DAO.tableDef
     Dim BackendPath As String
     Dim relinkedCount As Long
 
@@ -57,7 +57,7 @@ Public Function GetLinkedTableCount() As Long
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim tdf As DAO.TableDef
+    Dim tdf As DAO.tableDef
 
     Set db = GetCurrentDatabase()
 
@@ -76,10 +76,10 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "GetLinkedTableCount", Err
 End Function
 
-Private Function IsLinkedAccessTable(ByVal TableDef As DAO.TableDef) As Boolean
+Private Function IsLinkedAccessTable(ByVal tableDef As DAO.tableDef) As Boolean
     Dim connectText As String
 
-    connectText = Trim$(Nz(TableDef.Connect, vbNullString))
+    connectText = Trim$(Nz(tableDef.Connect, vbNullString))
     If LenB(connectText) = 0 Then
         Exit Function
     End If
@@ -87,14 +87,14 @@ Private Function IsLinkedAccessTable(ByVal TableDef As DAO.TableDef) As Boolean
     IsLinkedAccessTable = (InStr(1, connectText, ACCESS_CONNECT_PREFIX, vbTextCompare) > 0)
 End Function
 
-Private Function RelinkTable(ByVal TableDef As DAO.TableDef, ByVal BackendPath As String) As Boolean
+Private Function RelinkTable(ByVal tableDef As DAO.tableDef, ByVal BackendPath As String) As Boolean
     On Error GoTo ErrorHandler
 
-    TableDef.Connect = ACCESS_CONNECT_PREFIX & BackendPath
-    TableDef.RefreshLink
+    tableDef.Connect = ACCESS_CONNECT_PREFIX & BackendPath
+    tableDef.RefreshLink
 
     modLoggingHandler.LogInfo MODULE_NAME & ".RelinkTable", _
-        "Relinked table '" & TableDef.Name & "' to '" & BackendPath & "'."
+        "Relinked table '" & tableDef.Name & "' to '" & BackendPath & "'."
 
     RelinkTable = True
     Exit Function
@@ -102,7 +102,7 @@ Private Function RelinkTable(ByVal TableDef As DAO.TableDef, ByVal BackendPath A
 ErrorHandler:
     RelinkTable = False
     modLoggingHandler.LogError MODULE_NAME & ".RelinkTable", _
-        "Failed to relink table '" & TableDef.Name & "' to '" & BackendPath & "'.", Err.Number
+        "Failed to relink table '" & tableDef.Name & "' to '" & BackendPath & "'.", Err.Number
 End Function
 
 Private Function ShouldSkipTable(ByVal TableName As String) As Boolean

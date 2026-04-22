@@ -1,4 +1,3 @@
-Attribute VB_Name = "modDocumentRepository"
 Option Compare Database
 Option Explicit
 
@@ -140,7 +139,7 @@ Public Function DeleteDocumentPositions(ByVal DocumentId As Long) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim sqlText As String
+    Dim SqlText As String
 
     DeleteDocumentPositions = False
 
@@ -161,8 +160,8 @@ Public Function DeleteDocumentPositions(ByVal DocumentId As Long) As Boolean
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    sqlText = "DELETE FROM [" & TABLE_DOC_DOCUMENT_POSITION & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    db.Execute sqlText, dbFailOnError
+    SqlText = "DELETE FROM [" & TABLE_DOC_DOCUMENT_POSITION & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    db.Execute SqlText, dbFailOnError
 
     modLoggingHandler.LogInfo MODULE_NAME & ".DeleteDocumentPositions", _
         "Deleted document positions for DocumentId=" & CStr(DocumentId) & "."
@@ -278,7 +277,7 @@ Public Function UpdateDocumentTotals(ByVal DocumentId As Long) As Boolean
     Dim NetSum As Currency
     Dim VatSum As Currency
     Dim GrossSum As Currency
-    Dim sqlText As String
+    Dim SqlText As String
 
     UpdateDocumentTotals = False
 
@@ -300,8 +299,8 @@ Public Function UpdateDocumentTotals(ByVal DocumentId As Long) As Boolean
 
     Set db = modDb.GetCurrentDatabase()
 
-    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsHeader = db.OpenRecordset(sqlText, dbOpenDynaset)
+    SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(SqlText, dbOpenDynaset)
 
     If rsHeader.BOF And rsHeader.EOF Then
         modLoggingHandler.LogWarning MODULE_NAME & ".UpdateDocumentTotals", _
@@ -309,9 +308,9 @@ Public Function UpdateDocumentTotals(ByVal DocumentId As Long) As Boolean
         GoTo CleanExit
     End If
 
-    sqlText = "SELECT [" & FIELD_LINE_TOTAL_NET & "], [" & FIELD_LINE_TOTAL_VAT & "], [" & FIELD_LINE_TOTAL_GROSS & "] " & _
+    SqlText = "SELECT [" & FIELD_LINE_TOTAL_NET & "], [" & FIELD_LINE_TOTAL_VAT & "], [" & FIELD_LINE_TOTAL_GROSS & "] " & _
               "FROM [" & TABLE_DOC_DOCUMENT_POSITION & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsPositions = db.OpenRecordset(sqlText, dbOpenSnapshot)
+    Set rsPositions = db.OpenRecordset(SqlText, dbOpenSnapshot)
 
     If Not (rsPositions.BOF And rsPositions.EOF) Then
         rsPositions.MoveFirst
@@ -372,7 +371,7 @@ Public Function DocumentExists(ByVal DocumentId As Long) As Boolean
 
     Dim db As DAO.Database
     Dim rsHeader As DAO.Recordset
-    Dim sqlText As String
+    Dim SqlText As String
 
     If DocumentId <= 0 Then
         Exit Function
@@ -389,8 +388,8 @@ Public Function DocumentExists(ByVal DocumentId As Long) As Boolean
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsHeader = db.OpenRecordset(sqlText, dbOpenSnapshot)
+    SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(SqlText, dbOpenSnapshot)
 
     DocumentExists = Not (rsHeader.BOF And rsHeader.EOF)
 
@@ -462,7 +461,7 @@ Public Function AssignDocumentNumber(ByVal DocumentId As Long) As Boolean
 
     Dim db As DAO.Database
     Dim rsHeader As DAO.Recordset
-    Dim sqlText As String
+    Dim SqlText As String
     Dim documentTypeCode As String
     Dim documentNo As String
     Dim documentDate As Date
@@ -487,8 +486,8 @@ Public Function AssignDocumentNumber(ByVal DocumentId As Long) As Boolean
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsHeader = db.OpenRecordset(sqlText, dbOpenDynaset)
+    SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(SqlText, dbOpenDynaset)
 
     If rsHeader.BOF And rsHeader.EOF Then
         modLoggingHandler.LogWarning MODULE_NAME & ".AssignDocumentNumber", _
@@ -548,7 +547,7 @@ Public Function SetDocumentStatus(ByVal DocumentId As Long, ByVal StatusCode As 
 
     Dim db As DAO.Database
     Dim rsHeader As DAO.Recordset
-    Dim sqlText As String
+    Dim SqlText As String
 
     SetDocumentStatus = False
 
@@ -567,8 +566,8 @@ Public Function SetDocumentStatus(ByVal DocumentId As Long, ByVal StatusCode As 
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsHeader = db.OpenRecordset(sqlText, dbOpenDynaset)
+    SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(SqlText, dbOpenDynaset)
 
     If rsHeader.BOF And rsHeader.EOF Then
         GoTo CleanExit
@@ -598,7 +597,7 @@ Public Function CountDocumentPositions(ByVal DocumentId As Long) As Long
 
     Dim db As DAO.Database
     Dim rsPositions As DAO.Recordset
-    Dim sqlText As String
+    Dim SqlText As String
 
     If DocumentId <= 0 Then
         Exit Function
@@ -615,8 +614,8 @@ Public Function CountDocumentPositions(ByVal DocumentId As Long) As Long
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT_POSITION & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsPositions = db.OpenRecordset(sqlText, dbOpenSnapshot)
+    SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT_POSITION & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsPositions = db.OpenRecordset(SqlText, dbOpenSnapshot)
 
     If Not (rsPositions.BOF And rsPositions.EOF) Then
         rsPositions.MoveLast
@@ -640,7 +639,7 @@ Private Function TableExists(ByVal TableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim tdf As DAO.TableDef
+    Dim tdf As DAO.tableDef
 
     Set db = modDb.GetCurrentDatabase()
 
@@ -662,9 +661,9 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal FieldName As String, ByVal FieldValue As Variant)
-    If modDaoHelper.RecordsetHasField(rs, FieldName) Then
-        rs.Fields(FieldName).Value = FieldValue
+Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal FieldValue As Variant)
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        rs.Fields(fieldName).Value = FieldValue
     End If
 End Sub
 
@@ -680,12 +679,12 @@ Private Function ResolveCreatedBy() As String
     End If
 End Function
 
-Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal FieldName As String, ByVal DefaultValue As String) As String
+Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal fieldName As String, ByVal DefaultValue As String) As String
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim rsHeader As DAO.Recordset
-    Dim sqlText As String
+    Dim SqlText As String
 
     ResolveDocumentFieldValue = DefaultValue
 
@@ -702,15 +701,15 @@ Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal Field
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsHeader = db.OpenRecordset(sqlText, dbOpenSnapshot)
+    SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(SqlText, dbOpenSnapshot)
 
     If rsHeader.BOF And rsHeader.EOF Then
         GoTo CleanExit
     End If
 
-    If modDaoHelper.RecordsetHasField(rsHeader, FieldName) Then
-        ResolveDocumentFieldValue = modDaoHelper.NzString(rsHeader.Fields(FieldName).Value, DefaultValue)
+    If modDaoHelper.RecordsetHasField(rsHeader, fieldName) Then
+        ResolveDocumentFieldValue = modDaoHelper.NzString(rsHeader.Fields(fieldName).Value, DefaultValue)
     End If
 
 CleanExit:
@@ -726,12 +725,12 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal FieldName As String, ByVal DefaultValue As Long) As Long
+Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal fieldName As String, ByVal DefaultValue As Long) As Long
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim rsHeader As DAO.Recordset
-    Dim sqlText As String
+    Dim SqlText As String
 
     ResolveDocumentLongValue = DefaultValue
 
@@ -748,15 +747,15 @@ Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal FieldN
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsHeader = db.OpenRecordset(sqlText, dbOpenSnapshot)
+    SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(SqlText, dbOpenSnapshot)
 
     If rsHeader.BOF And rsHeader.EOF Then
         GoTo CleanExit
     End If
 
-    If modDaoHelper.RecordsetHasField(rsHeader, FieldName) Then
-        ResolveDocumentLongValue = modDaoHelper.NzLong(rsHeader.Fields(FieldName).Value, DefaultValue)
+    If modDaoHelper.RecordsetHasField(rsHeader, fieldName) Then
+        ResolveDocumentLongValue = modDaoHelper.NzLong(rsHeader.Fields(fieldName).Value, DefaultValue)
     End If
 
 CleanExit:
@@ -771,4 +770,3 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ResolveDocumentLongValue", Err
     Resume CleanExit
 End Function
-

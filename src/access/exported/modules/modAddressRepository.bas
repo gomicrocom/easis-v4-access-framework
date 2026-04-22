@@ -1,4 +1,3 @@
-Attribute VB_Name = "modAddressRepository"
 Option Compare Database
 Option Explicit
 
@@ -29,9 +28,9 @@ Private Const FIELD_CREATED_BY As String = "created_by"
 
 Public Function CreateAddress( _
     ByVal AddressTypeCode As String, _
-    Optional ByVal CompanyName As String = "", _
-    Optional ByVal FirstName As String = "", _
-    Optional ByVal LastName As String = "", _
+    Optional ByVal companyName As String = "", _
+    Optional ByVal firstName As String = "", _
+    Optional ByVal lastName As String = "", _
     Optional ByVal Street As String = "", _
     Optional ByVal HouseNo As String = "", _
     Optional ByVal ZipCode As String = "", _
@@ -53,9 +52,9 @@ Public Function CreateAddress( _
 
     rs.AddNew
     SetRecordsetValue rs, FIELD_ADDRESS_TYPE_CODE, UCase$(Trim$(AddressTypeCode))
-    SetRecordsetValue rs, FIELD_COMPANY_NAME, Trim$(CompanyName)
-    SetRecordsetValue rs, FIELD_FIRST_NAME, Trim$(FirstName)
-    SetRecordsetValue rs, FIELD_LAST_NAME, Trim$(LastName)
+    SetRecordsetValue rs, FIELD_COMPANY_NAME, Trim$(companyName)
+    SetRecordsetValue rs, FIELD_FIRST_NAME, Trim$(firstName)
+    SetRecordsetValue rs, FIELD_LAST_NAME, Trim$(lastName)
     SetRecordsetValue rs, FIELD_STREET, Trim$(Street)
     SetRecordsetValue rs, FIELD_HOUSE_NO, Trim$(HouseNo)
     SetRecordsetValue rs, FIELD_ZIP_CODE, Trim$(ZipCode)
@@ -88,13 +87,13 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Public Function AddressExists(ByVal AddressId As Long) As Boolean
+Public Function AddressExists(ByVal addressId As Long) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
 
-    If AddressId <= 0 Then
+    If addressId <= 0 Then
         Exit Function
     End If
 
@@ -103,7 +102,7 @@ Public Function AddressExists(ByVal AddressId As Long) As Boolean
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(AddressId) & ";", dbOpenSnapshot)
+    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", dbOpenSnapshot)
 
     AddressExists = Not (rs.BOF And rs.EOF)
 
@@ -120,7 +119,7 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Public Function GetAddressDisplayName(ByVal AddressId As Long, Optional ByVal DefaultValue As String = "") As String
+Public Function GetAddressDisplayName(ByVal addressId As Long, Optional ByVal DefaultValue As String = "") As String
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -131,7 +130,7 @@ Public Function GetAddressDisplayName(ByVal AddressId As Long, Optional ByVal De
 
     GetAddressDisplayName = DefaultValue
 
-    If AddressId <= 0 Then
+    If addressId <= 0 Then
         Exit Function
     End If
 
@@ -140,7 +139,7 @@ Public Function GetAddressDisplayName(ByVal AddressId As Long, Optional ByVal De
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(AddressId) & ";", dbOpenSnapshot)
+    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", dbOpenSnapshot)
 
     If rs.BOF And rs.EOF Then
         Exit Function
@@ -197,7 +196,7 @@ Private Function TableExists(ByVal TableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim tdf As DAO.TableDef
+    Dim tdf As DAO.tableDef
 
     Set db = modDb.GetCurrentDatabase()
     For Each tdf In db.TableDefs
@@ -218,15 +217,15 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal FieldName As String, ByVal FieldValue As Variant)
-    If modDaoHelper.RecordsetHasField(rs, FieldName) Then
-        rs.Fields(FieldName).Value = FieldValue
+Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal FieldValue As Variant)
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        rs.Fields(fieldName).Value = FieldValue
     End If
 End Sub
 
-Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal FieldName As String, ByVal DefaultValue As String) As String
-    If modDaoHelper.RecordsetHasField(rs, FieldName) Then
-        ResolveFieldValue = modDaoHelper.NzString(rs.Fields(FieldName).Value, DefaultValue)
+Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal DefaultValue As String) As String
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        ResolveFieldValue = modDaoHelper.NzString(rs.Fields(fieldName).Value, DefaultValue)
     Else
         ResolveFieldValue = DefaultValue
     End If

@@ -1,4 +1,3 @@
-Attribute VB_Name = "modContactRepository"
 Option Compare Database
 Option Explicit
 
@@ -22,7 +21,7 @@ Private Const FIELD_CREATED_AT As String = "created_at"
 Private Const FIELD_CREATED_BY As String = "created_by"
 
 Public Function CreateContact( _
-    ByVal AddressId As Long, _
+    ByVal addressId As Long, _
     ByVal ContactTypeCode As String, _
     ByVal ContactValue As String, _
     Optional ByVal IsPrimary As Boolean = False, _
@@ -33,7 +32,7 @@ Public Function CreateContact( _
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
 
-    If AddressId <= 0 Then
+    If addressId <= 0 Then
         Exit Function
     End If
 
@@ -45,7 +44,7 @@ Public Function CreateContact( _
     Set rs = db.OpenRecordset(TABLE_ADR_CONTACT, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
-    SetRecordsetValue rs, FIELD_ADDRESS_ID, AddressId
+    SetRecordsetValue rs, FIELD_ADDRESS_ID, addressId
     SetRecordsetValue rs, FIELD_CONTACT_TYPE_CODE, UCase$(Trim$(ContactTypeCode))
     SetRecordsetValue rs, FIELD_CONTACT_VALUE, Trim$(ContactValue)
     SetRecordsetValue rs, FIELD_IS_PRIMARY, IsPrimary
@@ -60,7 +59,7 @@ Public Function CreateContact( _
     End If
 
     modLoggingHandler.LogInfo MODULE_NAME & ".CreateContact", _
-        "Contact created. ContactId=" & CStr(CreateContact) & ", AddressId=" & CStr(AddressId) & "."
+        "Contact created. ContactId=" & CStr(CreateContact) & ", AddressId=" & CStr(addressId) & "."
 
 CleanExit:
     On Error Resume Next
@@ -75,7 +74,7 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Public Function GetPrimaryContactValue(ByVal AddressId As Long, ByVal ContactTypeCode As String, Optional ByVal DefaultValue As String = "") As String
+Public Function GetPrimaryContactValue(ByVal addressId As Long, ByVal ContactTypeCode As String, Optional ByVal DefaultValue As String = "") As String
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -84,7 +83,7 @@ Public Function GetPrimaryContactValue(ByVal AddressId As Long, ByVal ContactTyp
 
     GetPrimaryContactValue = DefaultValue
 
-    If AddressId <= 0 Then
+    If addressId <= 0 Then
         Exit Function
     End If
 
@@ -94,7 +93,7 @@ Public Function GetPrimaryContactValue(ByVal AddressId As Long, ByVal ContactTyp
 
     targetType = UCase$(Trim$(ContactTypeCode))
     Set db = modDb.GetCurrentDatabase()
-    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_CONTACT & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(AddressId) & ";", dbOpenSnapshot)
+    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_CONTACT & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", dbOpenSnapshot)
 
     If rs.BOF And rs.EOF Then
         Exit Function
@@ -182,7 +181,7 @@ Private Function TableExists(ByVal TableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim tdf As DAO.TableDef
+    Dim tdf As DAO.tableDef
 
     Set db = modDb.GetCurrentDatabase()
     For Each tdf In db.TableDefs
@@ -203,15 +202,15 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal FieldName As String, ByVal FieldValue As Variant)
-    If modDaoHelper.RecordsetHasField(rs, FieldName) Then
-        rs.Fields(FieldName).Value = FieldValue
+Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal FieldValue As Variant)
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        rs.Fields(fieldName).Value = FieldValue
     End If
 End Sub
 
-Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal FieldName As String, ByVal DefaultValue As String) As String
-    If modDaoHelper.RecordsetHasField(rs, FieldName) Then
-        ResolveFieldValue = modDaoHelper.NzString(rs.Fields(FieldName).Value, DefaultValue)
+Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal DefaultValue As String) As String
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        ResolveFieldValue = modDaoHelper.NzString(rs.Fields(fieldName).Value, DefaultValue)
     Else
         ResolveFieldValue = DefaultValue
     End If

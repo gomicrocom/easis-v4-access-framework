@@ -44,12 +44,12 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
 
-Public Function IsModuleActive(ByVal ModuleName As String) As Boolean
+Public Function IsModuleActive(ByVal moduleName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim normalizedModule As String
 
-    normalizedModule = NormalizeModuleName(ModuleName)
+    normalizedModule = NormalizeModuleName(moduleName)
     If LenB(normalizedModule) = 0 Then
         IsModuleActive = False
         Exit Function
@@ -85,13 +85,13 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "GetActiveModules", Err
 End Function
 
-Public Sub RequireModule(ByVal ModuleName As String, Optional ByVal RaiseError As Boolean = True)
+Public Sub RequireModule(ByVal moduleName As String, Optional ByVal RaiseError As Boolean = True)
     On Error GoTo ErrorHandler
 
     Dim normalizedModule As String
     Dim messageText As String
 
-    normalizedModule = NormalizeModuleName(ModuleName)
+    normalizedModule = NormalizeModuleName(moduleName)
     If LenB(normalizedModule) = 0 Then
         messageText = "Module name is required."
         modLoggingHandler.LogWarning MODULE_NAME & ".RequireModule", messageText
@@ -136,12 +136,12 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
 
-Private Sub ActivateModule(ByVal ModuleName As String)
+Private Sub ActivateModule(ByVal moduleName As String)
     On Error GoTo ErrorHandler
 
     Dim normalizedModule As String
 
-    normalizedModule = NormalizeModuleName(ModuleName)
+    normalizedModule = NormalizeModuleName(moduleName)
     If LenB(normalizedModule) = 0 Then
         Exit Sub
     End If
@@ -178,8 +178,8 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
 
-Private Function NormalizeModuleName(ByVal ModuleName As String) As String
-    NormalizeModuleName = UCase$(Trim$(ModuleName))
+Private Function NormalizeModuleName(ByVal moduleName As String) As String
+    NormalizeModuleName = UCase$(Trim$(moduleName))
 End Function
 
 Private Function BuildActiveModulesSummary() As String

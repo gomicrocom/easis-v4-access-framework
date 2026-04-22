@@ -190,7 +190,7 @@ Private Function LoadTranslationsFromTable() As Long
 
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
-    Dim sqlText As String
+    Dim SqlText As String
     Dim hasIsActiveField As Boolean
 
     If Not TranslationTableExists(TABLE_FW_TRANSLATIONS) Then
@@ -205,8 +205,8 @@ Private Function LoadTranslationsFromTable() As Long
             "Current database could not be resolved."
     End If
 
-    sqlText = "SELECT * FROM [" & TABLE_FW_TRANSLATIONS & "];"
-    Set rs = db.OpenRecordset(sqlText, dbOpenSnapshot)
+    SqlText = "SELECT * FROM [" & TABLE_FW_TRANSLATIONS & "];"
+    Set rs = db.OpenRecordset(SqlText, dbOpenSnapshot)
 
     If rs.EOF Then
         modLoggingHandler.LogWarning MODULE_NAME & ".LoadTranslationsFromTable", _
@@ -281,7 +281,7 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
 
-Private Sub AddTranslation(ByVal LanguageCode As String, ByVal TextKey As String, ByVal TextValue As String)
+Private Sub AddTranslation(ByVal LanguageCode As String, ByVal TextKey As String, ByVal textValue As String)
     On Error GoTo ErrorHandler
 
     Dim compositeKey As String
@@ -292,7 +292,7 @@ Private Sub AddTranslation(ByVal LanguageCode As String, ByVal TextKey As String
     End If
 
     EnsureTranslationStore
-    mTranslations(compositeKey) = TextValue
+    mTranslations(compositeKey) = textValue
     Exit Sub
 
 ErrorHandler:
@@ -344,7 +344,7 @@ Private Function TranslationTableExists(ByVal TableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim tableDef As DAO.TableDef
+    Dim tableDef As DAO.tableDef
     Dim normalizedTableName As String
 
     normalizedTableName = UCase$(Trim$(TableName))
@@ -373,4 +373,20 @@ ErrorHandler:
     TranslationTableExists = False
     modErrorHandler.HandleError MODULE_NAME, "TranslationTableExists", Err
     Err.Raise Err.Number, Err.Source, Err.Description
+End Function
+
+Public Function TEx(ByVal Key As String, _
+                    ByVal DefaultText As String, _
+                    ParamArray Args() As Variant) As String
+
+    Dim result As String
+    Dim i As Long
+
+    result = T(Key, DefaultText)
+
+    For i = LBound(Args) To UBound(Args)
+        result = Replace(result, "{" & i & "}", CStr(Args(i)))
+    Next i
+
+    TEx = result
 End Function

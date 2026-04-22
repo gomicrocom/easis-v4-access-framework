@@ -66,10 +66,10 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "CalculateDocumentLineVat", Err
 End Function
 
-Public Function ValidateDocumentType(ByVal DocumentTypeCode As String) As Boolean
+Public Function ValidateDocumentType(ByVal documentTypeCode As String) As Boolean
     Dim normalizedType As String
 
-    normalizedType = UCase$(Trim$(DocumentTypeCode))
+    normalizedType = UCase$(Trim$(documentTypeCode))
 
     Select Case normalizedType
         Case DOC_TYPE_OFFER, DOC_TYPE_ORDER_EX, DOC_TYPE_DELIVERY, DOC_TYPE_INVOICE_EX, DOC_TYPE_RECEIPT_EX, DOC_TYPE_PROFORMA

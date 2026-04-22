@@ -29,12 +29,12 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
 
-Public Function IsFeatureLicensed(ByVal FeatureName As String) As Boolean
+Public Function IsFeatureLicensed(ByVal featureName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim normalizedFeature As String
 
-    normalizedFeature = NormalizeFeatureCode(FeatureName)
+    normalizedFeature = NormalizeFeatureCode(featureName)
     If LenB(normalizedFeature) = 0 Then
         IsFeatureLicensed = False
         Exit Function
@@ -68,13 +68,13 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "GetLicensedFeatures", Err
 End Function
 
-Public Sub RequireFeature(ByVal FeatureName As String, Optional ByVal RaiseError As Boolean = True)
+Public Sub RequireFeature(ByVal featureName As String, Optional ByVal RaiseError As Boolean = True)
     On Error GoTo ErrorHandler
 
     Dim normalizedFeature As String
     Dim messageText As String
 
-    normalizedFeature = NormalizeFeatureCode(FeatureName)
+    normalizedFeature = NormalizeFeatureCode(featureName)
     If LenB(normalizedFeature) = 0 Then
         messageText = "Feature name is required."
         modLoggingHandler.LogWarning MODULE_NAME & ".RequireFeature", messageText
@@ -119,21 +119,21 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "InitializeLicensing", Err
 End Function
 
-Public Function IsFeatureEnabled(ByVal FeatureName As String) As Boolean
-    IsFeatureEnabled = IsFeatureLicensed(FeatureName)
+Public Function IsFeatureEnabled(ByVal featureName As String) As Boolean
+    IsFeatureEnabled = IsFeatureLicensed(featureName)
 End Function
 
 Private Sub LoadRuntimeLicenses(Optional ByVal IniPath As String = vbNullString)
     On Error GoTo ErrorHandler
 
-    Dim featureList As String
+    Dim FeatureList As String
 
     ClearLicenseStore
 
     AddLicensedFeature FEATURE_CORE
 
-    featureList = modConfigIni.GetIniString(CONFIG_SECTION_LICENSE, "EnabledFeatures", vbNullString, IniPath)
-    LoadFeatureList featureList
+    FeatureList = modConfigIni.GetIniString(CONFIG_SECTION_LICENSE, "EnabledFeatures", vbNullString, IniPath)
+    LoadFeatureList FeatureList
 
     If modConfigIni.GetIniBoolean(CONFIG_SECTION_LICENSE, FEATURE_CAMT054, False, IniPath) Then
         AddLicensedFeature FEATURE_CAMT054
@@ -180,12 +180,12 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
 
-Private Sub AddLicensedFeature(ByVal FeatureName As String)
+Private Sub AddLicensedFeature(ByVal featureName As String)
     On Error GoTo ErrorHandler
 
     Dim normalizedFeature As String
 
-    normalizedFeature = NormalizeFeatureCode(FeatureName)
+    normalizedFeature = NormalizeFeatureCode(featureName)
     If LenB(normalizedFeature) = 0 Then
         Exit Sub
     End If

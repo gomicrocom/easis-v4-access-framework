@@ -14,7 +14,7 @@ Private Const TAG_PREFIX_TRANSLATION As String = "TR:"
 Public Sub LocalizeForm(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
 
-    Dim translationKey As String
+    Dim TranslationKey As String
     Dim localizedCount As Long
     Dim ctl As Control
 
@@ -22,16 +22,16 @@ Public Sub LocalizeForm(ByVal FormInstance As Access.Form)
         Exit Sub
     End If
 
-    translationKey = ExtractTranslationKeyFromTag(FormInstance.Tag)
-    If LenB(translationKey) > 0 Then
-        SetFormCaption FormInstance, translationKey, NzString(FormInstance.Caption)
+    TranslationKey = ExtractTranslationKeyFromTag(FormInstance.Tag)
+    If LenB(TranslationKey) > 0 Then
+        SetFormCaption FormInstance, TranslationKey, NzString(FormInstance.Caption)
         localizedCount = localizedCount + 1
     End If
 
     For Each ctl In FormInstance.Controls
-        translationKey = ExtractTranslationKeyFromTag(ctl.Tag)
-        If LenB(translationKey) > 0 Then
-            LocalizeControl ctl, translationKey, GetControlFallbackCaption(ctl)
+        TranslationKey = ExtractTranslationKeyFromTag(ctl.Tag)
+        If LenB(TranslationKey) > 0 Then
+            LocalizeControl ctl, TranslationKey, GetControlFallbackCaption(ctl)
             localizedCount = localizedCount + 1
         End If
 
@@ -160,8 +160,8 @@ End Function
 Private Function LocalizeTabPages(ByVal TabControlInstance As Control) As Long
     On Error GoTo ErrorHandler
 
-    Dim page As Access.Page
-    Dim translationKey As String
+    Dim Page As Access.Page
+    Dim TranslationKey As String
     Dim fallbackCaption As String
 
     If TabControlInstance Is Nothing Then
@@ -172,14 +172,14 @@ Private Function LocalizeTabPages(ByVal TabControlInstance As Control) As Long
         Exit Function
     End If
 
-    For Each page In TabControlInstance.Pages
-        translationKey = ExtractTranslationKeyFromTag(NzString(page.Tag))
-        If LenB(translationKey) > 0 Then
-            fallbackCaption = NzString(page.Caption)
-            page.Caption = modTranslationService.T(translationKey, fallbackCaption)
+    For Each Page In TabControlInstance.Pages
+        TranslationKey = ExtractTranslationKeyFromTag(NzString(Page.Tag))
+        If LenB(TranslationKey) > 0 Then
+            fallbackCaption = NzString(Page.Caption)
+            Page.Caption = modTranslationService.T(TranslationKey, fallbackCaption)
             LocalizeTabPages = LocalizeTabPages + 1
         End If
-    Next page
+    Next Page
     Exit Function
 
 ErrorHandler:

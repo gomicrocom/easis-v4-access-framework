@@ -1,4 +1,3 @@
-Attribute VB_Name = "modFormRuntime"
 Option Compare Database
 Option Explicit
 
@@ -141,7 +140,7 @@ NextControl:
     ValidateRequiredFields = False
     TryShowRequiredFieldsMessage MissingFieldNames, GetFormName(FormInstance)
 
-    Set firstMissingControl = missingControls.Item(1)
+    Set firstMissingControl = missingControls.item(1)
     Call TryFocusControl(firstMissingControl)
 
     modLoggingHandler.LogWarning MODULE_NAME & ".ValidateRequiredFields", _
@@ -175,7 +174,8 @@ Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boole
     Dim invalidFormatFieldNames As Collection
     Dim firstInvalidControl As Control
     Dim isValueMissing As Boolean
-
+    Dim errorMessage As String
+        
     ValidateFormPolicies = True
 
     If FormInstance Is Nothing Then
@@ -201,7 +201,12 @@ Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boole
             missingRequiredFieldNames.Add GetDisplayNameForRequiredControl(FormInstance, ctl)
         ElseIf IsControlValueInvalidForPolicies(ctl, controlTokens) Then
             invalidFormatControls.Add ctl
-            invalidFormatFieldNames.Add GetDisplayNameForRequiredControl(FormInstance, ctl)
+            errorMessage = BuildControlValidationMessage(ctl, controlTokens)
+            
+            If LenB(errorMessage) > 0 Then
+                invalidFormatFieldNames.Add _
+                    GetDisplayNameForRequiredControl(FormInstance, ctl) & " ? " & errorMessage
+            End If
         End If
 
 NextControl:
@@ -215,9 +220,9 @@ NextControl:
     TryShowValidationSummaryMessage missingRequiredFieldNames, invalidFormatFieldNames, GetFormName(FormInstance)
 
     If missingRequiredControls.Count > 0 Then
-        Set firstInvalidControl = missingRequiredControls.Item(1)
+        Set firstInvalidControl = missingRequiredControls.item(1)
     Else
-        Set firstInvalidControl = invalidFormatControls.Item(1)
+        Set firstInvalidControl = invalidFormatControls.item(1)
     End If
 
     Call TryFocusControl(firstInvalidControl)
@@ -295,7 +300,7 @@ Private Function ParseTagTokens(ByVal TagValue As String) As Object
     Dim token As Variant
     Dim trimmedToken As String
     Dim separatorPosition As Long
-    Dim tokenKey As String
+    Dim TokenKey As String
     Dim tokenValue As String
 
     Set parsedTokens = CreateObject("Scripting.Dictionary")
@@ -316,16 +321,16 @@ Private Function ParseTagTokens(ByVal TagValue As String) As Object
 
         separatorPosition = InStr(1, trimmedToken, ":", vbTextCompare)
         If separatorPosition > 0 Then
-            tokenKey = UCase$(Trim$(Left$(trimmedToken, separatorPosition - 1)))
+            TokenKey = UCase$(Trim$(Left$(trimmedToken, separatorPosition - 1)))
             tokenValue = Trim$(Mid$(trimmedToken, separatorPosition + 1))
 
-            If LenB(tokenKey) > 0 Then
-                parsedTokens(tokenKey) = tokenValue
+            If LenB(TokenKey) > 0 Then
+                parsedTokens(TokenKey) = tokenValue
             End If
         Else
-            tokenKey = UCase$(trimmedToken)
-            If LenB(tokenKey) > 0 Then
-                parsedTokens(tokenKey) = True
+            TokenKey = UCase$(trimmedToken)
+            If LenB(TokenKey) > 0 Then
+                parsedTokens(TokenKey) = True
             End If
         End If
 
@@ -1390,6 +1395,91 @@ Private Function IsControlValueMaxLenValid(ByVal ControlInstance As Control, ByV
     If LenB(textValue) = 0 Then Exit Function
 
     IsControlValueMaxLenValid = (Len(textValue) <= maxLenValue)
+
+SafeExit:
+End Function
+Private Function BuildControlValidationMessage( _
+    ByVal ControlInstance As Control, _
+    ByVal controlTokens As Object) As String
+
+    On Error GoTo SafeExit
+
+    Dim msg As String
+    Dim minValue As Double
+    Dim maxValue As Double
+    Dim minLenValue As Long
+    Dim maxLenValue As Long
+
+    ' REQUIRED
+    If IsControlRequired(controlTokens) Then
+        If IsControlValueMissing(ControlInstance) Then
+            BuildControlValidationMessage = modTranslationService.T("ERR_REQUIRED", "is required")
+            Exit Function
+        End If
+    End If
+
+    ' NUMERIC
+    If IsControlNumericTag(controlTokens) Then
+        If Not IsControlValueNumericValid(ControlInstance) Then
+            BuildControlValidationMessage = modTranslationService.T("ERR_NUMERIC", "must be a number")
+            Exit Function
+        End If
+    End If
+
+    ' INTEGER
+    If IsControlIntegerTag(controlTokens) Then
+        If Not IsControlValueIntegerValid(ControlInstance) Then
+            BuildControlValidationMessage = modTranslationService.T("ERR_INTEGER", "must be an integer")
+            Exit Function
+        End If
+    End If
+
+    ' MIN / MAX
+    If IsControlNumericTag(controlTokens) Then
+        If GetMinValue(controlTokens, minValue) Then
+            If Not IsControlValueMinValid(ControlInstance, minValue) Then
+                BuildControlValidationMessage = Replace( _
+                    modTranslationService.T("ERR_MIN", "must be = {0}"), _
+                    "{0}", CStr(minValue))
+                Exit Function
+            End If
+        End If
+
+        If GetMaxValue(controlTokens, maxValue) Then
+            If Not IsControlValueMaxValid(ControlInstance, maxValue) Then
+                BuildControlValidationMessage = Replace( _
+                    modTranslationService.T("ERR_MAX", "must be = {0}"), _
+                    "{0}", CStr(maxValue))
+                Exit Function
+            End If
+        End If
+    End If
+
+    ' MINLEN / MAXLEN
+    If GetMinLenValue(controlTokens, minLenValue) Then
+        If Not IsControlValueMinLenValid(ControlInstance, minLenValue) Then
+            BuildControlValidationMessage = Replace( _
+                modTranslationService.T("ERR_MINLEN", "minimum length is {0}"), _
+                "{0}", CStr(minLenValue))
+            Exit Function
+        End If
+    End If
+
+    If GetMaxLenValue(controlTokens, maxLenValue) Then
+        If Not IsControlValueMaxLenValid(ControlInstance, maxLenValue) Then
+            BuildControlValidationMessage = Replace( _
+                modTranslationService.T("ERR_MAXLEN", "maximum length is {0}"), _
+                "{0}", CStr(maxLenValue))
+            Exit Function
+        End If
+    End If
+
+    ' DATE
+    If IsControlDateTag(controlTokens) Then
+        If Not IsControlValueDateValid(ControlInstance) Then
+            BuildControlValidationMessage = modTranslationService.T("ERR_DATE", "must be a valid date")
+        End If
+    End If
 
 SafeExit:
 End Function

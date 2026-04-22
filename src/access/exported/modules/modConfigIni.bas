@@ -53,23 +53,23 @@ ErrorHandler:
 End Function
 
 Public Function ResolveConfigPath(Optional ByVal IniPath As String = vbNullString) As String
-    Dim candidate As String
+    Dim Candidate As String
 
-    candidate = Trim$(IniPath)
-    If LenB(candidate) > 0 Then
-        ResolveConfigPath = candidate
+    Candidate = Trim$(IniPath)
+    If LenB(Candidate) > 0 Then
+        ResolveConfigPath = Candidate
         Exit Function
     End If
 
-    candidate = CurrentProject.path & "\config\easis.ini"
-    If LenB(Dir$(candidate, vbNormal)) > 0 Then
-        ResolveConfigPath = candidate
+    Candidate = CurrentProject.path & "\config\easis.ini"
+    If LenB(Dir$(Candidate, vbNormal)) > 0 Then
+        ResolveConfigPath = Candidate
         Exit Function
     End If
 
-    candidate = CurrentProject.path & "\easis.ini"
-    If LenB(Dir$(candidate, vbNormal)) > 0 Then
-        ResolveConfigPath = candidate
+    Candidate = CurrentProject.path & "\easis.ini"
+    If LenB(Dir$(Candidate, vbNormal)) > 0 Then
+        ResolveConfigPath = Candidate
         Exit Function
     End If
 End Function
