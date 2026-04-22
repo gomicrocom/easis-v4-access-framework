@@ -22,6 +22,8 @@ Private Const TAG_TOKEN_INTEGER As String = "INTEGER"
 Private Const TAG_TOKEN_MIN As String = "MIN"
 Private Const TAG_TOKEN_MAX As String = "MAX"
 Private Const TAG_TOKEN_DATE As String = "DATE"
+Private Const TAG_TOKEN_MINLEN As String = "MINLEN"
+Private Const TAG_TOKEN_MAXLEN As String = "MAXLEN"
 
 Public Sub InitializeForm(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
@@ -686,9 +688,11 @@ End Function
 Private Function IsControlValueInvalidForPolicies(ByVal ControlInstance As Control, ByVal controlTokens As Object) As Boolean
     On Error GoTo SafeExit
 
-    Dim MinValue As Double
-    Dim MaxValue As Double
-
+    Dim minValue As Double
+    Dim maxValue As Double
+    Dim minLenValue As Long
+    Dim maxLenValue As Long
+    
     If ControlInstance Is Nothing Then
         Exit Function
     End If
@@ -727,15 +731,15 @@ Private Function IsControlValueInvalidForPolicies(ByVal ControlInstance As Contr
 
     If IsControlNumericTag(controlTokens) Then
     
-        If GetMinValue(controlTokens, MinValue) Then
-            If Not IsControlValueMinValid(ControlInstance, MinValue) Then
+        If GetMinValue(controlTokens, minValue) Then
+            If Not IsControlValueMinValid(ControlInstance, minValue) Then
                 IsControlValueInvalidForPolicies = True
                 Exit Function
             End If
         End If
     
-        If GetMaxValue(controlTokens, MaxValue) Then
-            If Not IsControlValueMaxValid(ControlInstance, MaxValue) Then
+        If GetMaxValue(controlTokens, maxValue) Then
+            If Not IsControlValueMaxValid(ControlInstance, maxValue) Then
                 IsControlValueInvalidForPolicies = True
                 Exit Function
             End If
@@ -743,6 +747,20 @@ Private Function IsControlValueInvalidForPolicies(ByVal ControlInstance As Contr
     
     End If
 
+    If GetMinLenValue(controlTokens, minLenValue) Then
+        If Not IsControlValueMinLenValid(ControlInstance, minLenValue) Then
+            IsControlValueInvalidForPolicies = True
+            Exit Function
+        End If
+    End If
+    
+    If GetMaxLenValue(controlTokens, maxLenValue) Then
+        If Not IsControlValueMaxLenValid(ControlInstance, maxLenValue) Then
+            IsControlValueInvalidForPolicies = True
+            Exit Function
+        End If
+    End If
+    
     If IsControlDateTag(controlTokens) Then
         If Not IsControlValueDateValid(ControlInstance) Then
             IsControlValueInvalidForPolicies = True
@@ -752,7 +770,7 @@ Private Function IsControlValueInvalidForPolicies(ByVal ControlInstance As Contr
 SafeExit:
 End Function
 
-Private Function GetMinValue(ByVal controlTokens As Object, ByRef MinValue As Double) As Boolean
+Private Function GetMinValue(ByVal controlTokens As Object, ByRef minValue As Double) As Boolean
     On Error GoTo SafeExit
 
     Dim tokenValue As String
@@ -774,13 +792,13 @@ Private Function GetMinValue(ByVal controlTokens As Object, ByRef MinValue As Do
         Exit Function
     End If
 
-    MinValue = CDbl(tokenValue)
+    minValue = CDbl(tokenValue)
     GetMinValue = True
 
 SafeExit:
 End Function
 
-Private Function GetMaxValue(ByVal controlTokens As Object, ByRef MaxValue As Double) As Boolean
+Private Function GetMaxValue(ByVal controlTokens As Object, ByRef maxValue As Double) As Boolean
     On Error GoTo SafeExit
 
     Dim tokenValue As String
@@ -802,7 +820,7 @@ Private Function GetMaxValue(ByVal controlTokens As Object, ByRef MaxValue As Do
         Exit Function
     End If
 
-    MaxValue = CDbl(tokenValue)
+    maxValue = CDbl(tokenValue)
     GetMaxValue = True
 
 SafeExit:
@@ -871,7 +889,7 @@ Private Function IsControlValueIntegerValid(ByVal ControlInstance As Control) As
 SafeExit:
 End Function
 
-Private Function IsControlValueMinValid(ByVal ControlInstance As Control, ByVal MinValue As Double) As Boolean
+Private Function IsControlValueMinValid(ByVal ControlInstance As Control, ByVal minValue As Double) As Boolean
     On Error GoTo SafeExit
 
     Dim controlValue As Variant
@@ -899,12 +917,12 @@ Private Function IsControlValueMinValid(ByVal ControlInstance As Control, ByVal 
         Exit Function
     End If
 
-    IsControlValueMinValid = (CDbl(controlValue) >= MinValue)
+    IsControlValueMinValid = (CDbl(controlValue) >= minValue)
 
 SafeExit:
 End Function
 
-Private Function IsControlValueMaxValid(ByVal ControlInstance As Control, ByVal MaxValue As Double) As Boolean
+Private Function IsControlValueMaxValid(ByVal ControlInstance As Control, ByVal maxValue As Double) As Boolean
     On Error GoTo SafeExit
 
     Dim controlValue As Variant
@@ -932,7 +950,7 @@ Private Function IsControlValueMaxValid(ByVal ControlInstance As Control, ByVal 
         Exit Function
     End If
 
-    IsControlValueMaxValid = (CDbl(controlValue) <= MaxValue)
+    IsControlValueMaxValid = (CDbl(controlValue) <= maxValue)
 
 SafeExit:
 End Function
@@ -1290,3 +1308,88 @@ SafeExit:
 End Function
 
 
+Private Function GetMinLenValue(ByVal controlTokens As Object, ByRef minLenValue As Long) As Boolean
+    On Error GoTo SafeExit
+
+    Dim tokenValue As String
+
+    If controlTokens Is Nothing Then Exit Function
+    If Not controlTokens.Exists(TAG_TOKEN_MINLEN) Then Exit Function
+
+    tokenValue = Trim$(CStr(controlTokens(TAG_TOKEN_MINLEN)))
+    If LenB(tokenValue) = 0 Then Exit Function
+    If Not IsNumeric(tokenValue) Then Exit Function
+
+    minLenValue = CLng(tokenValue)
+    If minLenValue < 0 Then Exit Function
+
+    GetMinLenValue = True
+
+SafeExit:
+End Function
+
+Private Function GetMaxLenValue(ByVal controlTokens As Object, ByRef maxLenValue As Long) As Boolean
+    On Error GoTo SafeExit
+
+    Dim tokenValue As String
+
+    If controlTokens Is Nothing Then Exit Function
+    If Not controlTokens.Exists(TAG_TOKEN_MAXLEN) Then Exit Function
+
+    tokenValue = Trim$(CStr(controlTokens(TAG_TOKEN_MAXLEN)))
+    If LenB(tokenValue) = 0 Then Exit Function
+    If Not IsNumeric(tokenValue) Then Exit Function
+
+    maxLenValue = CLng(tokenValue)
+    If maxLenValue < 0 Then Exit Function
+
+    GetMaxLenValue = True
+
+SafeExit:
+End Function
+
+Private Function IsControlValueMinLenValid(ByVal ControlInstance As Control, ByVal minLenValue As Long) As Boolean
+    On Error GoTo SafeExit
+
+    Dim controlValue As Variant
+    Dim textValue As String
+
+    IsControlValueMinLenValid = True
+
+    If ControlInstance Is Nothing Then Exit Function
+
+    controlValue = ControlInstance.Value
+
+    If IsNull(controlValue) Or IsEmpty(controlValue) Then Exit Function
+    If VarType(controlValue) <> vbString Then Exit Function
+
+    textValue = Trim$(CStr(controlValue))
+    If LenB(textValue) = 0 Then Exit Function
+
+    IsControlValueMinLenValid = (Len(textValue) >= minLenValue)
+
+SafeExit:
+End Function
+
+Private Function IsControlValueMaxLenValid(ByVal ControlInstance As Control, ByVal maxLenValue As Long) As Boolean
+    On Error GoTo SafeExit
+
+    Dim controlValue As Variant
+    Dim textValue As String
+
+    IsControlValueMaxLenValid = True
+
+    If ControlInstance Is Nothing Then Exit Function
+
+    controlValue = ControlInstance.Value
+
+    If IsNull(controlValue) Or IsEmpty(controlValue) Then Exit Function
+    If VarType(controlValue) <> vbString Then Exit Function
+
+    textValue = Trim$(CStr(controlValue))
+    If LenB(textValue) = 0 Then Exit Function
+
+    IsControlValueMaxLenValid = (Len(textValue) <= maxLenValue)
+
+SafeExit:
+End Function
