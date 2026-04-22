@@ -686,8 +686,8 @@ End Function
 Private Function IsControlValueInvalidForPolicies(ByVal ControlInstance As Control, ByVal controlTokens As Object) As Boolean
     On Error GoTo SafeExit
 
-    Dim minValue As Double
-    Dim maxValue As Double
+    Dim MinValue As Double
+    Dim MaxValue As Double
 
     If ControlInstance Is Nothing Then
         Exit Function
@@ -712,24 +712,35 @@ Private Function IsControlValueInvalidForPolicies(ByVal ControlInstance As Contr
     End If
 
     If IsControlIntegerTag(controlTokens) Then
+    
+        If Not IsControlValueNumericValid(ControlInstance) Then
+            IsControlValueInvalidForPolicies = True
+            Exit Function
+        End If
+    
         If Not IsControlValueIntegerValid(ControlInstance) Then
             IsControlValueInvalidForPolicies = True
             Exit Function
         End If
+    
     End If
 
-    If GetMinValue(controlTokens, minValue) Then
-        If Not IsControlValueMinValid(ControlInstance, minValue) Then
-            IsControlValueInvalidForPolicies = True
-            Exit Function
+    If IsControlNumericTag(controlTokens) Then
+    
+        If GetMinValue(controlTokens, MinValue) Then
+            If Not IsControlValueMinValid(ControlInstance, MinValue) Then
+                IsControlValueInvalidForPolicies = True
+                Exit Function
+            End If
         End If
-    End If
-
-    If GetMaxValue(controlTokens, maxValue) Then
-        If Not IsControlValueMaxValid(ControlInstance, maxValue) Then
-            IsControlValueInvalidForPolicies = True
-            Exit Function
+    
+        If GetMaxValue(controlTokens, MaxValue) Then
+            If Not IsControlValueMaxValid(ControlInstance, MaxValue) Then
+                IsControlValueInvalidForPolicies = True
+                Exit Function
+            End If
         End If
+    
     End If
 
     If IsControlDateTag(controlTokens) Then
