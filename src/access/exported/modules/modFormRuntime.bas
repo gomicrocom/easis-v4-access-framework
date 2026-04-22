@@ -18,6 +18,9 @@ Private Const TAG_TOKEN_HIDDEN As String = "HIDDEN"
 Private Const TAG_TOKEN_SETFOCUS As String = "SETFOCUS"
 Private Const TAG_TOKEN_REQUIRED As String = "REQUIRED"
 Private Const TAG_TOKEN_NUMERIC As String = "NUMERIC"
+Private Const TAG_TOKEN_INTEGER As String = "INTEGER"
+Private Const TAG_TOKEN_MIN As String = "MIN"
+Private Const TAG_TOKEN_MAX As String = "MAX"
 Private Const TAG_TOKEN_DATE As String = "DATE"
 
 Public Sub InitializeForm(ByVal FormInstance As Access.Form)
@@ -421,6 +424,21 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "IsControlDateTag", Err
 End Function
 
+Private Function IsControlIntegerTag(ByVal controlTokens As Object) As Boolean
+    On Error GoTo ErrorHandler
+
+    If controlTokens Is Nothing Then
+        Exit Function
+    End If
+
+    IsControlIntegerTag = controlTokens.Exists(TAG_TOKEN_INTEGER)
+    Exit Function
+
+ErrorHandler:
+    IsControlIntegerTag = False
+    modErrorHandler.HandleError MODULE_NAME, "IsControlIntegerTag", Err
+End Function
+
 Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
 
@@ -668,6 +686,9 @@ End Function
 Private Function IsControlValueInvalidForPolicies(ByVal ControlInstance As Control, ByVal controlTokens As Object) As Boolean
     On Error GoTo SafeExit
 
+    Dim minValue As Double
+    Dim maxValue As Double
+
     If ControlInstance Is Nothing Then
         Exit Function
     End If
@@ -690,11 +711,88 @@ Private Function IsControlValueInvalidForPolicies(ByVal ControlInstance As Contr
         End If
     End If
 
+    If IsControlIntegerTag(controlTokens) Then
+        If Not IsControlValueIntegerValid(ControlInstance) Then
+            IsControlValueInvalidForPolicies = True
+            Exit Function
+        End If
+    End If
+
+    If GetMinValue(controlTokens, minValue) Then
+        If Not IsControlValueMinValid(ControlInstance, minValue) Then
+            IsControlValueInvalidForPolicies = True
+            Exit Function
+        End If
+    End If
+
+    If GetMaxValue(controlTokens, maxValue) Then
+        If Not IsControlValueMaxValid(ControlInstance, maxValue) Then
+            IsControlValueInvalidForPolicies = True
+            Exit Function
+        End If
+    End If
+
     If IsControlDateTag(controlTokens) Then
         If Not IsControlValueDateValid(ControlInstance) Then
             IsControlValueInvalidForPolicies = True
         End If
     End If
+
+SafeExit:
+End Function
+
+Private Function GetMinValue(ByVal controlTokens As Object, ByRef MinValue As Double) As Boolean
+    On Error GoTo SafeExit
+
+    Dim tokenValue As String
+
+    If controlTokens Is Nothing Then
+        Exit Function
+    End If
+
+    If Not controlTokens.Exists(TAG_TOKEN_MIN) Then
+        Exit Function
+    End If
+
+    tokenValue = Trim$(CStr(controlTokens(TAG_TOKEN_MIN)))
+    If LenB(tokenValue) = 0 Then
+        Exit Function
+    End If
+
+    If Not IsNumeric(tokenValue) Then
+        Exit Function
+    End If
+
+    MinValue = CDbl(tokenValue)
+    GetMinValue = True
+
+SafeExit:
+End Function
+
+Private Function GetMaxValue(ByVal controlTokens As Object, ByRef MaxValue As Double) As Boolean
+    On Error GoTo SafeExit
+
+    Dim tokenValue As String
+
+    If controlTokens Is Nothing Then
+        Exit Function
+    End If
+
+    If Not controlTokens.Exists(TAG_TOKEN_MAX) Then
+        Exit Function
+    End If
+
+    tokenValue = Trim$(CStr(controlTokens(TAG_TOKEN_MAX)))
+    If LenB(tokenValue) = 0 Then
+        Exit Function
+    End If
+
+    If Not IsNumeric(tokenValue) Then
+        Exit Function
+    End If
+
+    MaxValue = CDbl(tokenValue)
+    GetMaxValue = True
 
 SafeExit:
 End Function
@@ -723,6 +821,107 @@ Private Function IsControlValueNumericValid(ByVal ControlInstance As Control) As
     End If
 
     IsControlValueNumericValid = IsNumeric(controlValue)
+
+SafeExit:
+End Function
+
+Private Function IsControlValueIntegerValid(ByVal ControlInstance As Control) As Boolean
+    On Error GoTo SafeExit
+
+    Dim controlValue As Variant
+    Dim numericValue As Double
+
+    IsControlValueIntegerValid = True
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    controlValue = ControlInstance.Value
+
+    If IsNull(controlValue) Or IsEmpty(controlValue) Then
+        Exit Function
+    End If
+
+    If VarType(controlValue) = vbString Then
+        If LenB(Trim$(CStr(controlValue))) = 0 Then
+            Exit Function
+        End If
+    End If
+
+    If Not IsNumeric(controlValue) Then
+        IsControlValueIntegerValid = False
+        Exit Function
+    End If
+
+    numericValue = CDbl(controlValue)
+    IsControlValueIntegerValid = (numericValue = Fix(numericValue))
+
+SafeExit:
+End Function
+
+Private Function IsControlValueMinValid(ByVal ControlInstance As Control, ByVal MinValue As Double) As Boolean
+    On Error GoTo SafeExit
+
+    Dim controlValue As Variant
+
+    IsControlValueMinValid = True
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    controlValue = ControlInstance.Value
+
+    If IsNull(controlValue) Or IsEmpty(controlValue) Then
+        Exit Function
+    End If
+
+    If VarType(controlValue) = vbString Then
+        If LenB(Trim$(CStr(controlValue))) = 0 Then
+            Exit Function
+        End If
+    End If
+
+    If Not IsNumeric(controlValue) Then
+        IsControlValueMinValid = False
+        Exit Function
+    End If
+
+    IsControlValueMinValid = (CDbl(controlValue) >= MinValue)
+
+SafeExit:
+End Function
+
+Private Function IsControlValueMaxValid(ByVal ControlInstance As Control, ByVal MaxValue As Double) As Boolean
+    On Error GoTo SafeExit
+
+    Dim controlValue As Variant
+
+    IsControlValueMaxValid = True
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    controlValue = ControlInstance.Value
+
+    If IsNull(controlValue) Or IsEmpty(controlValue) Then
+        Exit Function
+    End If
+
+    If VarType(controlValue) = vbString Then
+        If LenB(Trim$(CStr(controlValue))) = 0 Then
+            Exit Function
+        End If
+    End If
+
+    If Not IsNumeric(controlValue) Then
+        IsControlValueMaxValid = False
+        Exit Function
+    End If
+
+    IsControlValueMaxValid = (CDbl(controlValue) <= MaxValue)
 
 SafeExit:
 End Function
