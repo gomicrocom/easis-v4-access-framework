@@ -23,6 +23,11 @@ Private Const TAG_TOKEN_MAX As String = "MAX"
 Private Const TAG_TOKEN_DATE As String = "DATE"
 Private Const TAG_TOKEN_MINLEN As String = "MINLEN"
 Private Const TAG_TOKEN_MAXLEN As String = "MAXLEN"
+Private Const VALIDATION_HIGHLIGHT_BACKCOLOR As Long = 13434879
+Private Const VALIDATION_DEFAULT_BACKCOLOR As Long = -2147483633
+Private Const VALIDATION_COLORSTORE_PREFIX As String = "__VALORIG__:"
+
+Private mValidationOriginalColors As Object
 
 Public Sub InitializeForm(ByVal FormInstance As Access.Form)
     On Error GoTo ErrorHandler
@@ -36,7 +41,9 @@ Public Sub InitializeForm(ByVal FormInstance As Access.Form)
     If FormInstance Is Nothing Then
         Exit Sub
     End If
-
+    
+    ClearStoredValidationColorsForForm FormInstance
+    
     FormName = GetFormName(FormInstance)
     Set formTokens = ParseTagTokens(FormInstance.Tag)
     Set CurrentUserRoles = modSessionContext.GetCurrentUserRoles()
@@ -113,6 +120,8 @@ Public Function ValidateRequiredFields(ByVal FormInstance As Access.Form) As Boo
         Exit Function
     End If
 
+    ClearValidationHighlights FormInstance
+    
     Set missingControls = New Collection
     Set MissingFieldNames = New Collection
 
@@ -127,9 +136,10 @@ Public Function ValidateRequiredFields(ByVal FormInstance As Access.Form) As Boo
             If IsControlValueMissing(ctl) Then
                 missingControls.Add ctl
                 MissingFieldNames.Add GetDisplayNameForRequiredControl(FormInstance, ctl)
+                HighlightInvalidControl ctl
             End If
         End If
-
+        
 NextControl:
     Next ctl
 
@@ -181,6 +191,8 @@ Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boole
     If FormInstance Is Nothing Then
         Exit Function
     End If
+    
+    ClearValidationHighlights FormInstance
 
     Set missingRequiredControls = New Collection
     Set missingRequiredFieldNames = New Collection
@@ -199,8 +211,10 @@ Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boole
         If IsControlRequired(controlTokens) And isValueMissing Then
             missingRequiredControls.Add ctl
             missingRequiredFieldNames.Add GetDisplayNameForRequiredControl(FormInstance, ctl)
+            HighlightInvalidControl ctl
         ElseIf IsControlValueInvalidForPolicies(ctl, controlTokens) Then
             invalidFormatControls.Add ctl
+            HighlightInvalidControl ctl
             errorMessage = BuildControlValidationMessage(ctl, controlTokens)
             
             If LenB(errorMessage) > 0 Then
@@ -208,7 +222,6 @@ Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boole
                     GetDisplayNameForRequiredControl(FormInstance, ctl) & ": " & errorMessage
             End If
         End If
-
 NextControl:
     Next ctl
 
@@ -1474,3 +1487,143 @@ Private Function BuildControlValidationMessage( _
 
 SafeExit:
 End Function
+
+Private Sub HighlightInvalidControl(ByVal ControlInstance As Control)
+    On Error GoTo SafeExit
+
+    Dim colorKey As String
+    Dim originalColor As Variant
+
+    If ControlInstance Is Nothing Then
+        Exit Sub
+    End If
+
+    If Not CanHighlightControl(ControlInstance) Then
+        Exit Sub
+    End If
+
+    EnsureValidationColorStore
+
+    colorKey = GetValidationColorKey(ControlInstance)
+    If LenB(colorKey) = 0 Then
+        Exit Sub
+    End If
+
+    If Not mValidationOriginalColors.Exists(colorKey) Then
+        originalColor = ControlInstance.BackColor
+        mValidationOriginalColors.Add colorKey, originalColor
+    End If
+
+    ControlInstance.BackColor = VALIDATION_HIGHLIGHT_BACKCOLOR
+
+SafeExit:
+End Sub
+
+Private Sub ClearValidationHighlights(ByVal FormInstance As Access.Form)
+    On Error GoTo SafeExit
+
+    Dim ctl As Control
+    Dim colorKey As String
+
+    If FormInstance Is Nothing Then
+        Exit Sub
+    End If
+
+    EnsureValidationColorStore
+
+    For Each ctl In FormInstance.Controls
+        If CanHighlightControl(ctl) Then
+            colorKey = GetValidationColorKey(ctl)
+
+            If LenB(colorKey) > 0 Then
+                If mValidationOriginalColors.Exists(colorKey) Then
+                    On Error Resume Next
+                    ctl.BackColor = mValidationOriginalColors(colorKey)
+                    Err.Clear
+                    On Error GoTo SafeExit
+
+                    mValidationOriginalColors.Remove colorKey
+                End If
+            End If
+        End If
+    Next ctl
+
+SafeExit:
+End Sub
+Private Function CanHighlightControl(ByVal ControlInstance As Control) As Boolean
+    On Error GoTo SafeExit
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    Select Case ControlInstance.ControlType
+        Case acTextBox, acComboBox, acListBox, acCheckBox, acOptionGroup
+            CanHighlightControl = True
+    End Select
+
+SafeExit:
+End Function
+Private Sub EnsureValidationColorStore()
+    If mValidationOriginalColors Is Nothing Then
+        Set mValidationOriginalColors = CreateObject("Scripting.Dictionary")
+        mValidationOriginalColors.CompareMode = vbTextCompare
+    End If
+End Sub
+
+Private Function GetValidationColorKey(ByVal ControlInstance As Control) As String
+    On Error GoTo SafeExit
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    GetValidationColorKey = GetParentFormName(ControlInstance) & "|" & ControlInstance.Name
+    Exit Function
+
+SafeExit:
+    GetValidationColorKey = vbNullString
+End Function
+
+Private Function GetParentFormName(ByVal ControlInstance As Control) As String
+    On Error GoTo SafeExit
+
+    If ControlInstance Is Nothing Then
+        Exit Function
+    End If
+
+    GetParentFormName = ControlInstance.Parent.Name
+    Exit Function
+
+SafeExit:
+    GetParentFormName = "<unknown>"
+End Function
+Private Sub ClearStoredValidationColorsForForm(ByVal FormInstance As Access.Form)
+    On Error GoTo SafeExit
+
+    Dim dictKey As Variant
+    Dim keysToRemove As Collection
+    Dim keyItem As Variant
+    Dim formPrefix As String
+
+    If FormInstance Is Nothing Then
+        Exit Sub
+    End If
+
+    EnsureValidationColorStore
+    Set keysToRemove = New Collection
+
+    formPrefix = FormInstance.Name & "|"
+
+    For Each dictKey In mValidationOriginalColors.Keys
+        If Left$(CStr(dictKey), Len(formPrefix)) = formPrefix Then
+            keysToRemove.Add CStr(dictKey)
+        End If
+    Next dictKey
+
+    For Each keyItem In keysToRemove
+        mValidationOriginalColors.Remove CStr(keyItem)
+    Next keyItem
+
+SafeExit:
+End Sub
