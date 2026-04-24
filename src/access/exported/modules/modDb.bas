@@ -5,10 +5,14 @@ Option Explicit
 ' Module    : modDb
 ' Purpose   : Database foundation helpers for Access frontend and backend setup.
 ' Author    : Codex
-' Version   : 0.1.0
+' Version   : 0.1.1
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modDb"
+
+Private mLastValidatedBackendPath As String
+Private mLastValidationContext As String
+Private mLastValidationSucceeded As Boolean
 
 Public Function GetCurrentDatabase() As DAO.Database
     On Error GoTo ErrorHandler
@@ -67,24 +71,29 @@ Public Function ValidateBackendConfiguration() As Boolean
     logContext = BuildValidationContext()
 
     If LenB(BackendPath) = 0 Then
+        ResetBackendValidationLogGuard
         modLoggingHandler.LogError MODULE_NAME & ".ValidateBackendConfiguration", _
             "Backend validation failed: no backend path configured. " & logContext
         Exit Function
     End If
 
     If Not BackendExists() Then
+        ResetBackendValidationLogGuard
         modLoggingHandler.LogError MODULE_NAME & ".ValidateBackendConfiguration", _
             "Backend validation failed: file not found at '" & BackendPath & "'. " & logContext
         Exit Function
     End If
 
-    modLoggingHandler.LogInfo MODULE_NAME & ".ValidateBackendConfiguration", _
-        "Backend configuration validated successfully for path '" & BackendPath & "'. " & logContext
+    If ShouldLogSuccessfulValidation(BackendPath, logContext) Then
+        modLoggingHandler.LogInfo MODULE_NAME & ".ValidateBackendConfiguration", _
+            "Backend configuration validated successfully for path '" & BackendPath & "'. " & logContext
+    End If
 
     ValidateBackendConfiguration = True
     Exit Function
 
 ErrorHandler:
+    ResetBackendValidationLogGuard
     ValidateBackendConfiguration = False
     modErrorHandler.HandleError MODULE_NAME, "ValidateBackendConfiguration", Err
 End Function
@@ -106,3 +115,29 @@ Private Function BuildValidationContext() As String
 
     BuildValidationContext = contextParts
 End Function
+
+Private Function ShouldLogSuccessfulValidation(ByVal BackendPath As String, ByVal ValidationContext As String) As Boolean
+    Dim normalizedPath As String
+    Dim normalizedContext As String
+
+    normalizedPath = Trim$(BackendPath)
+    normalizedContext = Trim$(ValidationContext)
+
+    If mLastValidationSucceeded Then
+        If StrComp(mLastValidatedBackendPath, normalizedPath, vbTextCompare) = 0 And _
+           StrComp(mLastValidationContext, normalizedContext, vbTextCompare) = 0 Then
+            Exit Function
+        End If
+    End If
+
+    mLastValidatedBackendPath = normalizedPath
+    mLastValidationContext = normalizedContext
+    mLastValidationSucceeded = True
+    ShouldLogSuccessfulValidation = True
+End Function
+
+Private Sub ResetBackendValidationLogGuard()
+    mLastValidatedBackendPath = vbNullString
+    mLastValidationContext = vbNullString
+    mLastValidationSucceeded = False
+End Sub
