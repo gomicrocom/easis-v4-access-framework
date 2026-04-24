@@ -14,6 +14,7 @@ SELECT
     Nz (p.surcharge_type, 'NONE') AS surcharge_type,
     Nz (p.surcharge_value, 0) AS surcharge_value,
     Nz (p.line_base_amount, 0) AS line_base_amount,
+    Nz (p.line_surcharge_amount, 0) AS line_surcharge_amount,
     Nz (p.line_total_net, 0) AS net_amount,
     Nz (p.line_total_vat, 0) AS vat_amount,
     Nz (p.line_total_gross, 0) AS gross_amount
