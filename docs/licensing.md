@@ -18,6 +18,12 @@ Licensing in Easis Version 4 is feature-based. A tenant can run the core framewo
 - module startup routines should check entitlement before activation
 - tenant-specific configuration may define license source and validation settings
 
+## Runtime Integration
+
+- licensing state is available through a central service
+- UI behavior (visibility, enable/disable) may depend on licensing
+- tag-based ROLE restrictions can complement licensing logic
+
 ## Configuration
 
 INI files can define license lookup parameters, local validation settings, and environment-specific behavior. Final license storage and validation mechanics will be documented once implementation choices are fixed.

@@ -25,3 +25,24 @@ Schema changes should be introduced through explicit framework versioning so the
 ## Open Direction
 
 Detailed table definitions are intentionally deferred until the framework services, licensing rules, and first module boundaries are finalized.
+
+## Framework Tables (Frontend or Backend)
+
+### Translations
+- tblFwTranslations
+  - key
+  - language
+  - value
+  - active flag
+
+### Help System
+- tblFwTagHelp
+  - token
+  - description
+  - example
+  - category
+
+### Tag Composer (temporary)
+- tblTmpTagComposer
+  - ControlName
+  - TagValue
