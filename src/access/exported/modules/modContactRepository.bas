@@ -1,3 +1,4 @@
+Attribute VB_Name = "modContactRepository"
 Option Compare Database
 Option Explicit
 

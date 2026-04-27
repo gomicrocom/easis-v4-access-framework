@@ -1,3 +1,4 @@
+Attribute VB_Name = "modSecurityHandler"
 Option Compare Database
 Option Explicit
 
@@ -119,3 +120,4 @@ Private Function BuildDeniedMessage(ByVal RoleCode As String, ByVal ActionName A
 
     BuildDeniedMessage = messageText
 End Function
+

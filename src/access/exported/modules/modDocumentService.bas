@@ -1,3 +1,4 @@
+Attribute VB_Name = "modDocumentService"
 Option Compare Database
 Option Explicit
 

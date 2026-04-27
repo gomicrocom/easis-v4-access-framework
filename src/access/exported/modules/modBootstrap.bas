@@ -1,3 +1,4 @@
+Attribute VB_Name = "modBootstrap"
 Option Compare Database
 Option Explicit
 

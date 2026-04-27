@@ -1,3 +1,4 @@
+Attribute VB_Name = "modNumberingHandler"
 Option Compare Database
 Option Explicit
 

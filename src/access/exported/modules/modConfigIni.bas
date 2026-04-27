@@ -1,3 +1,4 @@
+Attribute VB_Name = "modConfigIni"
 Option Compare Database
 Option Explicit
 
@@ -5,7 +6,7 @@ Option Explicit
 ' Module    : modConfigIni
 ' Purpose   : Reads configuration values from INI files.
 ' Author    : Codex
-' Version   : 0.2.0
+' Version   : 0.1.0
 '===============================================================================
 
 #If VBA7 Then
@@ -28,8 +29,6 @@ Option Explicit
 
 Private Const MODULE_NAME As String = "modConfigIni"
 Private Const INI_BUFFER_SIZE As Long = 2048
-Private Const CONFIG_DIRECTORY_NAME As String = "Cfg"
-Private Const CONFIG_FILE_NAME As String = "easis.ini"
 
 Public Function InitializeConfiguration(Optional ByVal IniPath As String = vbNullString) As Boolean
     On Error GoTo ErrorHandler
@@ -38,9 +37,7 @@ Public Function InitializeConfiguration(Optional ByVal IniPath As String = vbNul
 
     resolvedPath = ResolveConfigPath(IniPath)
     If LenB(resolvedPath) = 0 Then
-        modLoggingHandler.LogWarning MODULE_NAME & ".InitializeConfiguration", _
-            "Configuration initialization skipped because no configuration file was found."
-        Exit Function
+        Err.Raise vbObjectError + 2100, MODULE_NAME & ".InitializeConfiguration", "Configuration file path could not be resolved."
     End If
 
     ConfigFilePath = resolvedPath
@@ -56,67 +53,26 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "InitializeConfiguration", Err
 End Function
 
-Public Function GetConfigDirectory() As String
-    On Error GoTo ErrorHandler
-
-    GetConfigDirectory = EnsureTrailingBackslash(CurrentProject.Path) & CONFIG_DIRECTORY_NAME & "\"
-    Exit Function
-
-ErrorHandler:
-    GetConfigDirectory = vbNullString
-    modErrorHandler.HandleError MODULE_NAME, "GetConfigDirectory", Err
-End Function
-
-Public Function GetConfigFilePath() As String
-    On Error GoTo ErrorHandler
-
-    Dim configDirectory As String
-
-    configDirectory = GetConfigDirectory()
-    If LenB(configDirectory) = 0 Then
-        Exit Function
-    End If
-
-    If Not EnsureDirectoryExists(configDirectory) Then
-        modLoggingHandler.LogWarning MODULE_NAME & ".GetConfigFilePath", _
-            "Configuration directory could not be prepared: '" & configDirectory & "'."
-        Exit Function
-    End If
-
-    GetConfigFilePath = configDirectory & CONFIG_FILE_NAME
-    Exit Function
-
-ErrorHandler:
-    GetConfigFilePath = vbNullString
-    modErrorHandler.HandleError MODULE_NAME, "GetConfigFilePath", Err
-End Function
-
 Public Function ResolveConfigPath(Optional ByVal IniPath As String = vbNullString) As String
     Dim Candidate As String
 
     Candidate = Trim$(IniPath)
     If LenB(Candidate) > 0 Then
-        If LenB(Dir$(Candidate, vbNormal)) > 0 Then
-            ResolveConfigPath = Candidate
-        Else
-            modLoggingHandler.LogWarning MODULE_NAME & ".ResolveConfigPath", _
-                "Explicit configuration file was not found: '" & Candidate & "'."
-        End If
+        ResolveConfigPath = Candidate
         Exit Function
     End If
 
-    Candidate = GetConfigFilePath()
-    If LenB(Candidate) = 0 Then
-        Exit Function
-    End If
-
+    Candidate = CurrentProject.path & "\config\easis.ini"
     If LenB(Dir$(Candidate, vbNormal)) > 0 Then
         ResolveConfigPath = Candidate
         Exit Function
     End If
 
-    modLoggingHandler.LogWarning MODULE_NAME & ".ResolveConfigPath", _
-        "Configuration file was not found: '" & Candidate & "'."
+    Candidate = CurrentProject.path & "\easis.ini"
+    If LenB(Dir$(Candidate, vbNormal)) > 0 Then
+        ResolveConfigPath = Candidate
+        Exit Function
+    End If
 End Function
 
 Public Function GetIniString(ByVal SectionName As String, ByVal KeyName As String, Optional ByVal DefaultValue As String = vbNullString, Optional ByVal IniPath As String = vbNullString) As String
@@ -198,47 +154,4 @@ Private Function NormalizeLogLevel(ByVal Value As String) As String
         Case Else
             NormalizeLogLevel = "INFO"
     End Select
-End Function
-
-Private Function EnsureTrailingBackslash(ByVal FolderPath As String) As String
-    Dim normalizedPath As String
-
-    normalizedPath = Trim$(FolderPath)
-    If LenB(normalizedPath) = 0 Then
-        Exit Function
-    End If
-
-    If Right$(normalizedPath, 1) = "\" Then
-        EnsureTrailingBackslash = normalizedPath
-    Else
-        EnsureTrailingBackslash = normalizedPath & "\"
-    End If
-End Function
-
-Private Function EnsureDirectoryExists(ByVal FolderPath As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim normalizedPath As String
-
-    normalizedPath = Trim$(FolderPath)
-    If LenB(normalizedPath) = 0 Then
-        Exit Function
-    End If
-
-    If Right$(normalizedPath, 1) = "\" Then
-        normalizedPath = Left$(normalizedPath, Len(normalizedPath) - 1)
-    End If
-
-    If LenB(Dir$(normalizedPath, vbDirectory)) > 0 Then
-        EnsureDirectoryExists = True
-        Exit Function
-    End If
-
-    MkDir normalizedPath
-    EnsureDirectoryExists = (LenB(Dir$(normalizedPath, vbDirectory)) > 0)
-    Exit Function
-
-ErrorHandler:
-    EnsureDirectoryExists = False
-    modErrorHandler.HandleError MODULE_NAME, "EnsureDirectoryExists", Err
 End Function

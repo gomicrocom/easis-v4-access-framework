@@ -1,3 +1,4 @@
+Attribute VB_Name = "modTranslationService"
 Option Compare Database
 Option Explicit
 
@@ -190,7 +191,7 @@ Private Function LoadTranslationsFromTable() As Long
 
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
-    Dim SqlText As String
+    Dim sqlText As String
     Dim hasIsActiveField As Boolean
 
     If Not TranslationTableExists(TABLE_FW_TRANSLATIONS) Then
@@ -205,8 +206,8 @@ Private Function LoadTranslationsFromTable() As Long
             "Current database could not be resolved."
     End If
 
-    SqlText = "SELECT * FROM [" & TABLE_FW_TRANSLATIONS & "];"
-    Set rs = db.OpenRecordset(SqlText, dbOpenSnapshot)
+    sqlText = "SELECT * FROM [" & TABLE_FW_TRANSLATIONS & "];"
+    Set rs = db.OpenRecordset(sqlText, dbOpenSnapshot)
 
     If rs.EOF Then
         modLoggingHandler.LogWarning MODULE_NAME & ".LoadTranslationsFromTable", _

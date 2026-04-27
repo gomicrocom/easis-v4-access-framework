@@ -14,13 +14,13 @@ Private Const MODULE_NAME As String = "modPdfExportService"
 Private Const REPORT_DOCUMENT As String = "rpt_document"
 Private Const FIELD_DOCUMENT_ID As String = "document_id"
 
-Public Function ExportDocumentToPdf(ByVal DocumentId As Long, Optional ByRef ExportedFilePath As String = "") As Boolean
+Public Function ExportDocumentToPdf(ByVal DocumentId As Long, Optional ByRef exportedFilePath As String = "") As Boolean
     On Error GoTo ErrorHandler
 
     Dim targetPath As String
 
     ExportDocumentToPdf = False
-    ExportedFilePath = vbNullString
+    exportedFilePath = vbNullString
 
     If DocumentId <= 0 Then
         modLoggingHandler.LogWarning MODULE_NAME & ".ExportDocumentToPdf", _
@@ -53,16 +53,16 @@ Public Function ExportDocumentToPdf(ByVal DocumentId As Long, Optional ByRef Exp
         Exit Function
     End If
 
-    ExportDocumentToPdf = ExportDocumentToPdfAtPath(DocumentId, targetPath, ExportedFilePath)
+    ExportDocumentToPdf = ExportDocumentToPdfAtPath(DocumentId, targetPath, exportedFilePath)
     Exit Function
 
 ErrorHandler:
-    ExportedFilePath = vbNullString
+    exportedFilePath = vbNullString
     ExportDocumentToPdf = False
     modErrorHandler.HandleError MODULE_NAME, "ExportDocumentToPdf", Err
 End Function
 
-Public Function ExportDocumentToPdfAtPath(ByVal DocumentId As Long, ByVal TargetPdfPath As String, Optional ByRef ExportedFilePath As String = "") As Boolean
+Public Function ExportDocumentToPdfAtPath(ByVal DocumentId As Long, ByVal targetPdfPath As String, Optional ByRef exportedFilePath As String = "") As Boolean
     On Error GoTo ErrorHandler
 
     Dim targetPath As String
@@ -70,9 +70,9 @@ Public Function ExportDocumentToPdfAtPath(ByVal DocumentId As Long, ByVal Target
     Dim whereCondition As String
 
     ExportDocumentToPdfAtPath = False
-    ExportedFilePath = vbNullString
+    exportedFilePath = vbNullString
 
-    targetPath = Trim$(TargetPdfPath)
+    targetPath = Trim$(targetPdfPath)
 
     If DocumentId <= 0 Then
         modLoggingHandler.LogWarning MODULE_NAME & ".ExportDocumentToPdfAtPath", _
@@ -114,10 +114,10 @@ Public Function ExportDocumentToPdfAtPath(ByVal DocumentId As Long, ByVal Target
     whereCondition = "[" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId)
 
     DoCmd.OpenReport REPORT_DOCUMENT, acViewPreview, , whereCondition, acHidden
-    DoCmd.OutputTo acOutputReport, REPORT_DOCUMENT, acFormatPDF, TargetPdfPath, False
+    DoCmd.OutputTo acOutputReport, REPORT_DOCUMENT, acFormatPDF, targetPdfPath, False
     DoCmd.Close acReport, REPORT_DOCUMENT, acSaveNo
 
-    ExportedFilePath = targetPath
+    exportedFilePath = targetPath
     ExportDocumentToPdfAtPath = True
 
     modLoggingHandler.LogInfo MODULE_NAME & ".ExportDocumentToPdfAtPath", _
@@ -134,7 +134,7 @@ ErrorHandler:
     modLoggingHandler.LogError _
         MODULE_NAME & ".ExportDocumentToPdfAtPath", _
         "PDF export failed. DocumentId=" & CStr(DocumentId) & _
-        "; TargetPdfPath=" & TargetPdfPath & _
+        "; TargetPdfPath=" & targetPdfPath & _
         "; Err.Number=" & CStr(Err.Number) & _
         "; Err.Description=" & Err.Description, _
         Err.Number

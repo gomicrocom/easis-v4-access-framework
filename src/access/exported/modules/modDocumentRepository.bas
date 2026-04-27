@@ -1,3 +1,4 @@
+Attribute VB_Name = "modDocumentRepository"
 Option Compare Database
 Option Explicit
 
@@ -5,7 +6,7 @@ Option Explicit
 ' Module    : modDocumentRepository
 ' Purpose   : DAO persistence helpers for document headers and document lines.
 ' Author    : Codex
-' Version   : 0.2.0
+' Version   : 0.1.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modDocumentRepository"
@@ -27,19 +28,9 @@ Private Const FIELD_VAT_RATE As String = "vat_rate"
 Private Const FIELD_TOTAL_NET As String = "total_net"
 Private Const FIELD_TOTAL_VAT As String = "total_vat"
 Private Const FIELD_TOTAL_GROSS As String = "total_gross"
-Private Const FIELD_NET_AMOUNT As String = "net_amount"
-Private Const FIELD_VAT_AMOUNT As String = "vat_amount"
-Private Const FIELD_GROSS_AMOUNT As String = "gross_amount"
 Private Const FIELD_REMARKS As String = "remarks"
 Private Const FIELD_CREATED_AT As String = "created_at"
 Private Const FIELD_CREATED_BY As String = "created_by"
-Private Const FIELD_HEADER_DISCOUNT_TYPE As String = "header_discount_type"
-Private Const FIELD_HEADER_DISCOUNT_VALUE As String = "header_discount_value"
-Private Const FIELD_HEADER_SURCHARGE_TYPE As String = "header_surcharge_type"
-Private Const FIELD_HEADER_SURCHARGE_VALUE As String = "header_surcharge_value"
-Private Const FIELD_SUBTOTAL_NET_AMOUNT As String = "subtotal_net_amount"
-Private Const FIELD_HEADER_DISCOUNT_AMOUNT As String = "header_discount_amount"
-Private Const FIELD_HEADER_SURCHARGE_AMOUNT As String = "header_surcharge_amount"
 
 ' doc_document_position
 Private Const FIELD_DOCUMENT_POSITION_ID As String = "document_position_id"
@@ -48,24 +39,16 @@ Private Const FIELD_DESCRIPTION As String = "description"
 Private Const FIELD_QUANTITY As String = "quantity"
 Private Const FIELD_UNIT_CODE As String = "unit_code"
 Private Const FIELD_UNIT_PRICE As String = "unit_price"
-Private Const FIELD_DISCOUNT_TYPE As String = "discount_type"
-Private Const FIELD_DISCOUNT_VALUE As String = "discount_value"
-Private Const FIELD_SURCHARGE_TYPE As String = "surcharge_type"
-Private Const FIELD_SURCHARGE_VALUE As String = "surcharge_value"
-Private Const FIELD_LINE_BASE_AMOUNT As String = "line_base_amount"
-Private Const FIELD_LINE_DISCOUNT_AMOUNT As String = "line_discount_amount"
-Private Const FIELD_LINE_SURCHARGE_AMOUNT As String = "line_surcharge_amount"
 Private Const FIELD_LINE_TOTAL_NET As String = "line_total_net"
 Private Const FIELD_LINE_TOTAL_VAT As String = "line_total_vat"
 Private Const FIELD_LINE_TOTAL_GROSS As String = "line_total_gross"
 
 Private Const DEFAULT_DOCUMENT_STATUS As String = "DRAFT"
-Private Const DEFAULT_ADJUSTMENT_TYPE As String = "NONE"
 
 Public Function CreateDocumentHeader( _
     ByVal documentTypeCode As String, _
     Optional ByVal documentDate As Date = 0, _
-    Optional ByVal CustomerName As String = "", _
+    Optional ByVal customerName As String = "", _
     Optional ByVal TotalNet As Currency = 0, _
     Optional ByVal TotalVat As Currency = 0, _
     Optional ByVal TotalGross As Currency = 0, _
@@ -101,10 +84,8 @@ Public Function CreateDocumentHeader( _
         Exit Function
     End If
 
-    Call modDocumentCalculationService.EnsureDocumentCalculationSchema()
-
     effectiveDate = IIf(documentDate = 0, Date, documentDate)
-    effectiveCustomerName = Trim$(CustomerName)
+    effectiveCustomerName = Trim$(customerName)
 
     If CustomerAddressId > 0 Then
         If modAddressRepository.AddressExists(CustomerAddressId) Then
@@ -128,16 +109,6 @@ Public Function CreateDocumentHeader( _
     SetRecordsetValue rs, FIELD_TOTAL_NET, TotalNet
     SetRecordsetValue rs, FIELD_TOTAL_VAT, TotalVat
     SetRecordsetValue rs, FIELD_TOTAL_GROSS, TotalGross
-    SetRecordsetValue rs, FIELD_NET_AMOUNT, TotalNet
-    SetRecordsetValue rs, FIELD_VAT_AMOUNT, TotalVat
-    SetRecordsetValue rs, FIELD_GROSS_AMOUNT, TotalGross
-    SetRecordsetValue rs, FIELD_HEADER_DISCOUNT_TYPE, DEFAULT_ADJUSTMENT_TYPE
-    SetRecordsetValue rs, FIELD_HEADER_DISCOUNT_VALUE, 0
-    SetRecordsetValue rs, FIELD_HEADER_SURCHARGE_TYPE, DEFAULT_ADJUSTMENT_TYPE
-    SetRecordsetValue rs, FIELD_HEADER_SURCHARGE_VALUE, 0
-    SetRecordsetValue rs, FIELD_SUBTOTAL_NET_AMOUNT, TotalNet
-    SetRecordsetValue rs, FIELD_HEADER_DISCOUNT_AMOUNT, 0
-    SetRecordsetValue rs, FIELD_HEADER_SURCHARGE_AMOUNT, 0
     SetRecordsetValue rs, FIELD_REMARKS, Trim$(Remarks)
     SetRecordsetValue rs, FIELD_CREATED_AT, Now()
     SetRecordsetValue rs, FIELD_CREATED_BY, ResolveCreatedBy()
@@ -169,7 +140,7 @@ Public Function DeleteDocumentPositions(ByVal DocumentId As Long) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim SqlText As String
+    Dim sqlText As String
 
     DeleteDocumentPositions = False
 
@@ -190,8 +161,8 @@ Public Function DeleteDocumentPositions(ByVal DocumentId As Long) As Boolean
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    SqlText = "DELETE FROM [" & TABLE_DOC_DOCUMENT_POSITION & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    db.Execute SqlText, dbFailOnError
+    sqlText = "DELETE FROM [" & TABLE_DOC_DOCUMENT_POSITION & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    db.Execute sqlText, dbFailOnError
 
     modLoggingHandler.LogInfo MODULE_NAME & ".DeleteDocumentPositions", _
         "Deleted document positions for DocumentId=" & CStr(DocumentId) & "."
@@ -247,8 +218,6 @@ Public Function CreateDocumentPosition( _
         Exit Function
     End If
 
-    Call modDocumentCalculationService.EnsureDocumentCalculationSchema()
-
     If VatRate < 0 Then
         effectiveVatRate = modVatHandler.GetVatRate()
     Else
@@ -275,16 +244,6 @@ Public Function CreateDocumentPosition( _
     SetRecordsetValue rs, FIELD_QUANTITY, Quantity
     SetRecordsetValue rs, FIELD_UNIT_CODE, Trim$(UnitCode)
     SetRecordsetValue rs, FIELD_UNIT_PRICE, UnitPrice
-    SetRecordsetValue rs, FIELD_DISCOUNT_TYPE, DEFAULT_ADJUSTMENT_TYPE
-    SetRecordsetValue rs, FIELD_DISCOUNT_VALUE, 0
-    SetRecordsetValue rs, FIELD_SURCHARGE_TYPE, DEFAULT_ADJUSTMENT_TYPE
-    SetRecordsetValue rs, FIELD_SURCHARGE_VALUE, 0
-    SetRecordsetValue rs, FIELD_LINE_BASE_AMOUNT, lineNet
-    SetRecordsetValue rs, FIELD_LINE_DISCOUNT_AMOUNT, 0
-    SetRecordsetValue rs, FIELD_LINE_SURCHARGE_AMOUNT, 0
-    SetRecordsetValue rs, FIELD_NET_AMOUNT, lineNet
-    SetRecordsetValue rs, FIELD_VAT_AMOUNT, lineVat
-    SetRecordsetValue rs, FIELD_GROSS_AMOUNT, lineGross
     SetRecordsetValue rs, FIELD_VAT_RATE, effectiveVatRate
     SetRecordsetValue rs, FIELD_LINE_TOTAL_NET, lineNet
     SetRecordsetValue rs, FIELD_LINE_TOTAL_VAT, lineVat
@@ -313,7 +272,91 @@ End Function
 Public Function UpdateDocumentTotals(ByVal DocumentId As Long) As Boolean
     On Error GoTo ErrorHandler
 
-    UpdateDocumentTotals = modDocumentCalculationService.RecalculateDocument(DocumentId)
+    Dim db As DAO.Database
+    Dim rsHeader As DAO.Recordset
+    Dim rsPositions As DAO.Recordset
+    Dim NetSum As Currency
+    Dim VatSum As Currency
+    Dim GrossSum As Currency
+    Dim sqlText As String
+
+    UpdateDocumentTotals = False
+
+    If DocumentId <= 0 Then
+        Exit Function
+    End If
+
+    If Not modDb.ValidateBackendConfiguration() Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".UpdateDocumentTotals", _
+            "Document total update skipped because backend configuration is not valid."
+        Exit Function
+    End If
+
+    If Not TableExists(TABLE_DOC_DOCUMENT) Or Not TableExists(TABLE_DOC_DOCUMENT_POSITION) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".UpdateDocumentTotals", _
+            "Document total update skipped because required document tables are not available yet."
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+
+    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(sqlText, dbOpenDynaset)
+
+    If rsHeader.BOF And rsHeader.EOF Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".UpdateDocumentTotals", _
+            "Document total update skipped because DocumentId=" & CStr(DocumentId) & " does not exist."
+        GoTo CleanExit
+    End If
+
+    sqlText = "SELECT [" & FIELD_LINE_TOTAL_NET & "], [" & FIELD_LINE_TOTAL_VAT & "], [" & FIELD_LINE_TOTAL_GROSS & "] " & _
+              "FROM [" & TABLE_DOC_DOCUMENT_POSITION & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsPositions = db.OpenRecordset(sqlText, dbOpenSnapshot)
+
+    If Not (rsPositions.BOF And rsPositions.EOF) Then
+        rsPositions.MoveFirst
+        Do Until rsPositions.EOF
+            If modDaoHelper.RecordsetHasField(rsPositions, FIELD_LINE_TOTAL_NET) Then
+                NetSum = NetSum + CCur(modDaoHelper.NzString(rsPositions.Fields(FIELD_LINE_TOTAL_NET).Value, "0"))
+            End If
+
+            If modDaoHelper.RecordsetHasField(rsPositions, FIELD_LINE_TOTAL_VAT) Then
+                VatSum = VatSum + CCur(modDaoHelper.NzString(rsPositions.Fields(FIELD_LINE_TOTAL_VAT).Value, "0"))
+            End If
+
+            If modDaoHelper.RecordsetHasField(rsPositions, FIELD_LINE_TOTAL_GROSS) Then
+                GrossSum = GrossSum + CCur(modDaoHelper.NzString(rsPositions.Fields(FIELD_LINE_TOTAL_GROSS).Value, "0"))
+            End If
+
+            rsPositions.MoveNext
+        Loop
+    End If
+
+    If Not modDocumentService.CalculateDocumentTotalsFromPositions(NetSum, VatSum, GrossSum) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".UpdateDocumentTotals", _
+            "Document total update skipped because calculated totals were not accepted."
+        GoTo CleanExit
+    End If
+
+    rsHeader.Edit
+    SetRecordsetValue rsHeader, FIELD_TOTAL_NET, NetSum
+    SetRecordsetValue rsHeader, FIELD_TOTAL_VAT, VatSum
+    SetRecordsetValue rsHeader, FIELD_TOTAL_GROSS, GrossSum
+    rsHeader.Update
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".UpdateDocumentTotals", _
+        "Document totals updated for DocumentId=" & CStr(DocumentId) & _
+        " (Net=" & CStr(NetSum) & ", Vat=" & CStr(VatSum) & ", Gross=" & CStr(GrossSum) & ")."
+
+    UpdateDocumentTotals = True
+
+CleanExit:
+    On Error Resume Next
+    If Not rsPositions Is Nothing Then rsPositions.Close
+    If Not rsHeader Is Nothing Then rsHeader.Close
+    Set rsPositions = Nothing
+    Set rsHeader = Nothing
+    Set db = Nothing
     Exit Function
 
 ErrorHandler:
@@ -321,6 +364,7 @@ ErrorHandler:
     modLoggingHandler.LogError MODULE_NAME & ".UpdateDocumentTotals", _
         "Failed to update document totals for DocumentId=" & CStr(DocumentId) & ".", Err.Number
     modErrorHandler.HandleError MODULE_NAME, "UpdateDocumentTotals", Err
+    Resume CleanExit
 End Function
 
 Public Function DocumentExists(ByVal DocumentId As Long) As Boolean
@@ -328,7 +372,7 @@ Public Function DocumentExists(ByVal DocumentId As Long) As Boolean
 
     Dim db As DAO.Database
     Dim rsHeader As DAO.Recordset
-    Dim SqlText As String
+    Dim sqlText As String
 
     If DocumentId <= 0 Then
         Exit Function
@@ -345,8 +389,8 @@ Public Function DocumentExists(ByVal DocumentId As Long) As Boolean
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsHeader = db.OpenRecordset(SqlText, dbOpenSnapshot)
+    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(sqlText, dbOpenSnapshot)
 
     DocumentExists = Not (rsHeader.BOF And rsHeader.EOF)
 
@@ -429,7 +473,7 @@ Public Function AssignDocumentNumber(ByVal DocumentId As Long) As Boolean
 
     Dim db As DAO.Database
     Dim rsHeader As DAO.Recordset
-    Dim SqlText As String
+    Dim sqlText As String
     Dim documentTypeCode As String
     Dim documentNo As String
     Dim documentDate As Date
@@ -454,8 +498,8 @@ Public Function AssignDocumentNumber(ByVal DocumentId As Long) As Boolean
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsHeader = db.OpenRecordset(SqlText, dbOpenDynaset)
+    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(sqlText, dbOpenDynaset)
 
     If rsHeader.BOF And rsHeader.EOF Then
         modLoggingHandler.LogWarning MODULE_NAME & ".AssignDocumentNumber", _
@@ -515,7 +559,7 @@ Public Function SetDocumentStatus(ByVal DocumentId As Long, ByVal StatusCode As 
 
     Dim db As DAO.Database
     Dim rsHeader As DAO.Recordset
-    Dim SqlText As String
+    Dim sqlText As String
 
     SetDocumentStatus = False
 
@@ -534,8 +578,8 @@ Public Function SetDocumentStatus(ByVal DocumentId As Long, ByVal StatusCode As 
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsHeader = db.OpenRecordset(SqlText, dbOpenDynaset)
+    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(sqlText, dbOpenDynaset)
 
     If rsHeader.BOF And rsHeader.EOF Then
         GoTo CleanExit
@@ -565,7 +609,7 @@ Public Function CountDocumentPositions(ByVal DocumentId As Long) As Long
 
     Dim db As DAO.Database
     Dim rsPositions As DAO.Recordset
-    Dim SqlText As String
+    Dim sqlText As String
 
     If DocumentId <= 0 Then
         Exit Function
@@ -582,8 +626,8 @@ Public Function CountDocumentPositions(ByVal DocumentId As Long) As Long
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT_POSITION & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsPositions = db.OpenRecordset(SqlText, dbOpenSnapshot)
+    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT_POSITION & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsPositions = db.OpenRecordset(sqlText, dbOpenSnapshot)
 
     If Not (rsPositions.BOF And rsPositions.EOF) Then
         rsPositions.MoveLast
@@ -652,7 +696,7 @@ Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal field
 
     Dim db As DAO.Database
     Dim rsHeader As DAO.Recordset
-    Dim SqlText As String
+    Dim sqlText As String
 
     ResolveDocumentFieldValue = DefaultValue
 
@@ -669,8 +713,8 @@ Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal field
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsHeader = db.OpenRecordset(SqlText, dbOpenSnapshot)
+    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(sqlText, dbOpenSnapshot)
 
     If rsHeader.BOF And rsHeader.EOF Then
         GoTo CleanExit
@@ -698,7 +742,7 @@ Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal fieldN
 
     Dim db As DAO.Database
     Dim rsHeader As DAO.Recordset
-    Dim SqlText As String
+    Dim sqlText As String
 
     ResolveDocumentLongValue = DefaultValue
 
@@ -715,8 +759,8 @@ Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal fieldN
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
-    Set rsHeader = db.OpenRecordset(SqlText, dbOpenSnapshot)
+    sqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
+    Set rsHeader = db.OpenRecordset(sqlText, dbOpenSnapshot)
 
     If rsHeader.BOF And rsHeader.EOF Then
         GoTo CleanExit

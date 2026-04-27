@@ -1,3 +1,4 @@
+Attribute VB_Name = "modOutputPathService"
 Option Compare Database
 Option Explicit
 
@@ -5,20 +6,18 @@ Option Explicit
 ' Module    : modOutputPathService
 ' Purpose   : Resolves configured document output paths and PDF target locations.
 ' Author    : Codex
-' Version   : 0.1.5
+' Version   : 0.1.3
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modOutputPathService"
 
 Private Const TABLE_TEN_PARAMETER As String = "ten_parameter"
 Private Const TENANT_PARAMETER_BASIC_DOC_PATH As String = "BASIC_DOC_PATH"
-Private Const TENANT_PARAMETER_NAME As String = "TENANT_NAME"
 
 Private Const DEFAULT_PATH_SEGMENT As String = "Unknown"
 Private Const RESERVED_FILE_PREFIX As String = "File-"
 Private Const PDF_EXTENSION As String = ".pdf"
 Private Const DOCUMENT_FILE_PREFIX As String = "Document-"
-Private Const DEFAULT_DOCUMENT_FOLDER As String = "Docs"
 
 Public Function GetDocumentRootPath(Optional ByVal IniPath As String = "") As String
     On Error GoTo ErrorHandler
@@ -36,27 +35,33 @@ Public Function GetTenantDocumentRootPath() As String
 
     Dim rootPath As String
 
-    If modDb.ValidateBackendConfiguration() Then
-        If TableExists(TABLE_TEN_PARAMETER) Then
-            rootPath = Trim$(modTenantRepository.GetTenantParameter(TENANT_PARAMETER_BASIC_DOC_PATH, vbNullString))
-
-            If LenB(rootPath) > 0 Then
-                GetTenantDocumentRootPath = rootPath
-                Exit Function
-            End If
-
-            modLoggingHandler.LogWarning MODULE_NAME & ".GetTenantDocumentRootPath", _
-                "Tenant parameter '" & TENANT_PARAMETER_BASIC_DOC_PATH & "' is missing or empty. Using default document root path."
-        Else
-            modLoggingHandler.LogWarning MODULE_NAME & ".GetTenantDocumentRootPath", _
-                "Table '" & TABLE_TEN_PARAMETER & "' is not available. Using default document root path."
-        End If
-    Else
+    If Not modDb.ValidateBackendConfiguration() Then
         modLoggingHandler.LogWarning MODULE_NAME & ".GetTenantDocumentRootPath", _
-            "Backend configuration is not valid. Using default document root path."
+            "Document root path could not be resolved because backend configuration is not valid."
+        Exit Function
     End If
 
-    GetTenantDocumentRootPath = BuildDefaultDocumentRootPath()
+    If Not TableExists(TABLE_TEN_PARAMETER) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".GetTenantDocumentRootPath", _
+            "Table '" & TABLE_TEN_PARAMETER & "' is not available."
+        Exit Function
+    End If
+
+    If Not modTenantRepository.HasTenantParameter(TENANT_PARAMETER_BASIC_DOC_PATH) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".GetTenantDocumentRootPath", _
+            "Tenant parameter '" & TENANT_PARAMETER_BASIC_DOC_PATH & "' was not found."
+        Exit Function
+    End If
+
+    rootPath = Trim$(modTenantRepository.GetTenantParameter(TENANT_PARAMETER_BASIC_DOC_PATH, vbNullString))
+
+    If LenB(rootPath) = 0 Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".GetTenantDocumentRootPath", _
+            "Tenant parameter '" & TENANT_PARAMETER_BASIC_DOC_PATH & "' is empty."
+        Exit Function
+    End If
+
+    GetTenantDocumentRootPath = rootPath
     Exit Function
 
 ErrorHandler:
@@ -110,37 +115,6 @@ Public Function BuildDocumentPdfPath(ByVal DocumentId As Long) As String
 ErrorHandler:
     BuildDocumentPdfPath = vbNullString
     modErrorHandler.HandleError MODULE_NAME, "BuildDocumentPdfPath", Err
-End Function
-
-Public Function BuildLegacyDocumentPdfPath(ByVal DocumentId As Long, ByVal OutputPath As String) As String
-    On Error GoTo ErrorHandler
-
-    Dim normalizedPath As String
-    Dim documentNo As String
-
-    normalizedPath = Trim$(OutputPath)
-    If LenB(normalizedPath) = 0 Then
-        Exit Function
-    End If
-
-    If UCase$(Right$(normalizedPath, Len(PDF_EXTENSION))) = UCase$(PDF_EXTENSION) Then
-        BuildLegacyDocumentPdfPath = normalizedPath
-        Exit Function
-    End If
-
-    documentNo = modDocumentRepository.GetDocumentNumber(DocumentId, DOCUMENT_FILE_PREFIX & CStr(DocumentId))
-    If LenB(Trim$(documentNo)) = 0 Then
-        documentNo = DOCUMENT_FILE_PREFIX & CStr(DocumentId)
-    End If
-
-    BuildLegacyDocumentPdfPath = EnsureTrailingBackslash(normalizedPath) & _
-                                 SanitizePathSegment(documentNo) & _
-                                 PDF_EXTENSION
-    Exit Function
-
-ErrorHandler:
-    BuildLegacyDocumentPdfPath = vbNullString
-    modErrorHandler.HandleError MODULE_NAME, "BuildLegacyDocumentPdfPath", Err
 End Function
 
 Public Function EnsureDirectoryExists(ByVal FolderPath As String) As Boolean
@@ -280,7 +254,7 @@ Private Function TableExists(ByVal TableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim tdf As DAO.TableDef
+    Dim tdf As DAO.tableDef
 
     If LenB(Trim$(TableName)) = 0 Then
         Exit Function
@@ -307,52 +281,4 @@ ErrorHandler:
     TableExists = False
     modErrorHandler.HandleError MODULE_NAME, "TableExists", Err
     Resume CleanExit
-End Function
-
-Private Function BuildDefaultDocumentRootPath() As String
-    On Error GoTo ErrorHandler
-
-    Dim appPath As String
-    Dim tenantName As String
-
-    appPath = Trim$(CurrentProject.Path)
-    If LenB(appPath) = 0 Then
-        modLoggingHandler.LogWarning MODULE_NAME & ".BuildDefaultDocumentRootPath", _
-            "Default document root path could not be resolved because CurrentProject.Path is empty."
-        Exit Function
-    End If
-
-    tenantName = ResolveTenantNameForPath()
-
-    BuildDefaultDocumentRootPath = EnsureTrailingBackslash(appPath) & _
-                                   DEFAULT_DOCUMENT_FOLDER & "\" & _
-                                   tenantName
-    Exit Function
-
-ErrorHandler:
-    BuildDefaultDocumentRootPath = vbNullString
-    modErrorHandler.HandleError MODULE_NAME, "BuildDefaultDocumentRootPath", Err
-End Function
-
-Private Function ResolveTenantNameForPath() As String
-    On Error GoTo ErrorHandler
-
-    Dim tenantName As String
-
-    If IsTenantInitialized() Then
-        tenantName = Trim$(CurrentTenantName)
-    End If
-
-    If LenB(tenantName) = 0 And modDb.ValidateBackendConfiguration() Then
-        If TableExists(TABLE_TEN_PARAMETER) Then
-            tenantName = Trim$(modTenantRepository.GetTenantParameter(TENANT_PARAMETER_NAME, vbNullString))
-        End If
-    End If
-
-    ResolveTenantNameForPath = SanitizePathSegment(tenantName)
-    Exit Function
-
-ErrorHandler:
-    ResolveTenantNameForPath = DEFAULT_PATH_SEGMENT
-    modErrorHandler.HandleError MODULE_NAME, "ResolveTenantNameForPath", Err
 End Function

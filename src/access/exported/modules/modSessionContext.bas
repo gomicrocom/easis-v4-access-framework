@@ -1,3 +1,4 @@
+Attribute VB_Name = "modSessionContext"
 Option Compare Database
 Option Explicit
 

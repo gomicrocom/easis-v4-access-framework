@@ -1,3 +1,4 @@
+Attribute VB_Name = "modAddressRepository"
 Option Compare Database
 Option Explicit
 
@@ -28,9 +29,9 @@ Private Const FIELD_CREATED_BY As String = "created_by"
 
 Public Function CreateAddress( _
     ByVal AddressTypeCode As String, _
-    Optional ByVal companyName As String = "", _
-    Optional ByVal firstName As String = "", _
-    Optional ByVal lastName As String = "", _
+    Optional ByVal CompanyName As String = "", _
+    Optional ByVal FirstName As String = "", _
+    Optional ByVal LastName As String = "", _
     Optional ByVal Street As String = "", _
     Optional ByVal HouseNo As String = "", _
     Optional ByVal ZipCode As String = "", _
@@ -52,9 +53,9 @@ Public Function CreateAddress( _
 
     rs.AddNew
     SetRecordsetValue rs, FIELD_ADDRESS_TYPE_CODE, UCase$(Trim$(AddressTypeCode))
-    SetRecordsetValue rs, FIELD_COMPANY_NAME, Trim$(companyName)
-    SetRecordsetValue rs, FIELD_FIRST_NAME, Trim$(firstName)
-    SetRecordsetValue rs, FIELD_LAST_NAME, Trim$(lastName)
+    SetRecordsetValue rs, FIELD_COMPANY_NAME, Trim$(CompanyName)
+    SetRecordsetValue rs, FIELD_FIRST_NAME, Trim$(FirstName)
+    SetRecordsetValue rs, FIELD_LAST_NAME, Trim$(LastName)
     SetRecordsetValue rs, FIELD_STREET, Trim$(Street)
     SetRecordsetValue rs, FIELD_HOUSE_NO, Trim$(HouseNo)
     SetRecordsetValue rs, FIELD_ZIP_CODE, Trim$(ZipCode)
@@ -124,9 +125,9 @@ Public Function GetAddressDisplayName(ByVal addressId As Long, Optional ByVal De
 
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
-    Dim companyName As String
-    Dim firstName As String
-    Dim lastName As String
+    Dim CompanyName As String
+    Dim FirstName As String
+    Dim LastName As String
 
     GetAddressDisplayName = DefaultValue
 
@@ -145,15 +146,15 @@ Public Function GetAddressDisplayName(ByVal addressId As Long, Optional ByVal De
         Exit Function
     End If
 
-    companyName = ResolveFieldValue(rs, FIELD_COMPANY_NAME, vbNullString)
-    If LenB(Trim$(companyName)) > 0 Then
-        GetAddressDisplayName = Trim$(companyName)
+    CompanyName = ResolveFieldValue(rs, FIELD_COMPANY_NAME, vbNullString)
+    If LenB(Trim$(CompanyName)) > 0 Then
+        GetAddressDisplayName = Trim$(CompanyName)
         GoTo CleanExit
     End If
 
-    firstName = ResolveFieldValue(rs, FIELD_FIRST_NAME, vbNullString)
-    lastName = ResolveFieldValue(rs, FIELD_LAST_NAME, vbNullString)
-    GetAddressDisplayName = Trim$(firstName & " " & lastName)
+    FirstName = ResolveFieldValue(rs, FIELD_FIRST_NAME, vbNullString)
+    LastName = ResolveFieldValue(rs, FIELD_LAST_NAME, vbNullString)
+    GetAddressDisplayName = Trim$(FirstName & " " & LastName)
 
     If LenB(GetAddressDisplayName) = 0 Then
         GetAddressDisplayName = DefaultValue

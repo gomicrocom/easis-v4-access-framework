@@ -1,3 +1,4 @@
+Attribute VB_Name = "modBackendLinker"
 Option Compare Database
 Option Explicit
 

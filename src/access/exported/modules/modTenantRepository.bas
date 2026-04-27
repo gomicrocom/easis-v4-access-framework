@@ -1,3 +1,4 @@
+Attribute VB_Name = "modTenantRepository"
 Option Compare Database
 Option Explicit
 
@@ -196,3 +197,4 @@ ErrorHandler:
     ResolveTenantParameterValue = DefaultValue
     modErrorHandler.HandleError MODULE_NAME, "ResolveTenantParameterValue", Err
 End Function
+

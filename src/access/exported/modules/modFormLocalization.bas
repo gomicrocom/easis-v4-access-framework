@@ -1,3 +1,4 @@
+Attribute VB_Name = "modFormLocalization"
 Option Compare Database
 Option Explicit
 
