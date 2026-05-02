@@ -144,7 +144,7 @@ Public Function ValidateRequiredFields(ByVal FormInstance As Access.Form) As Boo
 NextControl:
     Next ctl
 
-    If missingControls.Count = 0 Then
+    If missingControls.count = 0 Then
         Exit Function
     End If
 
@@ -156,7 +156,7 @@ NextControl:
 
     modLoggingHandler.LogWarning MODULE_NAME & ".ValidateRequiredFields", _
         "Required-field validation failed on form '" & GetFormName(FormInstance) & "' for " & _
-        CStr(missingControls.Count) & " control(s)."
+        CStr(missingControls.count) & " control(s)."
     Exit Function
 
 ErrorHandler:
@@ -226,14 +226,14 @@ Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boole
 NextControl:
     Next ctl
 
-    If missingRequiredControls.Count = 0 And invalidFormatControls.Count = 0 Then
+    If missingRequiredControls.count = 0 And invalidFormatControls.count = 0 Then
         Exit Function
     End If
 
     ValidateFormPolicies = False
     TryShowValidationSummaryMessage missingRequiredFieldNames, invalidFormatFieldNames, GetFormName(FormInstance)
 
-    If missingRequiredControls.Count > 0 Then
+    If missingRequiredControls.count > 0 Then
         Set firstInvalidControl = missingRequiredControls.item(1)
     Else
         Set firstInvalidControl = invalidFormatControls.item(1)
@@ -243,7 +243,7 @@ NextControl:
 
     modLoggingHandler.LogWarning MODULE_NAME & ".ValidateFormPolicies", _
         "Form policy validation failed on form '" & GetFormName(FormInstance) & "' for " & _
-        CStr(missingRequiredControls.Count + invalidFormatControls.Count) & " control(s)."
+        CStr(missingRequiredControls.count + invalidFormatControls.count) & " control(s)."
     Exit Function
 
 ErrorHandler:

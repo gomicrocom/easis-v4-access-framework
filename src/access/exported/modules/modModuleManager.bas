@@ -191,7 +191,7 @@ Private Function BuildActiveModulesSummary() As String
 
     EnsureModuleStore
 
-    If mActiveModules.Count = 0 Then
+    If mActiveModules.count = 0 Then
         BuildActiveModulesSummary = "(none)"
         Exit Function
     End If

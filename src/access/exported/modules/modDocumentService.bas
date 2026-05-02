@@ -102,3 +102,4 @@ End Function
 Private Function RoundCurrency(ByVal Amount As Currency) As Currency
     RoundCurrency = CCur(Round(CDbl(Amount), 2))
 End Function
+

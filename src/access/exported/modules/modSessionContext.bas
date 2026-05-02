@@ -148,7 +148,7 @@ Private Sub InitializeCurrentRoles(ByVal RoleList As String)
         End If
     Next roleItem
 
-    If mCurrentRoles.Count = 0 Then
+    If mCurrentRoles.count = 0 Then
         mCurrentRoles.Add NormalizeRoleCode(ROLE_CODE_ADMIN), True
     End If
 

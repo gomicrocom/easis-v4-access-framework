@@ -26,10 +26,3 @@ Sub ExportAllModules()
     MsgBox "Alle Module wurden exportiert nach: " & path
 End Sub
 
-
-
-Public Sub runTestPdfReport()
-Dim p As String
-Debug.Print modPdfExportService.ExportDocumentToPdf(1, p)
-Debug.Print p
-End Sub

@@ -22,7 +22,7 @@ Public Sub InitializeLicenses()
 
     LoadRuntimeLicenses ConfigFilePath
     modLoggingHandler.LogInfo MODULE_NAME & ".InitializeLicenses", _
-                              "Licensing initialized with " & CStr(GetLicenseStore().Count) & " active feature(s)."
+                              "Licensing initialized with " & CStr(GetLicenseStore().count) & " active feature(s)."
     Exit Sub
 
 ErrorHandler:
@@ -111,7 +111,7 @@ Public Function InitializeLicensing(Optional ByVal IniPath As String = vbNullStr
 
     LoadRuntimeLicenses IniPath
     modLoggingHandler.LogInfo MODULE_NAME & ".InitializeLicensing", _
-                              "Licensing initialized with " & CStr(GetLicenseStore().Count) & " active feature(s)."
+                              "Licensing initialized with " & CStr(GetLicenseStore().count) & " active feature(s)."
     InitializeLicensing = True
     Exit Function
 
