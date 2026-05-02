@@ -25,6 +25,23 @@ Without a clear separation, updates become harder, support becomes riskier, and 
 
 Data storage is separated into four areas.
 
+### Naming Convention
+
+The following naming convention is mandatory across the backend structure:
+
+| Prefix | Scope | Location |
+|---|---|---|
+| `ref*` | system-wide reference data | `sys_be.accdb` |
+| `sys*` | technical system tables if required later | `sys_be.accdb` |
+| `log*` | log tables | `log_be.accdb` |
+| `ten*` | tenant parameters | tenant backend |
+| `doc*` | documents and document-related business data | tenant backend |
+| `adr*` | addresses and address-related business data | tenant backend |
+
+Important rule:
+
+The former `tbl*` prefix is no longer used in the new architecture.
+
 ### 1. Local Configuration
 
 Path:
@@ -91,6 +108,12 @@ Purpose:
 Important rule:
 
 `sys_be.accdb` must remain updateable by replacing the file. Therefore it must not contain local settings, logs, or tenant business data.
+
+Current system-wide reference tables include:
+
+- `refCountries`
+- `refCountryTimezones`
+- `refPostalCodes_DACH`
 
 ### 4. Log Backend
 
@@ -162,6 +185,7 @@ The chosen structure therefore creates clear boundaries between:
 - the frontend does not hold productive business data
 - `easis.ini` remains local installation configuration
 - startup and linking must evolve to connect tenant backend, system backend, and log backend
+- tenant databases should store only reference keys such as country codes, not full copies of shared system data
 
 ## Future Work
 
@@ -169,10 +193,16 @@ The chosen structure therefore creates clear boundaries between:
 - migrate existing framework tables into the correct backend area
 - switch the logging service to `log_be.accdb`
 - switch the translation service to `sys_be.accdb`
-- introduce ISO-4217 table `ref_currency` in `sys_be.accdb`
+- introduce ISO 4217 table `refCurrencies` in `sys_be.accdb`
+- extend postal-code coverage beyond the DACH region
+- add ISO 3166-2 region structures in `sys_be.accdb`
+- define versioning and update strategy for `sys_be.accdb`
+- evaluate optional delta updates instead of full file replacement
 
 ## Open Questions
 
 - how should log rotation and archival be implemented for `log_be.accdb`
 - what is the update mechanism for `sys_be.accdb`
 - how should customer-specific overrides of shared system reference data be handled
+- should `sys_be.accdb` be read-only in production or maintained through a dedicated admin tool
+- how should data quality updates in shared data pools be distributed and validated
