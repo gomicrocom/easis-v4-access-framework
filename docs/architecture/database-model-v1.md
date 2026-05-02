@@ -103,6 +103,7 @@ Current reference tables:
 - `refCountries`
 - `refCountryTimezones`
 - `refPostalCodes_DACH`
+- `refCurrencies`
 
 ### Log Backend
 
@@ -130,7 +131,7 @@ Does not contain:
 Tenant databases should store only reference keys into shared pools where appropriate, for example:
 
 - country code instead of a copied country master record
-- future currency code instead of a copied currency master record
+- currency code instead of a copied currency master record
 
 This keeps tenant backends smaller, avoids duplication, and allows central maintenance of shared standards.
 
@@ -215,6 +216,48 @@ Additional fields:
 - `SourceFile`
 - `SourceQuality`
 
+### `refCurrencies`
+
+Purpose:
+
+- central ISO 4217 currency definition table
+- basis for document currencies, reports, and centralized amount formatting
+
+Key rules:
+
+- `refCurrencies` belongs to `sys_be.accdb`
+- tenant backends store only `CurrencyCode` references
+- examples of tenant references are `doc_document.currency_code` and `ten_parameter.CURRENCY_CODE`
+- no translated names are stored in `refCurrencies`
+- translated names belong to the translation service
+
+Fields:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `CurrencyCode` | `TEXT(3)` | primary key |
+| `NumericCode` | `TEXT(3)` | ISO 4217 numeric code |
+| `CurrencyName` | `TEXT(100)` | neutral name |
+| `MinorUnit` | `BYTE` | number of decimal places |
+| `Symbol` | `TEXT(10)` | display symbol |
+| `SymbolPosition` | `TEXT(10)` | `PREFIX` or `SUFFIX` |
+| `DecimalSeparator` | `TEXT(5)` | decimal separator |
+| `ThousandSeparator` | `TEXT(5)` | thousand separator |
+| `IsActive` | `YESNO` | active flag |
+| `DataSource` | `TEXT(100)` | source provenance |
+| `DataQualityNotes` | `TEXT(255)` | data quality notes |
+| `timestamp` | `DATETIME` | last maintenance timestamp |
+
+Initial values:
+
+| CurrencyCode | NumericCode | CurrencyName | MinorUnit | Symbol | SymbolPosition | DecimalSeparator | ThousandSeparator | IsActive |
+|---|---|---|---:|---|---|---|---|---|
+| `CHF` | `756` | `Swiss Franc` | 2 | `CHF` | `PREFIX` | `.` | `'` | Yes |
+| `EUR` | `978` | `Euro` | 2 | `€` | `SUFFIX` | `,` | `.` | Yes |
+| `USD` | `840` | `US Dollar` | 2 | `$` | `PREFIX` | `.` | `,` | Yes |
+| `GBP` | `826` | `Pound Sterling` | 2 | `£` | `PREFIX` | `.` | `,` | Yes |
+| `JPY` | `392` | `Yen` | 0 | `¥` | `PREFIX` | `.` | `,` | Yes |
+
 ## Referential Integrity
 
 The intended shared reference relationships are:
@@ -233,16 +276,41 @@ The system data pools are intended for:
 - structured data entry in the frontend
 - address validation
 - standardized country and region handling
+- standardized currency formatting rules
 - groundwork for multilingual behavior
 - groundwork for broader internationalization
 
 Reports and business logic should consume stored tenant references and resolve shared reference data through `sys_be.accdb`, not through copied tenant-local duplicates.
 
+For currencies this means:
+
+- business tables store `CurrencyCode`
+- formatting metadata is resolved centrally from `refCurrencies`
+- `MinorUnit` determines decimal places for display
+
+## Currency Formatting Strategy
+
+Currency formatting should be centralized in a dedicated service:
+
+`modCurrencyFormatService`
+
+Planned functions:
+
+- `GetCurrencyFormat(CurrencyCode)`
+- `FormatCurrencyAmount(Amount, CurrencyCode)`
+- `NormalizeCurrencyCode(CurrencyCode)`
+
+Report rule:
+
+- reports should not use hardcoded Access currency format strings as the primary business rule
+- reports should display formatted amounts through centralized currency formatting logic
+- `qry_document_report_header` should later provide `currency_code`
+
 ## Future Work
 
-- introduce `refCurrencies` for ISO 4217 currency definitions
 - extend postal-code data beyond the DACH region
 - add ISO 3166-2 region tables
+- connect reports to centralized currency formatting
 - define versioning and update strategy for `sys_be.accdb`
 - evaluate delta update support instead of full file replacement
 

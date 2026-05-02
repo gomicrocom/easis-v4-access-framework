@@ -123,6 +123,50 @@ Additional fields:
 - `SourceFile`
 - `SourceQuality`
 
+### `refCurrencies`
+
+Purpose:
+
+- central ISO 4217 currency reference for all tenants
+- basis for document currency handling
+- basis for report formatting and centralized amount display rules
+
+Architectural rules:
+
+- `refCurrencies` belongs to `sys_be.accdb`
+- tenant backends store only `CurrencyCode` references, for example in `doc_document.currency_code` or `ten_parameter.CURRENCY_CODE`
+- `refCurrencies` does not contain translated currency names
+- translated labels are handled through the translation service
+- `MinorUnit` controls the number of decimal places to display
+- formatting logic should be centralized in `modCurrencyFormatService`
+
+Fields:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `CurrencyCode` | `TEXT(3)` | primary key, ISO 4217 alpha code |
+| `NumericCode` | `TEXT(3)` | ISO 4217 numeric code |
+| `CurrencyName` | `TEXT(100)` | neutral currency name |
+| `MinorUnit` | `BYTE` | decimal places used for display |
+| `Symbol` | `TEXT(10)` | display symbol or currency code |
+| `SymbolPosition` | `TEXT(10)` | `PREFIX` or `SUFFIX` |
+| `DecimalSeparator` | `TEXT(5)` | decimal separator for formatting |
+| `ThousandSeparator` | `TEXT(5)` | thousand separator for formatting |
+| `IsActive` | `YESNO` | active flag |
+| `DataSource` | `TEXT(100)` | source provenance |
+| `DataQualityNotes` | `TEXT(255)` | quality or review notes |
+| `timestamp` | `DATETIME` | last maintenance timestamp |
+
+Initial values:
+
+| CurrencyCode | NumericCode | CurrencyName | MinorUnit | Symbol | SymbolPosition | DecimalSeparator | ThousandSeparator | IsActive |
+|---|---|---|---:|---|---|---|---|---|
+| `CHF` | `756` | `Swiss Franc` | 2 | `CHF` | `PREFIX` | `.` | `'` | Yes |
+| `EUR` | `978` | `Euro` | 2 | `€` | `SUFFIX` | `,` | `.` | Yes |
+| `USD` | `840` | `US Dollar` | 2 | `$` | `PREFIX` | `.` | `,` | Yes |
+| `GBP` | `826` | `Pound Sterling` | 2 | `£` | `PREFIX` | `.` | `,` | Yes |
+| `JPY` | `392` | `Yen` | 0 | `¥` | `PREFIX` | `.` | `,` | Yes |
+
 ## Referential Integrity
 
 The intended core relations are:
@@ -132,6 +176,8 @@ The intended core relations are:
 | `refCountries.ALPHA-2` | `refCountryTimezones.ALPHA-2` | country to timezone |
 | `refCountries.ALPHA-2` | `refPostalCodes_DACH.CountryCodeISO2` | country to postal-code set |
 
+`refCurrencies` is a standalone shared reference table keyed by `CurrencyCode`.
+
 ## Usage Rules
 
 The reference data pools are used for:
@@ -139,16 +185,41 @@ The reference data pools are used for:
 - structured data entry in the frontend
 - address validation
 - standardization of country and region data
+- standardization of currency handling and amount formatting
 - multilingual groundwork
 - future internationalization
 
 Tenant databases should store only references such as country codes and not full copies of shared system master data.
 
+For currencies this means:
+
+- store `CurrencyCode` in tenant data
+- resolve display and formatting rules from `refCurrencies`
+- avoid tenant-local duplication of symbol, separator, or minor-unit metadata
+
+## Currency Formatting Service
+
+The currency formatting logic should be centralized in a dedicated service module:
+
+`modCurrencyFormatService`
+
+Planned functions:
+
+- `GetCurrencyFormat(CurrencyCode)`
+- `FormatCurrencyAmount(Amount, CurrencyCode)`
+- `NormalizeCurrencyCode(CurrencyCode)`
+
+Report rule:
+
+- reports should not rely on raw Access currency format strings as the primary business rule
+- reports should use centrally defined currency formatting behavior
+- `qry_document_report_header` should later provide `currency_code` so reports can resolve the correct currency format context
+
 ## Future Work
 
-- introduce `refCurrencies` for ISO 4217 currencies
 - extend postal-code coverage globally
 - add ISO 3166-2 region tables
+- connect reports and document output to centralized currency formatting
 - define versioning and update strategy for `sys_be.accdb`
 - evaluate optional delta updates instead of full file replacement
 
@@ -158,3 +229,4 @@ Tenant databases should store only references such as country codes and not full
 - how should customer-specific overrides be handled
 - should `sys_be.accdb` be read-only in production or maintained through a dedicated tool
 - how should data quality updates be distributed and validated
+- how should exceptional customer-specific currency formatting overrides be governed, if allowed at all

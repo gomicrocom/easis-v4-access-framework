@@ -114,6 +114,7 @@ Current system-wide reference tables include:
 - `refCountries`
 - `refCountryTimezones`
 - `refPostalCodes_DACH`
+- `refCurrencies`
 
 ### 4. Log Backend
 
@@ -193,9 +194,9 @@ The chosen structure therefore creates clear boundaries between:
 - migrate existing framework tables into the correct backend area
 - switch the logging service to `log_be.accdb`
 - switch the translation service to `sys_be.accdb`
-- introduce ISO 4217 table `refCurrencies` in `sys_be.accdb`
 - extend postal-code coverage beyond the DACH region
 - add ISO 3166-2 region structures in `sys_be.accdb`
+- connect reports and document output to centralized currency formatting based on `refCurrencies`
 - define versioning and update strategy for `sys_be.accdb`
 - evaluate optional delta updates instead of full file replacement
 
