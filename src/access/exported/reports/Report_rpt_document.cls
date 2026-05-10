@@ -20,6 +20,7 @@ Private Function BuildTenantSenderLine() As String
     tenantStreet = Nz(modTenantRepository.GetTenantParameter("TENANT_STREET", ""), "")
     tenantZip = Nz(modTenantRepository.GetTenantParameter("TENANT_ZIP_CODE", ""), "")
     tenantCity = Nz(modTenantRepository.GetTenantParameter("TENANT_CITY", ""), "")
+    
     BuildTenantSenderLine = JoinNonEmpty(" | ", tenantName, tenantStreet, Trim$(tenantZip & " " & tenantCity))
 End Function
 
@@ -45,14 +46,16 @@ Private Sub Berichtskopf_Format(Cancel As Integer, FormatCount As Integer)
     Dim senderLine As String
     Dim windowPosition As String
     Dim hasDelivery As Boolean
-    Dim isDeliveryNote As Boolean
+    Dim isDeliveryNoteValue  As Boolean
     
     senderLine = BuildTenantSenderLine()
     windowPosition = UCase$(Trim$(Nz(modTenantRepository.GetTenantParameter("ADDRESS_WINDOW_POSITION", "LEFT"), "LEFT")))
     
+    hasDelivery = Nz(Me!has_delivery_address, False)
+    isDeliveryNoteValue = IsDeliveryNote()
+    
     Me!txtSenderLeft = vbNullString
     Me!txtSenderRight = vbNullString
-    
     Me!txtSenderLeft.Visible = False
     Me!txtSenderRight.Visible = False
     
@@ -63,71 +66,146 @@ Private Sub Berichtskopf_Format(Cancel As Integer, FormatCount As Integer)
         Me!txtSenderLeft = senderLine
         Me!txtSenderLeft.Visible = True
     End If
-
-    ' --- Adresse ---
-    hasDelivery = Nz(Me!has_delivery_address, False)
-    isDeliveryNote = (UCase$(Nz(Me!document_type, "")) = "DELIVERY_NOTE")
     
     Me!txtAddressLeft = vbNullString
     Me!txtAddressRight = vbNullString
-    
     Me!txtAddressLeft.Visible = False
     Me!txtAddressRight.Visible = False
     
     If windowPosition = "RIGHT" Then
-        
         If hasDelivery Then
-            
-            If isDeliveryNote Then
-                ' Fenster = Lieferadresse
+            If isDeliveryNoteValue Then
                 Me!txtAddressRight = BuildDeliveryAddressBlock()
                 Me!txtAddressLeft = BuildBillingAddressBlock()
             Else
-                ' Fenster = Rechnungsadresse
                 Me!txtAddressRight = BuildBillingAddressBlock()
                 Me!txtAddressLeft = BuildDeliveryAddressBlock()
             End If
             
             Me!txtAddressRight.Visible = True
             Me!txtAddressLeft.Visible = True
-            
         Else
             Me!txtAddressRight = BuildBillingAddressBlock()
             Me!txtAddressRight.Visible = True
         End If
-        
     Else
-        
         If hasDelivery Then
-            
-            If isDeliveryNote Then
-                ' Fenster = Lieferadresse
+            If isDeliveryNoteValue Then
                 Me!txtAddressLeft = BuildDeliveryAddressBlock()
                 Me!txtAddressRight = BuildBillingAddressBlock()
             Else
-                ' Fenster = Rechnungsadresse
                 Me!txtAddressLeft = BuildBillingAddressBlock()
                 Me!txtAddressRight = BuildDeliveryAddressBlock()
             End If
             
             Me!txtAddressLeft.Visible = True
             Me!txtAddressRight.Visible = True
-            
         Else
             Me!txtAddressLeft = BuildBillingAddressBlock()
             Me!txtAddressLeft.Visible = True
         End If
-        
     End If
 End Sub
+
+Private Sub Berichtsfuß_Format(Cancel As Integer, FormatCount As Integer)
+    Dim showVat As Boolean
+    Dim isDeliveryNoteValue  As Boolean
+
+    isDeliveryNoteValue = IsDeliveryNote()
+    showVat = ShouldShowVatBlock()
+
+    Me!srpt_document_vat_summary.Visible = showVat And Not IsDeliveryNote
+
+    Me!lblPaymentTerms.Visible = (Not isDeliveryNoteValue And Len(Trim$(Nz(Me!txtPaymentTermsRaw, ""))) > 0)
+    Me!txtPaymentTerms.Visible = Me!lblPaymentTerms.Visible
+    
+    If Me!txtPaymentTerms.Visible Then
+        Me!txtPaymentTerms = Nz(Me!txtPaymentTermsRaw, "")
+    End If
+
+    Me!lblSubtotal.Visible = Not IsDeliveryNote
+    Me!txtSubtotal.Visible = Not IsDeliveryNote
+    
+    Me!lblHeaderDiscount.Visible = Not IsDeliveryNote
+    Me!txtHeaderDiscount.Visible = Not IsDeliveryNote
+    
+    Me!lblHeaderSurcharge.Visible = Not IsDeliveryNote
+    Me!txtHeaderSurcharge.Visible = Not IsDeliveryNote
+    
+    Me!lblNetAmount.Visible = Not IsDeliveryNote
+    Me!txtNetAmount.Visible = Not IsDeliveryNote
+    
+    Me!lblVatAmount.Visible = Not IsDeliveryNote
+    Me!txtVatAmount.Visible = Not IsDeliveryNote
+    
+    Me!lblTotalGross.Visible = Not IsDeliveryNote
+    Me!txtTotalGross.Visible = Not IsDeliveryNote
+    
+    Me!linTotalTop.Visible = Not IsDeliveryNote
+    
+    If Not IsDeliveryNote Then
+        Me!txtTotalGross = FormatCurrencyAmount( _
+            Nz(Me!txtGrossAmount, 0), _
+            Nz(Me!txtCurrencyCode, "CHF") _
+        )
+    End If
+End Sub
+
+Private Sub Detail_Format(Cancel As Integer, FormatCount As Integer)
+    ' No amount/VAT visibility logic here.
+    ' Detail amount columns are handled in the positions subreport.
+    ' Footer visibility is handled in Berichtsfuß_Format.
+End Sub
+
+Private Sub Report_NoData(Cancel As Integer)
+    MsgBox "Kein Dokument für den angegebenen Filter gefunden.", vbExclamation
+    Cancel = True
+End Sub
+
 Private Function BuildBillingAddressBlock() As String
     Dim result As String
     
     AppendLine result, Nz(Me!billing_display_name, "")
     AppendLine result, Nz(Me!billing_street, "")
-    AppendLine result, Nz(Me!billing_zip_city, "")
+    AppendLine result, BuildZipCityLine( _
+        Nz(Me!billing_zip_code, ""), _
+        Nz(Me!billing_city, ""), _
+        Nz(Me!billing_country_code, "") _
+    )
     
     BuildBillingAddressBlock = result
+End Function
+
+Private Function BuildDeliveryAddressBlock() As String
+    Dim result As String
+    
+    AppendLine result, Nz(Me!delivery_display_name, "")
+    AppendLine result, Nz(Me!delivery_street, "")
+    AppendLine result, BuildZipCityLine( _
+        Nz(Me!delivery_zip_code, ""), _
+        Nz(Me!delivery_city, ""), _
+        Nz(Me!delivery_country_code, "") _
+    )
+    
+    BuildDeliveryAddressBlock = result
+End Function
+
+Private Function BuildZipCityLine( _
+    ByVal ZipCode As String, _
+    ByVal City As String, _
+    ByVal CountryCode As String _
+) As String
+    Dim normalizedCountryCode As String
+    Dim prefix As String
+    
+    normalizedCountryCode = UCase$(Trim$(Nz(CountryCode, "")))
+    
+    If Len(normalizedCountryCode) > 0 _
+       And normalizedCountryCode <> TenantCountryCode() Then
+        prefix = normalizedCountryCode & "-"
+    End If
+    
+    BuildZipCityLine = Trim$(prefix & Trim$(Nz(ZipCode, "")) & " " & Trim$(Nz(City, "")))
 End Function
 
 Private Sub AppendLine(ByRef text As String, ByVal line As String)
@@ -140,21 +218,25 @@ Private Sub AppendLine(ByRef text As String, ByVal line As String)
     
     text = text & line
 End Sub
-Private Function BuildDeliveryAddressBlock() As String
-    Dim result As String
-    
-    AppendLine result, Nz(Me!delivery_display_name, "")
-    AppendLine result, Nz(Me!delivery_street, "")
-    AppendLine result, Nz(Me!delivery_zip_city, "")
-    
-    BuildDeliveryAddressBlock = result
+
+Private Function TenantCountryCode() As String
+    TenantCountryCode = UCase$(Trim$(Nz(modTenantRepository.GetTenantParameter("SENDER_COUNTRY_CODE", "CH"), "CH")))
 End Function
-Private Sub Detail_Format(Cancel As Integer, FormatCount As Integer)
-    Dim isNoVat As Boolean
-    isNoVat = (Nz(Me!vat_mode, "") = "NONE")
 
-    Me!subVatSummary.Visible = Not isNoVat
-    Me!lblNoVat.Visible = isNoVat
-End Sub
+Private Function IsDeliveryNote() As Boolean
+    IsDeliveryNote = (UCase$(Nz(Me!txtDocumentType, "")) = "DELIVERY_NOTE")
+End Function
 
+Private Function IsNoVatDocument() As Boolean
+    IsNoVatDocument = _
+        UCase$(Nz(Me!txtVatMode, "")) = "NONE" _
+        Or UCase$(Nz(Me!txtVatMode, "")) = "EXPORT"
+End Function
+
+Private Function ShouldShowVatBlock() As Boolean
+    ShouldShowVatBlock = _
+        Not IsDeliveryNote() _
+        And Not IsNoVatDocument() _
+        And Nz(Me!txtVatAmount, 0) <> 0
+End Function
 

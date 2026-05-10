@@ -71,7 +71,7 @@ ErrorHandler:
     On Error Resume Next
     DBEngine.Workspaces(0).Rollback
     MsgBox "Fehler beim Erstellen der Demo-Daten:" & vbCrLf & _
-           Err.Number & " - " & Err.Description, vbCritical, "Easis v4 Demo Seeder"
+           Err.Number & " - " & Err.description, vbCritical, "Easis v4 Demo Seeder"
     Resume CleanExit
 End Sub
 
@@ -166,15 +166,15 @@ End Sub
 
 Private Sub InsertDocuments(ByVal db As DAO.Database)
     
-    mDocInvoiceCh = InsertDocument(db, "INVOICE", "FINAL", "RE-2026-0001", DateSerial(2026, 5, 2), mAddressBillingCh, "Muster Handel AG", "CHF", "NET", 7.7, "Schweizer Rechnung / Standardfall")
+    mDocInvoiceCh = InsertDocument(db, "INVOICE", "FINAL", "RE-2026-0001", DateSerial(2026, 5, 2), mAddressBillingCh, "Muster Handel AG", "CHF", "NET", 7.7, "Schweizer Rechnung / Standardfall", "", 0, "de-CH", "NET_30", "Zahlbar innert 30 Tagen netto.")
     
-    mDocInvoiceEu = InsertDocument(db, "INVOICE", "FINAL", "RE-2026-0002", DateSerial(2026, 5, 2), mAddressBillingDe, "Beispiel GmbH", "EUR", "NET", 19, "EU-Rechnung mit Positionsrabatt und Kopfrabatt. Separate Lieferadresse: Beispiel GmbH - Site Paris, 12 Rue Lafayette, 75009 Paris, FR", "PERCENT", 5)
+    mDocInvoiceEu = InsertDocument(db, "INVOICE", "FINAL", "RE-2026-0002", DateSerial(2026, 5, 2), mAddressBillingDe, "Beispiel GmbH", "EUR", "NET", 19, "EU-Rechnung mit Positionsrabatt und Kopfrabatt. Separate Lieferadresse: Beispiel GmbH - Site Paris, 12 Rue Lafayette, 75009 Paris, FR", "PERCENT", 5, "de-DE", "CASH_DISCOUNT_10_2_NET_30", "2% Skonto bei Zahlung innert 10 Tagen, ansonsten zahlbar innert 30 Tagen netto.")
     
-    mDocDeliveryNote = InsertDocument(db, "DELIVERY_NOTE", "FINAL", "LS-2026-0001", DateSerial(2026, 5, 2), mAddressShippingCh, "Muster Handel AG - Lager Genf", "CHF", "NET", 7.7, "Lieferschein-Sonderfall: Lieferadresse im Fenster, Rechnungsadresse gegenüber: Muster Handel AG, Industriestrasse 15, 6300 Zug")
+    mDocDeliveryNote = InsertDocument(db, "DELIVERY_NOTE", "FINAL", "LS-2026-0001", DateSerial(2026, 5, 2), mAddressShippingCh, "Muster Handel AG - Lager Genf", "CHF", "NET", 7.7, "Lieferschein-Sonderfall: Lieferadresse im Fenster, Rechnungsadresse gegenüber: Muster Handel AG, Industriestrasse 15, 6300 Zug", "", 0, "de-CH", "", "")
     
-    mDocCreditNote = InsertDocument(db, "CREDIT_NOTE", "FINAL", "GS-2026-0001", DateSerial(2026, 5, 2), mAddressBillingDe, "Beispiel GmbH", "EUR", "NET", 19, "Gutschrift mit negativer Position")
+    mDocCreditNote = InsertDocument(db, "CREDIT_NOTE", "FINAL", "GS-2026-0001", DateSerial(2026, 5, 2), mAddressBillingDe, "Beispiel GmbH", "EUR", "NET", 19, "Gutschrift mit negativer Position", "", 0, "de-DE", "NET_30", "Zahlbar innert 30 Tagen netto.")
     
-    mDocInvoiceUsd = InsertDocument(db, "INVOICE", "FINAL", "RE-2026-0003", DateSerial(2026, 5, 2), mAddressBillingUs, "Global Components Inc.", "USD", "EXPORT", 0, "Exportrechnung mit 0% VAT, Positionsrabatt, großen Zahlen und Rundungstest")
+    mDocInvoiceUsd = InsertDocument(db, "INVOICE", "FINAL", "RE-2026-0003", DateSerial(2026, 5, 2), mAddressBillingUs, "Global Components Inc.", "USD", "EXPORT", 0, "Exportrechnung mit 0% VAT, Positionsrabatt, großen Zahlen und Rundungstest", "", 0, "en-US", "PREPAYMENT", "Payable in advance.")
 
 End Sub
 
@@ -273,7 +273,10 @@ Private Function InsertDocument( _
     ByVal VatRate As Double, _
     ByVal Remarks As String, _
     Optional ByVal HeaderDiscountType As String = "", _
-    Optional ByVal HeaderDiscountValue As Double = 0 _
+    Optional ByVal HeaderDiscountValue As Double = 0, _
+    Optional ByVal LanguageCode As String = "", _
+    Optional ByVal PaymentTermCode As String = "", _
+    Optional ByVal PaymentTermsText As String = "" _
 ) As Long
     
     Dim rs As DAO.Recordset
@@ -292,6 +295,9 @@ Private Function InsertDocument( _
     SetFieldIfExists rs, "header_discount_value", HeaderDiscountValue
     SetFieldIfExists rs, "header_discount_amount", CCur(0)
     SetFieldIfExists rs, "vat_mode", UCase$(Trim$(VatMode))
+    SetFieldIfExists rs, "language_code", NullIfEmpty(LanguageCode)
+    SetFieldIfExists rs, "payment_term_code", NullIfEmpty(PaymentTermCode)
+    SetFieldIfExists rs, "payment_terms_text", NullIfEmpty(PaymentTermsText)
     SetFieldIfExists rs, "vat_rate", VatRate
     SetFieldIfExists rs, "total_net", CCur(0)
     SetFieldIfExists rs, "total_vat", CCur(0)
@@ -312,8 +318,8 @@ Private Sub InsertPosition( _
     ByVal db As DAO.Database, _
     ByVal DocumentId As Long, _
     ByVal LineNo As Long, _
-    ByVal Description As String, _
-    ByVal Quantity As Double, _
+    ByVal description As String, _
+    ByVal quantity As Double, _
     ByVal UnitCode As String, _
     ByVal UnitPrice As Currency, _
     ByVal VatRate As Double, _
@@ -327,7 +333,7 @@ Private Sub InsertPosition( _
     Dim lineVat As Currency
     Dim lineGross As Currency
 
-    lineBase = CCur(Round(CDbl(Quantity) * CDbl(UnitPrice), 2))
+    lineBase = CCur(Round(CDbl(quantity) * CDbl(UnitPrice), 2))
 
     If UCase$(Trim$(DiscountType)) = "PERCENT" Then
         lineDiscount = CCur(Round(CDbl(lineBase) * CDbl(DiscountValue) / 100#, 2))
@@ -344,8 +350,8 @@ Private Sub InsertPosition( _
     rs.AddNew
     SetFieldIfExists rs, "document_id", DocumentId
     SetFieldIfExists rs, "line_no", LineNo
-    SetFieldIfExists rs, "description", Trim$(Description)
-    SetFieldIfExists rs, "quantity", Quantity
+    SetFieldIfExists rs, "description", Trim$(description)
+    SetFieldIfExists rs, "quantity", quantity
     SetFieldIfExists rs, "unit_code", Trim$(UnitCode)
     SetFieldIfExists rs, "unit_price", UnitPrice
     SetFieldIfExists rs, "vat_rate", VatRate
@@ -530,6 +536,8 @@ Private Function NullIfEmpty(ByVal Value As String) As Variant
     If LenB(Trim$(Value)) = 0 Then
         NullIfEmpty = Null
     Else
-        NullIfEmpty = UCase$(Trim$(Value))
+        NullIfEmpty = Trim$(Value)
     End If
 End Function
+
+
