@@ -35,6 +35,7 @@ Private mDocInvoiceEu As Long
 Private mDocDeliveryNote As Long
 Private mDocCreditNote As Long
 Private mDocInvoiceUsd As Long
+Private mDocLongInvoice As Long
 
 Public Sub SeedDemoData(Optional ByVal TenantCode As String = "DEMO_CH")
     On Error GoTo ErrorHandler
@@ -175,10 +176,18 @@ Private Sub InsertDocuments(ByVal db As DAO.Database)
     mDocCreditNote = InsertDocument(db, "CREDIT_NOTE", "FINAL", "GS-2026-0001", DateSerial(2026, 5, 2), mAddressBillingDe, "Beispiel GmbH", "EUR", "NET", 19, "Gutschrift mit negativer Position", "", 0, "de-DE", "NET_30", "Zahlbar innert 30 Tagen netto.")
     
     mDocInvoiceUsd = InsertDocument(db, "INVOICE", "FINAL", "RE-2026-0003", DateSerial(2026, 5, 2), mAddressBillingUs, "Global Components Inc.", "USD", "EXPORT", 0, "Exportrechnung mit 0% VAT, Positionsrabatt, großen Zahlen und Rundungstest", "", 0, "en-US", "PREPAYMENT", "Payable in advance.")
+    
+    mDocLongInvoice = InsertDocument(db, "INVOICE", "FINAL", "RE-2026-0099", DateSerial(2026, 5, 3), mAddressBillingCh, "Muster Handel AG", "CHF", "NET", 7.7, "Langdokument für Report- und Seitenumbruchtests", "", 0, "de-CH", "NET_30", "Zahlbar innert 30 Tagen netto.")
 
 End Sub
 
 Private Sub InsertPositions(ByVal db As DAO.Database)
+    Dim i As Long
+    Dim vatRate As Double
+    Dim unitPrice As Currency
+    Dim quantity As Double
+    Dim description As String
+
     InsertPosition db, mDocInvoiceCh, 1, "Beratung Architekturreview Easis v4", 4, "h", 180, 7.7
     InsertPosition db, mDocInvoiceCh, 2, "Einrichtung Reporting-Template", 1, "pauschal", 650, 7.7
 
@@ -193,6 +202,33 @@ Private Sub InsertPositions(ByVal db As DAO.Database)
     InsertPosition db, mDocInvoiceUsd, 1, "Software license export", 5, "pcs", 499, 0
     InsertPosition db, mDocInvoiceUsd, 2, "International remote support package", 1, "package", 1250, 0, "PERCENT", 15
     InsertPosition db, mDocInvoiceUsd, 3, "Rounding and large amount test position", 12.5, "h", 1234.56, 0, "PERCENT", 2.5
+
+    For i = 1 To 50
+        If i Mod 10 = 0 Then
+            vatRate = 2.5
+        ElseIf i Mod 15 = 0 Then
+            vatRate = 0
+        Else
+            vatRate = 7.7
+        End If
+
+        unitPrice = CCur(45 + (i * 4.25))
+        quantity = 1 + (i Mod 5)
+
+        description = _
+            "Testposition " & Format$(i, "00") & _
+            " - Automatisch generierte Langbeschreibung für Seitenumbruch-, PDF- und VAT-Tests"
+
+        InsertPosition _
+            db, _
+            mDocLongInvoice, _
+            i, _
+            description, _
+            quantity, _
+            "Stk", _
+            unitPrice, _
+            vatRate
+    Next i
 End Sub
 Private Function InsertAddress( _
     ByVal db As DAO.Database, _
@@ -375,6 +411,7 @@ Private Sub UpdateDocumentTotals(ByVal db As DAO.Database)
     UpdateOneDocumentTotal db, mDocDeliveryNote
     UpdateOneDocumentTotal db, mDocCreditNote
     UpdateOneDocumentTotal db, mDocInvoiceUsd
+    UpdateOneDocumentTotal db, mDocLongInvoice
 End Sub
 
 Private Sub UpdateOneDocumentTotal(ByVal db As DAO.Database, ByVal DocumentId As Long)
@@ -539,5 +576,7 @@ Private Function NullIfEmpty(ByVal Value As String) As Variant
         NullIfEmpty = Trim$(Value)
     End If
 End Function
+
+
 
 

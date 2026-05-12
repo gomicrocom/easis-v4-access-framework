@@ -107,7 +107,23 @@ Private Sub Berichtskopf_Format(Cancel As Integer, FormatCount As Integer)
     End If
 End Sub
 
-Private Sub Berichtsfuﬂ_Format(Cancel As Integer, FormatCount As Integer)
+
+Private Sub Detailbereich_Format(Cancel As Integer, FormatCount As Integer)
+    
+    Dim IsDeliveryNote As Boolean
+    IsDeliveryNote = (UCase$(Nz(Me!txtDocumentType, "")) = "DELIVERY_NOTE")
+
+    Me!txtUnitPrice.Visible = Not IsDeliveryNote
+    Me!txtLineDiscount.Visible = Not IsDeliveryNote
+    Me!txtLineSurcharge.Visible = Not IsDeliveryNote
+    Me!txtLineNet.Visible = Not IsDeliveryNote
+    Me!txtLineVat.Visible = Not IsDeliveryNote
+    Me!txtLineGross.Visible = Not IsDeliveryNote
+
+End Sub
+
+Private Sub grpDocument_Id_footer_Format(Cancel As Integer, FormatCount As Integer)
+    
     Dim showVat As Boolean
     Dim isDeliveryNoteValue  As Boolean
 
@@ -149,12 +165,21 @@ Private Sub Berichtsfuﬂ_Format(Cancel As Integer, FormatCount As Integer)
             Nz(Me!txtCurrencyCode, "CHF") _
         )
     End If
+
 End Sub
 
-Private Sub Detail_Format(Cancel As Integer, FormatCount As Integer)
-    ' No amount/VAT visibility logic here.
-    ' Detail amount columns are handled in the positions subreport.
-    ' Footer visibility is handled in Berichtsfuﬂ_Format.
+Private Sub grpDocument_Id_header_Format(Cancel As Integer, FormatCount As Integer)
+    
+    Dim IsDeliveryNote As Boolean
+    IsDeliveryNote = (UCase$(Nz(Me!txtDocumentType, "")) = "DELIVERY_NOTE")
+
+    Me!lblUnitPrice.Visible = Not IsDeliveryNote
+    Me!lblLineDiscount.Visible = Not IsDeliveryNote
+    Me!lblLineSurcharge.Visible = Not IsDeliveryNote
+    Me!lblLineNet.Visible = Not IsDeliveryNote
+    Me!lblLineVat.Visible = Not IsDeliveryNote
+    Me!lblLineGross.Visible = Not IsDeliveryNote
+
 End Sub
 
 Private Sub Report_NoData(Cancel As Integer)
