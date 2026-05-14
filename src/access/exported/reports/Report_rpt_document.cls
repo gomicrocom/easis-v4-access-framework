@@ -48,6 +48,7 @@ Private Sub Berichtskopf_Format(Cancel As Integer, FormatCount As Integer)
     Dim hasDelivery As Boolean
     Dim isDeliveryNoteValue  As Boolean
     
+    ApplyTranslations
     senderLine = BuildTenantSenderLine()
     windowPosition = UCase$(Trim$(Nz(modTenantRepository.GetTenantParameter("ADDRESS_WINDOW_POSITION", "LEFT"), "LEFT")))
     
@@ -107,6 +108,46 @@ Private Sub Berichtskopf_Format(Cancel As Integer, FormatCount As Integer)
     End If
 End Sub
 
+
+Private Sub ApplyTranslations()
+    Dim languageCode As String
+    Dim documentType As String
+
+    languageCode = Nz(GetControlValue("txtLanguageCode", "DE-CH"), "DE-CH")
+    documentType = UCase$(Nz(GetControlValue("txtDocumentType", ""), ""))
+
+    modTranslationService.SetCurrentLanguage languageCode
+
+    If HasControl("txtDocumentTitle") Then
+        Me!txtDocumentTitle = modTranslationService.T("DOCUMENT." & documentType, documentType)
+    End If
+
+    SetCaptionIfPresent "lblDocumentNo", modTranslationService.T("REPORT.DOCUMENT_NO", "Nummer")
+    SetCaptionIfPresent "lblDocumentDate", modTranslationService.T("REPORT.DATE", "Datum")
+    SetCaptionIfPresent "lblDocumentType", modTranslationService.T("REPORT.DOCUMENT_TYPE", "Dokumenttyp")
+    SetCaptionIfPresent "lblStatus", modTranslationService.T("REPORT.STATUS", "Status")
+    SetCaptionIfPresent "lblVatSummary", modTranslationService.T("REPORT.VAT_SUMMARY", "MwSt.-Aufschlüsselung")
+
+    SetCaptionIfPresent "lblPos", modTranslationService.T("REPORT.POS", "Pos.")
+    SetCaptionIfPresent "lblDescription", modTranslationService.T("REPORT.DESCRIPTION", "Beschreibung")
+    SetCaptionIfPresent "lblQuantity", modTranslationService.T("REPORT.QUANTITY", "Anz.")
+    SetCaptionIfPresent "lblUnit", modTranslationService.T("REPORT.UNIT", "Einh.")
+    SetCaptionIfPresent "lblUnitPrice", modTranslationService.T("REPORT.UNIT_PRICE", "Preis")
+    SetCaptionIfPresent "lblLineDiscount", modTranslationService.T("REPORT.DISCOUNT", "Rabatt")
+    SetCaptionIfPresent "lblLineSurcharge", modTranslationService.T("REPORT.SURCHARGE", "Zuschlag")
+    SetCaptionIfPresent "lblLineNetAmount", modTranslationService.T("REPORT.NET_AMOUNT", "Netto")
+    SetCaptionIfPresent "lblLineVatAmount", modTranslationService.T("REPORT.VAT", "MwSt.")
+    SetCaptionIfPresent "lblLineGrossAmount", modTranslationService.T("REPORT.GROSS_AMOUNT", "Brutto")
+
+    SetCaptionIfPresent "lblSubtotal", modTranslationService.T("REPORT.SUBTOTAL", "Zwischensumme")
+    SetCaptionIfPresent "lblHeaderDiscount", modTranslationService.T("REPORT.HEADER_DISCOUNT", "Kopfrabatt")
+    SetCaptionIfPresent "lblHeaderSurcharge", modTranslationService.T("REPORT.HEADER_SURCHARGE", "Kopfzuschlag")
+    SetCaptionIfPresent "lblNetAmount", modTranslationService.T("REPORT.NET_AMOUNT", "Netto")
+    SetCaptionIfPresent "lblVatAmount", modTranslationService.T("REPORT.VAT", "MwSt.")
+    SetCaptionIfPresent "lblTotalGross", modTranslationService.T("REPORT.TOTAL", "Total")
+    SetCaptionIfPresent "lblPaymentTerms", modTranslationService.T("REPORT.PAYMENT_TERMS", "Zahlungsbedingungen")
+    SetCaptionIfPresent "lblNoVat", modTranslationService.T("REPORT.NO_VAT", "Keine MwSt.")
+End Sub
 
 Private Sub Detailbereich_Format(Cancel As Integer, FormatCount As Integer)
     
@@ -176,9 +217,6 @@ Private Sub grpDocument_Id_header_Format(Cancel As Integer, FormatCount As Integ
     Me!lblUnitPrice.Visible = Not IsDeliveryNote
     Me!lblLineDiscount.Visible = Not IsDeliveryNote
     Me!lblLineSurcharge.Visible = Not IsDeliveryNote
-    Me!lblLineNet.Visible = Not IsDeliveryNote
-    Me!lblLineVat.Visible = Not IsDeliveryNote
-    Me!lblLineGross.Visible = Not IsDeliveryNote
 
 End Sub
 
@@ -264,4 +302,46 @@ Private Function ShouldShowVatBlock() As Boolean
         And Not IsNoVatDocument() _
         And Nz(Me!txtVatAmount, 0) <> 0
 End Function
+
+
+
+
+Private Function HasControl(ByVal ControlName As String) As Boolean
+    On Error GoTo SafeExit
+    
+    Dim ctl As Control
+    
+    Set ctl = Me.Controls(ControlName)
+    HasControl = True
+    Exit Function
+    
+SafeExit:
+    HasControl = False
+End Function
+
+Private Sub SetCaptionIfPresent(ByVal ControlName As String, ByVal CaptionText As String)
+    On Error GoTo SafeExit
+    
+    If HasControl(ControlName) Then
+        Me.Controls(ControlName).Caption = CaptionText
+    End If
+    
+SafeExit:
+End Sub
+
+Private Function GetControlValue(ByVal ControlName As String, Optional ByVal DefaultValue As Variant) As Variant
+    On Error GoTo SafeExit
+    
+    If HasControl(ControlName) Then
+        GetControlValue = Me.Controls(ControlName).Value
+    Else
+        GetControlValue = DefaultValue
+    End If
+    Exit Function
+    
+SafeExit:
+    GetControlValue = DefaultValue
+End Function
+
+
 
