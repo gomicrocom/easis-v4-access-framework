@@ -15,7 +15,7 @@ Option Explicit
 ' Purpose   : Minimal read-only translation explorer for future framework
 '             composer work.
 ' Author    : Codex
-' Version   : 0.1.0
+' Version   : 0.1.1
 '===============================================================================
 
 Private Const MODULE_NAME As String = "Form_frmFwComposer"
@@ -50,9 +50,6 @@ Private Sub lstObjects_AfterUpdate()
     On Error GoTo ErrorHandler
 
     LoadControlList
-    Me!txtSuggestedTranslationKey = Null
-    Me!txtCaptionPreview = Null
-    ApplyTranslationFilter vbNullString
     Exit Sub
 
 ErrorHandler:
@@ -73,32 +70,95 @@ End Sub
 
 Private Sub PopulateObjectTypeCombo()
     Me!cboObjectType.RowSourceType = "Value List"
-    Me!cboObjectType.RowSource = modFwComposerService.OBJECT_TYPE_REPORT & ";" & modFwComposerService.OBJECT_TYPE_FORM
+    Me!cboObjectType.RowSource = _
+        modFwComposerService.OBJECT_TYPE_REPORT & ";" & _
+        modFwComposerService.OBJECT_TYPE_FORM
+End Sub
+
+Private Sub LoadObjectList()
+    On Error GoTo ErrorHandler
+
+    Dim objectList As Collection
+
+    Set objectList = modFwComposerService.GetComposerObjectList( _
+        Nz(Me!cboObjectType, modFwComposerService.OBJECT_TYPE_REPORT))
+
+    LoadCollectionToListBox Me!lstObjects, objectList
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "LoadObjectList", Err
+    Err.Raise Err.Number, Err.Source, Err.description
+End Sub
+
+Private Sub LoadControlList()
+    On Error GoTo ErrorHandler
+
+    Dim controlList As Collection
+    Dim objectType As String
+    Dim ObjectName As String
+
+    objectType = Nz(Me!cboObjectType.Value, vbNullString)
+    ObjectName = Nz(Me!lstObjects.Value, vbNullString)
+
+    Me!lstControls.RowSourceType = "Value List"
+    Me!lstControls.RowSource = vbNullString
+    Me!txtSuggestedTranslationKey = Null
+    Me!txtCaptionPreview = Null
+    ApplyTranslationFilter vbNullString
+
+    If LenB(Trim$(objectType)) = 0 Or LenB(Trim$(ObjectName)) = 0 Then
+        Exit Sub
+    End If
+
+    Set controlList = modFwComposerService.GetComposerControlList(objectType, ObjectName, "lbl")
+
+    If controlList Is Nothing Or controlList.count = 0 Then
+        Me!txtSuggestedTranslationKey = "(keine lbl*-Controls gefunden)"
+        Exit Sub
+    End If
+
+    LoadCollectionToListBox Me!lstControls, controlList
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "LoadControlList", Err
+    MsgBox "Fehler beim Laden der Steuerelemente: " & Err.description, vbExclamation, MODULE_NAME
 End Sub
 
 Private Sub RefreshTranslationPreview()
     On Error GoTo ErrorHandler
 
     Dim objectType As String
-    Dim objectName As String
+    Dim ObjectName As String
     Dim ControlName As String
     Dim TranslationKey As String
 
     objectType = Nz(Me!cboObjectType, vbNullString)
-    objectName = Nz(Me!lstObjects, vbNullString)
+    ObjectName = Nz(Me!lstObjects, vbNullString)
     ControlName = Nz(Me!lstControls, vbNullString)
 
-    If LenB(Trim$(objectType)) = 0 Or LenB(Trim$(objectName)) = 0 Or LenB(Trim$(ControlName)) = 0 Then
+    If LenB(Trim$(objectType)) = 0 _
+       Or LenB(Trim$(ObjectName)) = 0 _
+       Or LenB(Trim$(ControlName)) = 0 Then
+
         Me!txtSuggestedTranslationKey = Null
         Me!txtCaptionPreview = Null
         ApplyTranslationFilter vbNullString
         Exit Sub
     End If
 
-    TranslationKey = modFwComposerService.SuggestTranslationKey(objectType, objectName, ControlName)
+    TranslationKey = modFwComposerService.SuggestTranslationKey( _
+        objectType, _
+        ObjectName, _
+        ControlName)
 
     Me!txtSuggestedTranslationKey = TranslationKey
-    Me!txtCaptionPreview = modFwComposerService.GetControlCaptionValue(objectType, objectName, ControlName)
+    Me!txtCaptionPreview = modFwComposerService.GetControlCaptionValue( _
+        objectType, _
+        ObjectName, _
+        ControlName)
+
     ApplyTranslationFilter TranslationKey
     Exit Sub
 
@@ -122,45 +182,6 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
-Private Sub LoadObjectList()
-    On Error GoTo ErrorHandler
-
-    Dim objectList As Collection
-
-    Set objectList = modFwComposerService.GetComposerObjectList(Nz(Me!cboObjectType, modFwComposerService.OBJECT_TYPE_REPORT))
-    LoadCollectionToListBox Me!lstObjects, objectList
-    Exit Sub
-
-ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "LoadObjectList", Err
-    Err.Raise Err.Number, Err.Source, Err.description
-End Sub
-
-Private Sub LoadControlList()
-    On Error GoTo ErrorHandler
-
-    Dim controlList As Collection
-    Dim objectType As String
-    Dim objectName As String
-
-    objectType = Nz(Me!cboObjectType, vbNullString)
-    objectName = Nz(Me!lstObjects, vbNullString)
-
-    If LenB(Trim$(objectName)) = 0 Then
-        Me!lstControls.RowSourceType = "Value List"
-        Me!lstControls.RowSource = vbNullString
-        Exit Sub
-    End If
-
-    Set controlList = modFwComposerService.GetComposerControlList(objectType, objectName, "lbl")
-    LoadCollectionToListBox Me!lstControls, controlList
-    Exit Sub
-
-ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "LoadControlList", Err
-    Err.Raise Err.Number, Err.Source, Err.description
-End Sub
-
 Private Sub ApplyTranslationFilter(Optional ByVal TranslationKey As String = vbNullString)
     On Error GoTo ErrorHandler
 
@@ -179,6 +200,7 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ApplyTranslationFilter", Err
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
+
 Private Sub LoadCollectionToListBox(ByVal lst As Access.ListBox, ByVal values As Collection)
     On Error GoTo ErrorHandler
 

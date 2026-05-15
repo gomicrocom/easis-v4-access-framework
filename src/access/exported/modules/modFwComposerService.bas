@@ -7,7 +7,7 @@ Option Explicit
 ' Purpose   : Provides object and control inspection helpers for a future
 '             framework composer form.
 ' Author    : Codex
-' Version   : 0.1.0
+' Version   : 0.1.1
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFwComposerService"
@@ -17,21 +17,21 @@ Public Const COMPOSER_MODE_TRANSLATIONS As String = "TRANSLATIONS"
 Public Const OBJECT_TYPE_FORM As String = "FORM"
 Public Const OBJECT_TYPE_REPORT As String = "REPORT"
 
-Public Function GetComposerObjectList(ByVal ObjectType As String) As Collection
+Public Function GetComposerObjectList(ByVal objectType As String) As Collection
     On Error GoTo ErrorHandler
 
     Dim normalizedObjectType As String
     Dim result As Collection
-    Dim accessObject As Access.AccessObject
+    Dim accessObject As Access.accessObject
 
-    normalizedObjectType = NormalizeObjectType(ObjectType)
+    normalizedObjectType = NormalizeObjectType(objectType)
     Set result = New Collection
 
     Select Case normalizedObjectType
         Case OBJECT_TYPE_FORM
             For Each accessObject In CurrentProject.AllForms
-                If Not accessObject.IsLoaded Or accessObject.IsLoaded Then
-                    If Left$(accessObject.Name, 1) <> "~" Then
+                If Left$(accessObject.Name, 1) <> "~" Then
+                    If Not IsComposerInternalObject(accessObject.Name) Then
                         CollectionAddSorted result, accessObject.Name
                     End If
                 End If
@@ -39,8 +39,8 @@ Public Function GetComposerObjectList(ByVal ObjectType As String) As Collection
 
         Case OBJECT_TYPE_REPORT
             For Each accessObject In CurrentProject.AllReports
-                If Not accessObject.IsLoaded Or accessObject.IsLoaded Then
-                    If Left$(accessObject.Name, 1) <> "~" Then
+                If Left$(accessObject.Name, 1) <> "~" Then
+                    If Not IsComposerInternalObject(accessObject.Name) Then
                         CollectionAddSorted result, accessObject.Name
                     End If
                 End If
@@ -52,11 +52,11 @@ Public Function GetComposerObjectList(ByVal ObjectType As String) As Collection
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "GetComposerObjectList", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Err.Raise Err.Number, Err.Source, Err.description
 End Function
 
 Public Function GetComposerControlList( _
-    ByVal ObjectType As String, _
+    ByVal objectType As String, _
     ByVal ObjectName As String, _
     Optional ByVal OnlyNamedPrefix As String = "" _
 ) As Collection
@@ -66,12 +66,18 @@ Public Function GetComposerControlList( _
     Dim normalizedPrefix As String
     Dim result As Collection
     Dim ctl As Control
+    Dim wasOpenedByService As Boolean
 
-    normalizedObjectType = NormalizeObjectType(ObjectType)
+    normalizedObjectType = NormalizeObjectType(objectType)
     normalizedPrefix = Trim$(OnlyNamedPrefix)
     Set result = New Collection
 
-    OpenObjectHiddenDesign normalizedObjectType, ObjectName
+    If IsComposerInternalObject(ObjectName) Then
+        Set GetComposerControlList = result
+        Exit Function
+    End If
+
+    wasOpenedByService = OpenObjectHiddenDesign(normalizedObjectType, ObjectName)
 
     Select Case normalizedObjectType
         Case OBJECT_TYPE_FORM
@@ -92,18 +98,20 @@ Public Function GetComposerControlList( _
     End Select
 
 CleanExit:
-    CloseObjectNoSave normalizedObjectType, ObjectName
+    If wasOpenedByService Then
+        CloseObjectNoSave normalizedObjectType, ObjectName
+    End If
+
     Set GetComposerControlList = result
     Exit Function
 
 ErrorHandler:
-    CloseObjectNoSave normalizedObjectType, ObjectName
     modErrorHandler.HandleError MODULE_NAME, "GetComposerControlList", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Resume CleanExit
 End Function
 
 Public Function SuggestTranslationKey( _
-    ByVal ObjectType As String, _
+    ByVal objectType As String, _
     ByVal ObjectName As String, _
     ByVal ControlName As String _
 ) As String
@@ -113,7 +121,7 @@ Public Function SuggestTranslationKey( _
     Dim normalizedObjectName As String
     Dim normalizedControlName As String
 
-    normalizedObjectType = NormalizeObjectType(ObjectType)
+    normalizedObjectType = NormalizeObjectType(objectType)
     normalizedObjectName = UCase$(Trim$(ObjectName))
     normalizedControlName = NormalizeTranslationName(StripPrefix(ControlName, "lbl"))
 
@@ -127,41 +135,41 @@ Public Function SuggestTranslationKey( _
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "SuggestTranslationKey", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Err.Raise Err.Number, Err.Source, Err.description
 End Function
 
 Public Function GetControlTagValue( _
-    ByVal ObjectType As String, _
+    ByVal objectType As String, _
     ByVal ObjectName As String, _
     ByVal ControlName As String _
 ) As String
     On Error GoTo ErrorHandler
 
-    GetControlTagValue = GetControlStringProperty(ObjectType, ObjectName, ControlName, "Tag")
+    GetControlTagValue = GetControlStringProperty(objectType, ObjectName, ControlName, "Tag")
     Exit Function
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "GetControlTagValue", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Err.Raise Err.Number, Err.Source, Err.description
 End Function
 
 Public Function GetControlCaptionValue( _
-    ByVal ObjectType As String, _
+    ByVal objectType As String, _
     ByVal ObjectName As String, _
     ByVal ControlName As String _
 ) As String
     On Error GoTo ErrorHandler
 
-    GetControlCaptionValue = GetControlStringProperty(ObjectType, ObjectName, ControlName, "Caption")
+    GetControlCaptionValue = GetControlStringProperty(objectType, ObjectName, ControlName, "Caption")
     Exit Function
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "GetControlCaptionValue", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Err.Raise Err.Number, Err.Source, Err.description
 End Function
 
 Private Function GetControlStringProperty( _
-    ByVal ObjectType As String, _
+    ByVal objectType As String, _
     ByVal ObjectName As String, _
     ByVal ControlName As String, _
     ByVal PropertyName As String _
@@ -169,13 +177,20 @@ Private Function GetControlStringProperty( _
     On Error GoTo ErrorHandler
 
     Dim normalizedObjectType As String
+    Dim wasOpenedByService As Boolean
 
-    normalizedObjectType = NormalizeObjectType(ObjectType)
-    OpenObjectHiddenDesign normalizedObjectType, ObjectName
+    normalizedObjectType = NormalizeObjectType(objectType)
+
+    If IsComposerInternalObject(ObjectName) Then
+        GetControlStringProperty = vbNullString
+        Exit Function
+    End If
+
+    wasOpenedByService = OpenObjectHiddenDesign(normalizedObjectType, ObjectName)
 
     If Not ControlExists(normalizedObjectType, ObjectName, ControlName) Then
-        Err.Raise vbObjectError + 3200, MODULE_NAME & ".GetControlStringProperty", _
-            "Control '" & ControlName & "' does not exist on " & normalizedObjectType & " '" & ObjectName & "'."
+        GetControlStringProperty = vbNullString
+        GoTo CleanExit
     End If
 
     Select Case normalizedObjectType
@@ -186,26 +201,37 @@ Private Function GetControlStringProperty( _
     End Select
 
 CleanExit:
-    CloseObjectNoSave normalizedObjectType, ObjectName
+    If wasOpenedByService Then
+        CloseObjectNoSave normalizedObjectType, ObjectName
+    End If
     Exit Function
 
 ErrorHandler:
-    CloseObjectNoSave normalizedObjectType, ObjectName
     modErrorHandler.HandleError MODULE_NAME, "GetControlStringProperty", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Resume CleanExit
 End Function
 
-Private Function NormalizeObjectType(ByVal ObjectType As String) As String
+Private Function NormalizeObjectType(ByVal objectType As String) As String
     Dim normalizedType As String
 
-    normalizedType = UCase$(Trim$(ObjectType))
+    normalizedType = UCase$(Trim$(objectType))
 
     Select Case normalizedType
         Case OBJECT_TYPE_FORM, OBJECT_TYPE_REPORT
             NormalizeObjectType = normalizedType
         Case Else
             Err.Raise vbObjectError + 3201, MODULE_NAME & ".NormalizeObjectType", _
-                "Unsupported object type: " & ObjectType
+                "Unsupported object type: " & objectType
+    End Select
+End Function
+
+Private Function IsComposerInternalObject(ByVal ObjectName As String) As Boolean
+    Select Case UCase$(Trim$(ObjectName))
+        Case "FRMFWCOMPOSER", _
+             "FRMFWTRANSLATIONLIST"
+            IsComposerInternalObject = True
+        Case Else
+            IsComposerInternalObject = False
     End Select
 End Function
 
@@ -260,11 +286,11 @@ Private Function NormalizeTranslationName(ByVal Value As String) As String
         End If
     Next i
 
-    Do While Left$(result, 1) = "_"
+    Do While Len(result) > 0 And Left$(result, 1) = "_"
         result = Mid$(result, 2)
     Loop
 
-    Do While Right$(result, 1) = "_"
+    Do While Len(result) > 0 And Right$(result, 1) = "_"
         result = Left$(result, Len(result) - 1)
     Loop
 
@@ -332,13 +358,13 @@ Private Function StripPrefix(ByVal Value As String, ByVal Prefix As String) As S
     End If
 End Function
 
-Private Function ObjectExists(ByVal ObjectType As String, ByVal ObjectName As String) As Boolean
+Private Function ObjectExists(ByVal objectType As String, ByVal ObjectName As String) As Boolean
     On Error GoTo ErrorHandler
 
-    Dim accessObject As Access.AccessObject
+    Dim accessObject As Access.accessObject
     Dim normalizedObjectType As String
 
-    normalizedObjectType = NormalizeObjectType(ObjectType)
+    normalizedObjectType = NormalizeObjectType(objectType)
 
     Select Case normalizedObjectType
         Case OBJECT_TYPE_FORM
@@ -364,36 +390,40 @@ ErrorHandler:
     ObjectExists = False
 End Function
 
-Private Sub OpenObjectHiddenDesign(ByVal ObjectType As String, ByVal ObjectName As String)
+Private Function OpenObjectHiddenDesign(ByVal objectType As String, ByVal ObjectName As String) As Boolean
     On Error GoTo ErrorHandler
 
-    If Not ObjectExists(ObjectType, ObjectName) Then
+    OpenObjectHiddenDesign = False
+
+    If Not ObjectExists(objectType, ObjectName) Then
         Err.Raise vbObjectError + 3202, MODULE_NAME & ".OpenObjectHiddenDesign", _
-            ObjectType & " '" & ObjectName & "' does not exist."
+            objectType & " '" & ObjectName & "' does not exist."
     End If
 
-    Select Case NormalizeObjectType(ObjectType)
+    Select Case NormalizeObjectType(objectType)
         Case OBJECT_TYPE_FORM
             If Not CurrentProject.AllForms(ObjectName).IsLoaded Then
                 DoCmd.OpenForm ObjectName, acDesign, , , , acHidden
+                OpenObjectHiddenDesign = True
             End If
 
         Case OBJECT_TYPE_REPORT
             If Not CurrentProject.AllReports(ObjectName).IsLoaded Then
                 DoCmd.OpenReport ObjectName, acViewDesign, , , acHidden
+                OpenObjectHiddenDesign = True
             End If
     End Select
-    Exit Sub
+    Exit Function
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "OpenObjectHiddenDesign", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
-End Sub
+    Err.Raise Err.Number, Err.Source, Err.description
+End Function
 
-Private Sub CloseObjectNoSave(ByVal ObjectType As String, ByVal ObjectName As String)
+Private Sub CloseObjectNoSave(ByVal objectType As String, ByVal ObjectName As String)
     On Error Resume Next
 
-    Select Case UCase$(Trim$(ObjectType))
+    Select Case UCase$(Trim$(objectType))
         Case OBJECT_TYPE_FORM
             If ObjectExists(OBJECT_TYPE_FORM, ObjectName) Then
                 If CurrentProject.AllForms(ObjectName).IsLoaded Then
@@ -410,7 +440,7 @@ Private Sub CloseObjectNoSave(ByVal ObjectType As String, ByVal ObjectName As St
     End Select
 End Sub
 
-Private Sub CollectionAddSorted(ByVal target As Collection, ByVal ItemValue As String)
+Private Sub CollectionAddSorted(ByVal target As Collection, ByVal itemValue As String)
     On Error GoTo ErrorHandler
 
     Dim tempValues() As String
@@ -423,18 +453,18 @@ Private Sub CollectionAddSorted(ByVal target As Collection, ByVal ItemValue As S
         Exit Sub
     End If
 
-    If target.Count = 0 Then
-        target.Add ItemValue
+    If target.count = 0 Then
+        target.Add itemValue
         Exit Sub
     End If
 
-    ReDim tempValues(1 To target.Count + 1)
+    ReDim tempValues(1 To target.count + 1)
 
-    For i = 1 To target.Count
+    For i = 1 To target.count
         tempValues(i) = CStr(target(i))
     Next i
 
-    tempValues(target.Count + 1) = ItemValue
+    tempValues(target.count + 1) = itemValue
 
     For i = LBound(tempValues) To UBound(tempValues) - 1
         For j = i + 1 To UBound(tempValues)
@@ -446,9 +476,12 @@ Private Sub CollectionAddSorted(ByVal target As Collection, ByVal ItemValue As S
         Next j
     Next i
 
-    Do While target.Count > 0
+    Do While target.count > 0
         target.Remove 1
     Loop
+
+    inserted = False
+    currentValue = vbNullString
 
     For i = LBound(tempValues) To UBound(tempValues)
         If Not inserted Or StrComp(currentValue, tempValues(i), vbTextCompare) <> 0 Then
@@ -461,15 +494,15 @@ Private Sub CollectionAddSorted(ByVal target As Collection, ByVal ItemValue As S
     Exit Sub
 
 ErrorHandler:
-    target.Add ItemValue
+    target.Add itemValue
 End Sub
 
-Private Function ControlExists(ByVal ObjectType As String, ByVal ObjectName As String, ByVal ControlName As String) As Boolean
+Private Function ControlExists(ByVal objectType As String, ByVal ObjectName As String, ByVal ControlName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim ctl As Control
 
-    Select Case NormalizeObjectType(ObjectType)
+    Select Case NormalizeObjectType(objectType)
         Case OBJECT_TYPE_FORM
             For Each ctl In Forms(ObjectName).Controls
                 If StrComp(ctl.Name, ControlName, vbTextCompare) = 0 Then
