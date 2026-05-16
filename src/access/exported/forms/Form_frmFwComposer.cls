@@ -15,7 +15,7 @@ Option Explicit
 ' Purpose   : Minimal translation explorer and maintenance entry point for
 '             future framework composer work.
 ' Author    : Codex
-' Version   : 0.1.4
+' Version   : 0.1.5
 '===============================================================================
 
 Private Const MODULE_NAME As String = "Form_frmFwComposer"
@@ -85,31 +85,51 @@ End Sub
 Private Sub cmdValidateTranslations_Click()
     On Error GoTo ErrorHandler
 
-    Dim ObjectType As String
-    Dim ObjectName As String
-    Dim isValid As Boolean
-
-    ObjectType = vbNullString
-    ObjectName = vbNullString
-
-    If LenB(Trim$(Nz(Me!lstObjects.Value, vbNullString))) > 0 Then
-        ObjectType = Nz(Me!cboObjectType.Value, vbNullString)
-        ObjectName = Nz(Me!lstObjects.Value, vbNullString)
-    End If
-
-    isValid = modFwComposerService.ValidateTranslationsReady(ObjectType, ObjectName)
-
-    If isValid Then
+    If ValidateCurrentTranslations(True) Then
         MsgBox "Alle Uebersetzungen sind vollstaendig.", vbInformation, MODULE_NAME
-    Else
-        MsgBox "Es gibt noch fehlende Uebersetzungen. Bitte '<neu>' ersetzen.", vbExclamation, MODULE_NAME
-        ApplyMissingTranslationFilter
     End If
     Exit Sub
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "cmdValidateTranslations_Click", Err
     MsgBox "Fehler beim Pruefen der Uebersetzungen: " & Err.description, vbExclamation, MODULE_NAME
+End Sub
+
+Private Sub cmdApplyTranslationTags_Click()
+    On Error GoTo ErrorHandler
+
+    Dim ObjectType As String
+    Dim ObjectName As String
+    Dim appliedCount As Long
+    Dim skippedCount As Long
+
+    ObjectType = Nz(Me!cboObjectType.Value, vbNullString)
+    ObjectName = Nz(Me!lstObjects.Value, vbNullString)
+
+    If LenB(Trim$(ObjectType)) = 0 Or LenB(Trim$(ObjectName)) = 0 Then
+        MsgBox "Bitte zuerst ein Formular oder einen Report auswaehlen.", vbExclamation, MODULE_NAME
+        Exit Sub
+    End If
+
+    If Not ValidateCurrentTranslations(True) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".cmdApplyTranslationTags_Click", _
+            "Translation validation failed for " & ObjectType & "." & ObjectName & "."
+        Exit Sub
+    End If
+
+    modFwComposerService.ApplyTranslationTagsToObject ObjectType, ObjectName, appliedCount, skippedCount
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".cmdApplyTranslationTags_Click", _
+        "Applied TR captions for " & ObjectType & "." & ObjectName & _
+        " | applied=" & CStr(appliedCount) & _
+        " | skipped=" & CStr(skippedCount) & "."
+
+    MsgBox "TR-Tags wurden erfolgreich angewendet.", vbInformation, MODULE_NAME
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdApplyTranslationTags_Click", Err
+    MsgBox "Fehler beim Anwenden der TR-Tags: " & Err.description, vbExclamation, MODULE_NAME
 End Sub
 
 Private Sub PopulateObjectTypeCombo()
@@ -313,6 +333,31 @@ Private Function BuildMissingTranslationFilter() As String
         "([TranslationValue] = " & sqlText(PLACEHOLDER_TRANSLATION_VALUE) & _
         " OR [TranslationValue] Is Null" & _
         " OR Trim(Nz([TranslationValue], '')) = '')"
+End Function
+
+Private Function ValidateCurrentTranslations(Optional ByVal ShowMessage As Boolean = True) As Boolean
+    Dim ObjectType As String
+    Dim ObjectName As String
+    Dim isValid As Boolean
+
+    ObjectType = vbNullString
+    ObjectName = vbNullString
+
+    If LenB(Trim$(Nz(Me!lstObjects.Value, vbNullString))) > 0 Then
+        ObjectType = Nz(Me!cboObjectType.Value, vbNullString)
+        ObjectName = Nz(Me!lstObjects.Value, vbNullString)
+    End If
+
+    isValid = modFwComposerService.ValidateTranslationsReady(ObjectType, ObjectName)
+
+    If Not isValid Then
+        If ShowMessage Then
+            MsgBox "Es gibt noch fehlende Uebersetzungen. Bitte '<neu>' ersetzen.", vbExclamation, MODULE_NAME
+        End If
+        ApplyMissingTranslationFilter
+    End If
+
+    ValidateCurrentTranslations = isValid
 End Function
 
 Private Sub LoadCollectionToListBox(ByVal lst As Access.ListBox, ByVal values As Collection)

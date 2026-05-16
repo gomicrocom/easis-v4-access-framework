@@ -152,6 +152,85 @@ BasicModule v1 depends on the framework layer in the following way:
 - logging
   - runtime diagnostics, validation issues, and service errors are written through centralized logging helpers
 
+### UI Form Architecture
+
+The business application layer now follows a standardized form naming convention.
+
+This convention is intended to:
+
+- keep modules structurally predictable
+- simplify navigation and runtime handling
+- reduce ad hoc naming decisions in future UI work
+- support reusable workflow-oriented form patterns across modules
+
+### Form Naming Convention
+
+The following naming patterns are the standard for future business forms:
+
+- `frm<Entity>List`
+- `frm<Entity>Detail`
+- `frm<Entity>Select`
+- `frm<Entity>Dialog`
+- `frm<Entity>Wizard`
+
+### Form Type Purpose
+
+- `frm<Entity>List`
+  - list, navigation, search, and workflow entry form
+- `frm<Entity>Detail`
+  - record maintenance and editing form
+- `frm<Entity>Select`
+  - compact selection or lookup form used from other workflows
+- `frm<Entity>Dialog`
+  - focused modal or short interaction form
+- `frm<Entity>Wizard`
+  - guided multi-step workflow form
+
+### Examples
+
+- `frmAddressList`
+- `frmAddressDetail`
+- `frmOrderList`
+- `frmOrderDetail`
+- `frmArticleList`
+- `frmArticleDetail`
+- `frmInvoiceList`
+- `frmInvoiceDetail`
+- `frmCustomerAccountDialog`
+- `frmSubscriptionWizard`
+
+### Architectural Intent
+
+The naming convention is not cosmetic only. It defines expected workflow roles:
+
+- list forms are entry, navigation, and search forms
+- detail forms are record editing forms
+- select forms are helper forms for choosing existing business entities
+- dialog forms are scoped interactions with a narrow purpose
+- wizard forms guide the user through sequential business steps
+
+The framework is therefore designed around reusable workflow-oriented UI patterns instead of isolated one-off forms.
+
+### Relationship to `tblListActions`
+
+Dynamic navigation from list forms should be driven through:
+
+- `tblListActions`
+
+This means:
+
+- `tblListActions` stores `TargetForm` values
+- naming consistency is important for generic navigation handlers
+- future runtime handlers may dynamically open target forms based on naming conventions and action metadata
+
+The preferred pattern is:
+
+- `frm<Entity>List` as the navigation host
+- `tblListActions` as the configurable action source
+- `frm<Entity>Detail` and related forms as targets
+
+This keeps business navigation extensible without adding many hard-coded per-row UI actions.
+
 ---
 
 ## Business Tables Overview

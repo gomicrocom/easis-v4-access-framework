@@ -27,6 +27,8 @@ Reference tables provide controlled reusable business values for the tenant appl
   - VAT code and VAT-rate definitions
 - `refUnits`
   - quantity and unit definitions
+- `tblListActions`
+  - configurable list navigation and action source for business UI flows
 
 ### Master Tables
 
@@ -62,6 +64,7 @@ The exact physical field names may evolve by implementation detail, but the inte
 | `refPaymentTerms` | `PaymentTermID` or stable business code |
 | `refVatCodes` | `VatCodeID` or stable VAT code |
 | `refUnits` | `UnitID` or stable unit code |
+| `tblListActions` | `ActionId` |
 
 If a table uses a business code as a technical primary identifier, that code must remain stable and unique within the tenant backend.
 
@@ -78,6 +81,7 @@ The following business relationships are expected to be central:
 | `refUnits` | `tblArticles` / `tblOrderLines` | unit standardization |
 | `refVatCodes` | `tblArticles` / `tblOrderLines` | VAT assignment |
 | `refPaymentTerms` | `tblOrders` | commercial payment handling |
+| `tblListActions` | `frm<Entity>List` | configurable navigation/action menu |
 
 Typical tenant-business relationships include:
 
@@ -168,6 +172,29 @@ Stores VAT reference definitions used in calculations and document presentation.
 ### `refUnits`
 
 Stores standardized unit definitions used by articles and order lines.
+
+### `tblListActions`
+
+Stores configurable action definitions for list-form driven navigation and workflow menus.
+
+The initial concept includes:
+
+- `ActionId`
+- `ListCode`
+- `ActionCode`
+- `ActionLabel`
+- `TargetForm`
+- `RequiresSelection`
+- `ModuleCode`
+- `RoleCode`
+- `SortOrder`
+- `IsActive`
+
+The intended use is framework-oriented rather than address-specific:
+
+- one list form such as `frmAddressList` or `frmOrderList` can load its actions dynamically
+- `TargetForm` points to standardized UI targets such as `frmAddressDetail`
+- `ModuleCode` and `RoleCode` allow later module- and permission-aware action filtering
 
 ## Roadmap Context
 

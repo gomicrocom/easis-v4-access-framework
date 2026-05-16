@@ -7,7 +7,7 @@ Option Explicit
 ' Purpose   : Provides object and control inspection helpers for a future
 '             framework composer form.
 ' Author    : Codex
-' Version   : 0.1.2
+' Version   : 0.1.3
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFwComposerService"
@@ -248,6 +248,101 @@ Public Function ValidateTranslationsReady( _
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ValidateTranslationsReady", Err
+    Err.Raise Err.Number, Err.Source, Err.description
+End Function
+
+Public Function ApplyTranslationTagsToObject( _
+    ByVal ObjectType As String, _
+    ByVal ObjectName As String, _
+    Optional ByRef AppliedCount As Long = 0, _
+    Optional ByRef SkippedCount As Long = 0 _
+) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim normalizedObjectType As String
+    Dim controlList As Collection
+    Dim controlName As Variant
+    Dim translationKey As String
+    Dim currentCaption As String
+    Dim wasLoaded As Boolean
+    Dim wasVisible As Boolean
+    Dim openedByService As Boolean
+    Dim updatedObject As Boolean
+
+    normalizedObjectType = NormalizeObjectType(ObjectType)
+    ObjectName = Trim$(ObjectName)
+
+    If LenB(ObjectName) = 0 Then
+        Exit Function
+    End If
+
+    Set controlList = GetComposerControlList(normalizedObjectType, ObjectName, "lbl")
+    If controlList Is Nothing Or controlList.Count = 0 Then
+        modLoggingHandler.LogInfo MODULE_NAME & ".ApplyTranslationTagsToObject", _
+            "No translation-relevant controls found for " & normalizedObjectType & "." & ObjectName & "."
+        ApplyTranslationTagsToObject = True
+        Exit Function
+    End If
+
+    wasLoaded = IsObjectLoaded(normalizedObjectType, ObjectName)
+    wasVisible = GetObjectVisible(normalizedObjectType, ObjectName)
+    openedByService = OpenObjectForUpdate(normalizedObjectType, ObjectName)
+
+    For Each controlName In controlList
+        translationKey = SuggestTranslationKey(normalizedObjectType, ObjectName, CStr(controlName))
+
+        If LenB(translationKey) = 0 Then
+            SkippedCount = SkippedCount + 1
+            GoTo NextControl
+        End If
+
+        currentCaption = GetControlCaptionForLoadedObject(normalizedObjectType, ObjectName, CStr(controlName))
+
+        If LenB(currentCaption) = 0 Then
+            SkippedCount = SkippedCount + 1
+            GoTo NextControl
+        End If
+
+        If StrComp(Left$(Trim$(currentCaption), 3), "TR:", vbTextCompare) = 0 Then
+            SkippedCount = SkippedCount + 1
+            GoTo NextControl
+        End If
+
+        If SetControlCaptionForLoadedObject(normalizedObjectType, ObjectName, CStr(controlName), "TR:" & translationKey) Then
+            AppliedCount = AppliedCount + 1
+            updatedObject = True
+        Else
+            SkippedCount = SkippedCount + 1
+        End If
+
+NextControl:
+    Next controlName
+
+    If updatedObject Then
+        SaveOpenedObject normalizedObjectType, ObjectName
+    End If
+
+    If openedByService Then
+        CloseObjectNoSave normalizedObjectType, ObjectName
+    End If
+
+    RestoreObjectState normalizedObjectType, ObjectName, wasLoaded, wasVisible
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".ApplyTranslationTagsToObject", _
+        "Updated " & normalizedObjectType & "." & ObjectName & _
+        " | applied=" & CStr(AppliedCount) & _
+        " | skipped=" & CStr(SkippedCount) & "."
+
+    ApplyTranslationTagsToObject = True
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ApplyTranslationTagsToObject", Err
+    On Error Resume Next
+    If openedByService Then
+        CloseObjectNoSave normalizedObjectType, ObjectName
+    End If
+    RestoreObjectState normalizedObjectType, ObjectName, wasLoaded, wasVisible
     Err.Raise Err.Number, Err.Source, Err.description
 End Function
 
@@ -523,6 +618,103 @@ Private Sub CloseObjectNoSave(ByVal ObjectType As String, ByVal ObjectName As St
     End Select
 End Sub
 
+Private Function IsObjectLoaded(ByVal ObjectType As String, ByVal ObjectName As String) As Boolean
+    On Error GoTo SafeExit
+
+    Select Case NormalizeObjectType(ObjectType)
+        Case OBJECT_TYPE_FORM
+            IsObjectLoaded = CurrentProject.AllForms(ObjectName).IsLoaded
+        Case OBJECT_TYPE_REPORT
+            IsObjectLoaded = CurrentProject.AllReports(ObjectName).IsLoaded
+    End Select
+
+SafeExit:
+End Function
+
+Private Function GetObjectVisible(ByVal ObjectType As String, ByVal ObjectName As String) As Boolean
+    On Error GoTo SafeExit
+
+    If NormalizeObjectType(ObjectType) = OBJECT_TYPE_FORM Then
+        If CurrentProject.AllForms(ObjectName).IsLoaded Then
+            GetObjectVisible = Forms(ObjectName).Visible
+        End If
+    End If
+
+SafeExit:
+End Function
+
+Private Function OpenObjectForUpdate(ByVal ObjectType As String, ByVal ObjectName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    OpenObjectForUpdate = False
+
+    Select Case NormalizeObjectType(ObjectType)
+        Case OBJECT_TYPE_FORM
+            If CurrentProject.AllForms(ObjectName).IsLoaded Then
+                DoCmd.Close acForm, ObjectName, acSaveYes
+            End If
+            DoCmd.OpenForm ObjectName, acDesign, , , , acHidden
+            OpenObjectForUpdate = True
+
+        Case OBJECT_TYPE_REPORT
+            If CurrentProject.AllReports(ObjectName).IsLoaded Then
+                DoCmd.Close acReport, ObjectName, acSaveYes
+            End If
+            DoCmd.OpenReport ObjectName, acViewDesign, , , acHidden
+            OpenObjectForUpdate = True
+    End Select
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "OpenObjectForUpdate", Err
+    Err.Raise Err.Number, Err.Source, Err.description
+End Function
+
+Private Sub SaveOpenedObject(ByVal ObjectType As String, ByVal ObjectName As String)
+    On Error GoTo ErrorHandler
+
+    Select Case NormalizeObjectType(ObjectType)
+        Case OBJECT_TYPE_FORM
+            DoCmd.Save acForm, ObjectName
+        Case OBJECT_TYPE_REPORT
+            DoCmd.Save acReport, ObjectName
+    End Select
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "SaveOpenedObject", Err
+    Err.Raise Err.Number, Err.Source, Err.description
+End Sub
+
+Private Sub RestoreObjectState( _
+    ByVal ObjectType As String, _
+    ByVal ObjectName As String, _
+    ByVal wasLoaded As Boolean, _
+    ByVal wasVisible As Boolean)
+    On Error GoTo SafeExit
+
+    If Not wasLoaded Then
+        Exit Sub
+    End If
+
+    Select Case NormalizeObjectType(ObjectType)
+        Case OBJECT_TYPE_FORM
+            If Not CurrentProject.AllForms(ObjectName).IsLoaded Then
+                DoCmd.OpenForm ObjectName, acNormal
+            End If
+            If Not wasVisible Then
+                Forms(ObjectName).Visible = False
+            End If
+
+        Case OBJECT_TYPE_REPORT
+            If Not CurrentProject.AllReports(ObjectName).IsLoaded Then
+                DoCmd.OpenReport ObjectName, acViewPreview
+            End If
+    End Select
+
+SafeExit:
+End Sub
+
 Private Sub CollectionAddSorted(ByVal target As Collection, ByVal itemValue As String)
     On Error GoTo ErrorHandler
 
@@ -617,6 +809,47 @@ Private Function GetObjectPropertySafely(ByVal Obj As Object, ByVal PropertyName
 
 SafeExit:
     GetObjectPropertySafely = vbNullString
+End Function
+
+Private Function GetControlCaptionForLoadedObject( _
+    ByVal ObjectType As String, _
+    ByVal ObjectName As String, _
+    ByVal ControlName As String _
+) As String
+    On Error GoTo SafeExit
+
+    Select Case NormalizeObjectType(ObjectType)
+        Case OBJECT_TYPE_FORM
+            GetControlCaptionForLoadedObject = GetObjectPropertySafely(Forms(ObjectName).Controls(ControlName), "Caption")
+        Case OBJECT_TYPE_REPORT
+            GetControlCaptionForLoadedObject = GetObjectPropertySafely(Reports(ObjectName).Controls(ControlName), "Caption")
+    End Select
+    Exit Function
+
+SafeExit:
+    GetControlCaptionForLoadedObject = vbNullString
+End Function
+
+Private Function SetControlCaptionForLoadedObject( _
+    ByVal ObjectType As String, _
+    ByVal ObjectName As String, _
+    ByVal ControlName As String, _
+    ByVal CaptionValue As String _
+) As Boolean
+    On Error GoTo SafeExit
+
+    Select Case NormalizeObjectType(ObjectType)
+        Case OBJECT_TYPE_FORM
+            Forms(ObjectName).Controls(ControlName).Properties("Caption").Value = CaptionValue
+        Case OBJECT_TYPE_REPORT
+            Reports(ObjectName).Controls(ControlName).Properties("Caption").Value = CaptionValue
+    End Select
+
+    SetControlCaptionForLoadedObject = True
+    Exit Function
+
+SafeExit:
+    SetControlCaptionForLoadedObject = False
 End Function
 
 Private Function EnsureTranslationPlaceholderRow( _
