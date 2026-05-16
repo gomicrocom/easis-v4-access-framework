@@ -54,6 +54,139 @@ Modules integrate via framework services.
 - query-based access
 - import/export services
 
+### 5. Business Application Layer
+
+The project has now moved from the initial framework and infrastructure phase into the first business application phase.
+
+This means the framework is no longer only preparing technical services. It is now actively hosting business entities, transactional workflows, reporting, and document output on top of the tenant backend structure.
+
+Active storage landscape:
+
+- `FE.accdb`
+- `Data\<TENANT>_be.accdb`
+- `Data\sys_be.accdb`
+- `Data\log_be.accdb`
+
+The tenant backend is now the primary home for business data and the first functional module scope: `BasicModule v1`.
+
+---
+
+## BasicModule v1
+
+### Transition from Framework Phase to Business Phase
+
+The framework phase established:
+
+- startup and configuration loading
+- tenant/backend separation
+- translation handling
+- tag-driven UI policy handling
+- validation services
+- reporting and export foundations
+- logging and diagnostics
+
+BasicModule v1 is the first module that uses these technical foundations to implement a concrete business workflow.
+
+### Tenant Backend Usage
+
+`Data\<TENANT>_be.accdb` is now actively used for:
+
+- business master data
+- order transactions
+- payment and VAT references needed by order entry
+- business document generation inputs
+
+`sys_be.accdb` continues to hold global reference pools.
+
+`log_be.accdb` remains the technical destination for operational logging as the logging architecture evolves.
+
+### Core Business Entities
+
+BasicModule v1 currently centers around the following tenant-backend tables:
+
+- `tblAddresses`
+  - address master data for customers, contacts, invoice addresses, and delivery addresses
+- `tblProductGroups`
+  - logical grouping and classification of sellable items
+- `tblArticles`
+  - article and service master data used in order lines
+- `tblOrders`
+  - order header data including customer, status, dates, totals, and downstream document context
+- `tblOrderLines`
+  - transactional line items belonging to an order
+- `refPaymentTerms`
+  - tenant-side payment-term reference data used by orders and document generation
+- `refVatCodes`
+  - VAT code definitions used for pricing, tax logic, and document totals
+- `refUnits`
+  - allowed quantity and unit definitions for articles and order lines
+
+### Order Workflow
+
+The intended baseline business flow is:
+
+1. maintain business partners and addresses
+2. maintain articles and supporting references
+3. create an order header
+4. add order lines
+5. calculate totals and VAT
+6. generate a business document
+7. export PDF and trigger mail delivery
+
+This workflow is intentionally built on framework services instead of duplicating infrastructure logic inside forms.
+
+### Framework Integration
+
+BasicModule v1 depends on the framework layer in the following way:
+
+- translations
+  - UI captions, report labels, and document titles are resolved through the translation service
+- tags
+  - controls use managed `Tag` tokens for validation, behavior, access restrictions, and translation metadata
+- validation
+  - form input rules remain centralized in the framework runtime instead of being duplicated per form
+- module access
+  - role- and module-dependent availability is enforced through the existing framework access patterns
+- reporting
+  - reports consume prepared business data and framework translation logic
+- logging
+  - runtime diagnostics, validation issues, and service errors are written through centralized logging helpers
+
+---
+
+## Business Tables Overview
+
+### Master and Reference Scope
+
+- `tblAddresses`
+  - stores business partner and address master records
+- `tblProductGroups`
+  - stores product or service grouping definitions
+- `tblArticles`
+  - stores article master records including pricing and unit defaults
+- `refPaymentTerms`
+  - stores reusable payment-term definitions for the business module
+- `refVatCodes`
+  - stores VAT code and VAT-rate related reference definitions
+- `refUnits`
+  - stores reusable units for quantities and article definitions
+
+### Transaction Scope
+
+- `tblOrders`
+  - stores order headers and commercial context
+- `tblOrderLines`
+  - stores order positions and line-level commercial detail
+
+### Business Document Direction
+
+Orders are expected to become the operational basis for:
+
+- printed documents
+- PDF output
+- email delivery
+- later business document lifecycles such as invoice, delivery note, and follow-up handling
+
 ---
 
 ## Runtime Framework (Access UI Layer)
@@ -169,6 +302,18 @@ Config location:
 - Batch processing (print, email, dunning, subscriptions)
 - CAMT.054 import
 - NAPS2 scan integration
+
+### Business Application Roadmap
+
+Planned next steps:
+
+- `frmAddresses`
+- `frmArticles`
+- `frmOrders`
+- order line handling
+- calculation services
+- document generation
+- mail handling
 
 ---
 

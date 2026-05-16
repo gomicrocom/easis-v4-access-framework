@@ -88,13 +88,13 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Public Function AddressExists(ByVal addressId As Long) As Boolean
+Public Function AddressExists(ByVal AddressId As Long) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
 
-    If addressId <= 0 Then
+    If AddressId <= 0 Then
         Exit Function
     End If
 
@@ -103,7 +103,7 @@ Public Function AddressExists(ByVal addressId As Long) As Boolean
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", dbOpenSnapshot)
+    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(AddressId) & ";", dbOpenSnapshot)
 
     AddressExists = Not (rs.BOF And rs.EOF)
 
@@ -120,7 +120,7 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Public Function GetAddressDisplayName(ByVal addressId As Long, Optional ByVal DefaultValue As String = "") As String
+Public Function GetAddressDisplayName(ByVal AddressId As Long, Optional ByVal DefaultValue As String = "") As String
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -131,7 +131,7 @@ Public Function GetAddressDisplayName(ByVal addressId As Long, Optional ByVal De
 
     GetAddressDisplayName = DefaultValue
 
-    If addressId <= 0 Then
+    If AddressId <= 0 Then
         Exit Function
     End If
 
@@ -140,7 +140,7 @@ Public Function GetAddressDisplayName(ByVal addressId As Long, Optional ByVal De
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", dbOpenSnapshot)
+    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(AddressId) & ";", dbOpenSnapshot)
 
     If rs.BOF And rs.EOF Then
         Exit Function
@@ -218,15 +218,15 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal FieldValue As Variant)
-    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
-        rs.Fields(fieldName).Value = FieldValue
+Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal FieldName As String, ByVal FieldValue As Variant)
+    If modDaoHelper.RecordsetHasField(rs, FieldName) Then
+        rs.Fields(FieldName).Value = FieldValue
     End If
 End Sub
 
-Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal DefaultValue As String) As String
-    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
-        ResolveFieldValue = modDaoHelper.NzString(rs.Fields(fieldName).Value, DefaultValue)
+Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal FieldName As String, ByVal DefaultValue As String) As String
+    If modDaoHelper.RecordsetHasField(rs, FieldName) Then
+        ResolveFieldValue = modDaoHelper.NzString(rs.Fields(FieldName).Value, DefaultValue)
     Else
         ResolveFieldValue = DefaultValue
     End If

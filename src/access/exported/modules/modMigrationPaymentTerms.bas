@@ -45,26 +45,26 @@ Public Sub ApplyPaymentTermsMigration()
 
     Dim frontendDb As DAO.Database
     Dim beDb As DAO.Database
-    Dim backendPath As String
+    Dim BackendPath As String
 
     Set frontendDb = CurrentDb
-    backendPath = GetBackendPathForLinkedTable(frontendDb, TABLE_DOC_DOCUMENT)
-    Set beDb = DBEngine.OpenDatabase(backendPath)
+    BackendPath = GetBackendPathForLinkedTable(frontendDb, TABLE_DOC_DOCUMENT)
+    Set beDb = DBEngine.OpenDatabase(BackendPath)
 
     EnsureDocDocumentFields beDb
     EnsureTenPaymentTermTable beDb
     EnsureTenPaymentTermIndexes beDb
     SeedDefaultPaymentTerms beDb
-    EnsureLinkedBackendTable frontendDb, backendPath, TABLE_TEN_PAYMENT_TERM
+    EnsureLinkedBackendTable frontendDb, BackendPath, TABLE_TEN_PAYMENT_TERM
 
-    MsgBox "Payment terms migration completed. Backend: " & backendPath & _
+    MsgBox "Payment terms migration completed. Backend: " & BackendPath & _
            ". Linked table: " & TABLE_TEN_PAYMENT_TERM, vbInformation, MODULE_NAME
     GoTo CleanExit
 
 ErrorHandler:
     MsgBox "Payment terms migration failed:" & vbCrLf & _
            Err.Number & " - " & Err.description & vbCrLf & vbCrLf & _
-           "Backend: " & backendPath, vbCritical, MODULE_NAME
+           "Backend: " & BackendPath, vbCritical, MODULE_NAME
 
 CleanExit:
     On Error Resume Next
@@ -253,10 +253,10 @@ Private Sub EnsurePaymentTerm( _
     sql = sql & FIELD_CREATED_BY & ", "
     sql = sql & FIELD_UPDATED_AT & ", "
     sql = sql & FIELD_UPDATED_BY & ") VALUES ("
-    sql = sql & SqlText(PaymentTermCode) & ", "
-    sql = sql & SqlText(LanguageCode) & ", "
-    sql = sql & SqlText(Title) & ", "
-    sql = sql & SqlText(TermsText) & ", "
+    sql = sql & sqlText(PaymentTermCode) & ", "
+    sql = sql & sqlText(LanguageCode) & ", "
+    sql = sql & sqlText(Title) & ", "
+    sql = sql & sqlText(TermsText) & ", "
     sql = sql & SqlNumber(DaysNet) & ", "
     sql = sql & SqlNumber(DiscountDays) & ", "
     sql = sql & SqlNumber(DiscountPercent) & ", "
@@ -264,9 +264,9 @@ Private Sub EnsurePaymentTerm( _
     sql = sql & SqlBool(IsActive) & ", "
     sql = sql & SqlNumber(SortOrder) & ", "
     sql = sql & SqlDate(Now()) & ", "
-    sql = sql & SqlText(DEFAULT_CREATED_BY) & ", "
+    sql = sql & sqlText(DEFAULT_CREATED_BY) & ", "
     sql = sql & SqlDate(Now()) & ", "
-    sql = sql & SqlText(DEFAULT_UPDATED_BY) & ")"
+    sql = sql & sqlText(DEFAULT_UPDATED_BY) & ")"
 
     ExecSql db, sql
     Exit Sub
@@ -297,8 +297,8 @@ Private Function PaymentTermExists( _
 
     sql = "SELECT " & FIELD_PAYMENT_TERM_ID & _
           " FROM " & TABLE_TEN_PAYMENT_TERM & _
-          " WHERE " & FIELD_PAYMENT_TERM_CODE & " = " & SqlText(PaymentTermCode) & _
-          " AND " & FIELD_LANGUAGE_CODE & " = " & SqlText(LanguageCode)
+          " WHERE " & FIELD_PAYMENT_TERM_CODE & " = " & sqlText(PaymentTermCode) & _
+          " AND " & FIELD_LANGUAGE_CODE & " = " & sqlText(LanguageCode)
 
     Set rs = db.OpenRecordset(sql, dbOpenSnapshot)
     PaymentTermExists = Not (rs.BOF And rs.EOF)
@@ -368,7 +368,7 @@ End Function
 
 Private Sub EnsureLinkedBackendTable( _
     ByVal frontendDb As DAO.Database, _
-    ByVal backendPath As String, _
+    ByVal BackendPath As String, _
     ByVal TableName As String)
     On Error GoTo ErrorHandler
 
@@ -380,7 +380,7 @@ Private Sub EnsureLinkedBackendTable( _
         Exit Sub
     End If
 
-    If LenB(Trim$(backendPath)) = 0 Then
+    If LenB(Trim$(BackendPath)) = 0 Then
         Err.Raise vbObjectError + 2010, MODULE_NAME & ".EnsureLinkedBackendTable", _
             "Backend path is empty for linked table '" & TableName & "'."
     End If
@@ -399,7 +399,7 @@ Private Sub EnsureLinkedBackendTable( _
     End If
 
     Set tdf = frontendDb.CreateTableDef(TableName)
-    tdf.Connect = ";DATABASE=" & backendPath
+    tdf.Connect = ";DATABASE=" & BackendPath
     tdf.SourceTableName = TableName
     frontendDb.TableDefs.Append tdf
     frontendDb.TableDefs.Refresh
@@ -495,11 +495,11 @@ Private Sub ExecSql(ByVal db As DAO.Database, ByVal sql As String)
     db.Execute sql, dbFailOnError
 End Sub
 
-Private Function SqlText(ByVal v As Variant) As String
+Private Function sqlText(ByVal v As Variant) As String
     If IsNull(v) Then
-        SqlText = "NULL"
+        sqlText = "NULL"
     Else
-        SqlText = "'" & Replace(CStr(v), "'", "''") & "'"
+        sqlText = "'" & Replace(CStr(v), "'", "''") & "'"
     End If
 End Function
 

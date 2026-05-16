@@ -46,12 +46,12 @@ Private Const FIELD_LINE_TOTAL_GROSS As String = "line_total_gross"
 Private Const DEFAULT_DOCUMENT_STATUS As String = "DRAFT"
 
 Public Function CreateDocumentHeader( _
-    ByVal documentTypeCode As String, _
-    Optional ByVal documentDate As Date = 0, _
-    Optional ByVal customerName As String = "", _
-    Optional ByVal TotalNet As Currency = 0, _
-    Optional ByVal TotalVat As Currency = 0, _
-    Optional ByVal TotalGross As Currency = 0, _
+    ByVal DocumentTypeCode As String, _
+    Optional ByVal DocumentDate As Date = 0, _
+    Optional ByVal CustomerName As String = "", _
+    Optional ByVal totalNet As Currency = 0, _
+    Optional ByVal totalVat As Currency = 0, _
+    Optional ByVal totalGross As Currency = 0, _
     Optional ByVal Remarks As String = "", _
     Optional ByVal CustomerAddressId As Long = 0 _
 ) As Long
@@ -65,7 +65,7 @@ Public Function CreateDocumentHeader( _
 
     CreateDocumentHeader = 0
 
-    documentType = UCase$(Trim$(documentTypeCode))
+    documentType = UCase$(Trim$(DocumentTypeCode))
     If Not modDocumentService.ValidateDocumentType(documentType) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CreateDocumentHeader", _
             "Document header creation skipped because document type is not supported."
@@ -84,8 +84,8 @@ Public Function CreateDocumentHeader( _
         Exit Function
     End If
 
-    effectiveDate = IIf(documentDate = 0, Date, documentDate)
-    effectiveCustomerName = Trim$(customerName)
+    effectiveDate = IIf(DocumentDate = 0, Date, DocumentDate)
+    effectiveCustomerName = Trim$(CustomerName)
 
     If CustomerAddressId > 0 Then
         If modAddressRepository.AddressExists(CustomerAddressId) Then
@@ -106,9 +106,9 @@ Public Function CreateDocumentHeader( _
     SetRecordsetValue rs, FIELD_CURRENCY_CODE, ResolveCurrencyCode()
     SetRecordsetValue rs, FIELD_VAT_MODE, modVatHandler.GetVatMode()
     SetRecordsetValue rs, FIELD_VAT_RATE, modVatHandler.GetVatRate()
-    SetRecordsetValue rs, FIELD_TOTAL_NET, TotalNet
-    SetRecordsetValue rs, FIELD_TOTAL_VAT, TotalVat
-    SetRecordsetValue rs, FIELD_TOTAL_GROSS, TotalGross
+    SetRecordsetValue rs, FIELD_TOTAL_NET, totalNet
+    SetRecordsetValue rs, FIELD_TOTAL_VAT, totalVat
+    SetRecordsetValue rs, FIELD_TOTAL_GROSS, totalGross
     SetRecordsetValue rs, FIELD_REMARKS, Trim$(Remarks)
     SetRecordsetValue rs, FIELD_CREATED_AT, Now()
     SetRecordsetValue rs, FIELD_CREATED_BY, ResolveCreatedBy()
@@ -183,8 +183,8 @@ End Function
 Public Function CreateDocumentPosition( _
     ByVal DocumentId As Long, _
     ByVal LineNo As Long, _
-    ByVal Description As String, _
-    ByVal Quantity As Double, _
+    ByVal description As String, _
+    ByVal quantity As Double, _
     ByVal UnitPrice As Currency, _
     Optional ByVal UnitCode As String = "", _
     Optional ByVal VatRate As Double = -1, _
@@ -230,9 +230,9 @@ Public Function CreateDocumentPosition( _
         effectiveVatMode = modVatHandler.NormalizeVatMode(VatMode)
     End If
 
-    lineNet = modDocumentService.CalculateDocumentLineNet(Quantity, UnitPrice)
-    lineVat = modDocumentService.CalculateDocumentLineVat(Quantity, UnitPrice, effectiveVatRate, effectiveVatMode)
-    lineGross = modDocumentService.CalculateDocumentLineGross(Quantity, UnitPrice, effectiveVatRate, effectiveVatMode)
+    lineNet = modDocumentService.CalculateDocumentLineNet(quantity, UnitPrice)
+    lineVat = modDocumentService.CalculateDocumentLineVat(quantity, UnitPrice, effectiveVatRate, effectiveVatMode)
+    lineGross = modDocumentService.CalculateDocumentLineGross(quantity, UnitPrice, effectiveVatRate, effectiveVatMode)
 
     Set db = modDb.GetCurrentDatabase()
     Set rs = db.OpenRecordset(TABLE_DOC_DOCUMENT_POSITION, dbOpenDynaset, dbAppendOnly)
@@ -240,8 +240,8 @@ Public Function CreateDocumentPosition( _
     rs.AddNew
     SetRecordsetValue rs, FIELD_DOCUMENT_ID, DocumentId
     SetRecordsetValue rs, FIELD_LINE_NO, LineNo
-    SetRecordsetValue rs, FIELD_DESCRIPTION, Trim$(Description)
-    SetRecordsetValue rs, FIELD_QUANTITY, Quantity
+    SetRecordsetValue rs, FIELD_DESCRIPTION, Trim$(description)
+    SetRecordsetValue rs, FIELD_QUANTITY, quantity
     SetRecordsetValue rs, FIELD_UNIT_CODE, Trim$(UnitCode)
     SetRecordsetValue rs, FIELD_UNIT_PRICE, UnitPrice
     SetRecordsetValue rs, FIELD_VAT_RATE, effectiveVatRate
@@ -432,17 +432,17 @@ End Function
 Public Function GetDocumentCustomerDisplayName(ByVal DocumentId As Long, Optional ByVal DefaultValue As String = "") As String
     On Error GoTo ErrorHandler
 
-    Dim addressId As Long
+    Dim AddressId As Long
     Dim storedCustomerName As String
     Dim addressDisplayName As String
 
     GetDocumentCustomerDisplayName = DefaultValue
 
     storedCustomerName = ResolveDocumentFieldValue(DocumentId, FIELD_CUSTOMER_NAME, DefaultValue)
-    addressId = ResolveDocumentLongValue(DocumentId, FIELD_CUSTOMER_ADDRESS_ID, 0)
+    AddressId = ResolveDocumentLongValue(DocumentId, FIELD_CUSTOMER_ADDRESS_ID, 0)
 
-    If addressId > 0 Then
-        addressDisplayName = modAddressRepository.GetAddressDisplayName(addressId, vbNullString)
+    If AddressId > 0 Then
+        addressDisplayName = modAddressRepository.GetAddressDisplayName(AddressId, vbNullString)
         If LenB(Trim$(addressDisplayName)) > 0 Then
             GetDocumentCustomerDisplayName = addressDisplayName
             Exit Function
@@ -474,9 +474,9 @@ Public Function AssignDocumentNumber(ByVal DocumentId As Long) As Boolean
     Dim db As DAO.Database
     Dim rsHeader As DAO.Recordset
     Dim sqlText As String
-    Dim documentTypeCode As String
-    Dim documentNo As String
-    Dim documentDate As Date
+    Dim DocumentTypeCode As String
+    Dim DocumentNo As String
+    Dim DocumentDate As Date
     Dim nextDocumentNo As String
 
     AssignDocumentNumber = False
@@ -507,23 +507,23 @@ Public Function AssignDocumentNumber(ByVal DocumentId As Long) As Boolean
         GoTo CleanExit
     End If
 
-    documentTypeCode = UCase$(Trim$(modDaoHelper.NzString(rsHeader.Fields(FIELD_DOCUMENT_TYPE_CODE).Value)))
-    documentNo = Trim$(modDaoHelper.NzString(rsHeader.Fields(FIELD_DOCUMENT_NO).Value))
+    DocumentTypeCode = UCase$(Trim$(modDaoHelper.NzString(rsHeader.Fields(FIELD_DOCUMENT_TYPE_CODE).Value)))
+    DocumentNo = Trim$(modDaoHelper.NzString(rsHeader.Fields(FIELD_DOCUMENT_NO).Value))
 
     If modDaoHelper.RecordsetHasField(rsHeader, FIELD_DOCUMENT_DATE) Then
-        documentDate = rsHeader.Fields(FIELD_DOCUMENT_DATE).Value
+        DocumentDate = rsHeader.Fields(FIELD_DOCUMENT_DATE).Value
     Else
-        documentDate = Date
+        DocumentDate = Date
     End If
 
-    If LenB(documentNo) > 0 Then
+    If LenB(DocumentNo) > 0 Then
         modLoggingHandler.LogInfo MODULE_NAME & ".AssignDocumentNumber", _
-            "DocumentId=" & CStr(DocumentId) & " already has document number '" & documentNo & "'."
+            "DocumentId=" & CStr(DocumentId) & " already has document number '" & DocumentNo & "'."
         AssignDocumentNumber = True
         GoTo CleanExit
     End If
 
-    nextDocumentNo = modNumberingHandler.GetNextDocumentNumber(documentTypeCode, documentDate)
+    nextDocumentNo = modNumberingHandler.GetNextDocumentNumber(DocumentTypeCode, DocumentDate)
     If LenB(Trim$(nextDocumentNo)) = 0 Then
         modLoggingHandler.LogWarning MODULE_NAME & ".AssignDocumentNumber", _
             "Document number assignment failed because no next number could be generated for DocumentId=" & CStr(DocumentId) & "."
@@ -673,9 +673,9 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal FieldValue As Variant)
-    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
-        rs.Fields(fieldName).Value = FieldValue
+Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal FieldName As String, ByVal FieldValue As Variant)
+    If modDaoHelper.RecordsetHasField(rs, FieldName) Then
+        rs.Fields(FieldName).Value = FieldValue
     End If
 End Sub
 
@@ -691,7 +691,7 @@ Private Function ResolveCreatedBy() As String
     End If
 End Function
 
-Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal fieldName As String, ByVal DefaultValue As String) As String
+Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal FieldName As String, ByVal DefaultValue As String) As String
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -720,8 +720,8 @@ Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal field
         GoTo CleanExit
     End If
 
-    If modDaoHelper.RecordsetHasField(rsHeader, fieldName) Then
-        ResolveDocumentFieldValue = modDaoHelper.NzString(rsHeader.Fields(fieldName).Value, DefaultValue)
+    If modDaoHelper.RecordsetHasField(rsHeader, FieldName) Then
+        ResolveDocumentFieldValue = modDaoHelper.NzString(rsHeader.Fields(FieldName).Value, DefaultValue)
     End If
 
 CleanExit:
@@ -737,7 +737,7 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal fieldName As String, ByVal DefaultValue As Long) As Long
+Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal FieldName As String, ByVal DefaultValue As Long) As Long
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -766,8 +766,8 @@ Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal fieldN
         GoTo CleanExit
     End If
 
-    If modDaoHelper.RecordsetHasField(rsHeader, fieldName) Then
-        ResolveDocumentLongValue = modDaoHelper.NzLong(rsHeader.Fields(fieldName).Value, DefaultValue)
+    If modDaoHelper.RecordsetHasField(rsHeader, FieldName) Then
+        ResolveDocumentLongValue = modDaoHelper.NzLong(rsHeader.Fields(FieldName).Value, DefaultValue)
     End If
 
 CleanExit:

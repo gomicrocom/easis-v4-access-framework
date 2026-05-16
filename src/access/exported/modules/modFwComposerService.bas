@@ -7,24 +7,32 @@ Option Explicit
 ' Purpose   : Provides object and control inspection helpers for a future
 '             framework composer form.
 ' Author    : Codex
-' Version   : 0.1.1
+' Version   : 0.1.2
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFwComposerService"
+Private Const TRANSLATION_TABLE_NAME As String = "tblFwTranslations"
+Private Const PLACEHOLDER_TRANSLATION_VALUE As String = "<neu>"
+Private Const FIELD_TRANSLATION_KEY As String = "TranslationKey"
+Private Const FIELD_LANGUAGE_CODE As String = "LanguageCode"
+Private Const FIELD_TRANSLATION_VALUE As String = "TranslationValue"
+Private Const FIELD_IS_ACTIVE As String = "IsActive"
+Private Const FIELD_MODULE_CODE As String = "ModuleCode"
+Private Const FIELD_UPDATED_AT As String = "UpdatedAt"
 
 Public Const COMPOSER_MODE_TAGS As String = "TAGS"
 Public Const COMPOSER_MODE_TRANSLATIONS As String = "TRANSLATIONS"
 Public Const OBJECT_TYPE_FORM As String = "FORM"
 Public Const OBJECT_TYPE_REPORT As String = "REPORT"
 
-Public Function GetComposerObjectList(ByVal objectType As String) As Collection
+Public Function GetComposerObjectList(ByVal ObjectType As String) As Collection
     On Error GoTo ErrorHandler
 
     Dim normalizedObjectType As String
     Dim result As Collection
     Dim accessObject As Access.accessObject
 
-    normalizedObjectType = NormalizeObjectType(objectType)
+    normalizedObjectType = NormalizeObjectType(ObjectType)
     Set result = New Collection
 
     Select Case normalizedObjectType
@@ -56,7 +64,7 @@ ErrorHandler:
 End Function
 
 Public Function GetComposerControlList( _
-    ByVal objectType As String, _
+    ByVal ObjectType As String, _
     ByVal ObjectName As String, _
     Optional ByVal OnlyNamedPrefix As String = "" _
 ) As Collection
@@ -68,7 +76,7 @@ Public Function GetComposerControlList( _
     Dim ctl As Control
     Dim wasOpenedByService As Boolean
 
-    normalizedObjectType = NormalizeObjectType(objectType)
+    normalizedObjectType = NormalizeObjectType(ObjectType)
     normalizedPrefix = Trim$(OnlyNamedPrefix)
     Set result = New Collection
 
@@ -111,7 +119,7 @@ ErrorHandler:
 End Function
 
 Public Function SuggestTranslationKey( _
-    ByVal objectType As String, _
+    ByVal ObjectType As String, _
     ByVal ObjectName As String, _
     ByVal ControlName As String _
 ) As String
@@ -121,7 +129,7 @@ Public Function SuggestTranslationKey( _
     Dim normalizedObjectName As String
     Dim normalizedControlName As String
 
-    normalizedObjectType = NormalizeObjectType(objectType)
+    normalizedObjectType = NormalizeObjectType(ObjectType)
     normalizedObjectName = UCase$(Trim$(ObjectName))
     normalizedControlName = NormalizeTranslationName(StripPrefix(ControlName, "lbl"))
 
@@ -139,13 +147,13 @@ ErrorHandler:
 End Function
 
 Public Function GetControlTagValue( _
-    ByVal objectType As String, _
+    ByVal ObjectType As String, _
     ByVal ObjectName As String, _
     ByVal ControlName As String _
 ) As String
     On Error GoTo ErrorHandler
 
-    GetControlTagValue = GetControlStringProperty(objectType, ObjectName, ControlName, "Tag")
+    GetControlTagValue = GetControlStringProperty(ObjectType, ObjectName, ControlName, "Tag")
     Exit Function
 
 ErrorHandler:
@@ -154,13 +162,13 @@ ErrorHandler:
 End Function
 
 Public Function GetControlCaptionValue( _
-    ByVal objectType As String, _
+    ByVal ObjectType As String, _
     ByVal ObjectName As String, _
     ByVal ControlName As String _
 ) As String
     On Error GoTo ErrorHandler
 
-    GetControlCaptionValue = GetControlStringProperty(objectType, ObjectName, ControlName, "Caption")
+    GetControlCaptionValue = GetControlStringProperty(ObjectType, ObjectName, ControlName, "Caption")
     Exit Function
 
 ErrorHandler:
@@ -168,8 +176,83 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.description
 End Function
 
+Public Function EnsureTranslationPlaceholders(ByVal TranslationKey As String) As Long
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim languageCodes As Variant
+    Dim LanguageCode As Variant
+    Dim insertedCount As Long
+
+    TranslationKey = Trim$(TranslationKey)
+    If LenB(TranslationKey) = 0 Then
+        Exit Function
+    End If
+
+    Set db = CurrentDb
+    If Not TableExists(db, TRANSLATION_TABLE_NAME) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".EnsureTranslationPlaceholders", _
+            "Translation table not found: " & TRANSLATION_TABLE_NAME & "."
+        Exit Function
+    End If
+
+    languageCodes = Array("DE-CH", "FR-FR", "EN-US")
+
+    For Each LanguageCode In languageCodes
+        If EnsureTranslationPlaceholderRow(db, TranslationKey, CStr(LanguageCode)) Then
+            insertedCount = insertedCount + 1
+        End If
+    Next LanguageCode
+
+    If insertedCount > 0 Then
+        modLoggingHandler.LogInfo MODULE_NAME & ".EnsureTranslationPlaceholders", _
+            "Inserted " & CStr(insertedCount) & " placeholder translation row(s) for " & TranslationKey & "."
+    End If
+
+    EnsureTranslationPlaceholders = insertedCount
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "EnsureTranslationPlaceholders", Err
+    Err.Raise Err.Number, Err.Source, Err.description
+End Function
+
+Public Function ValidateTranslationsReady( _
+    Optional ByVal ObjectType As String = "", _
+    Optional ByVal ObjectName As String = "" _
+) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim missingCount As Long
+    Dim whereClause As String
+    Dim scopeDescription As String
+
+    Set db = CurrentDb
+
+    If Not TableExists(db, TRANSLATION_TABLE_NAME) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".ValidateTranslationsReady", _
+            "Translation table not found: " & TRANSLATION_TABLE_NAME & "."
+        Exit Function
+    End If
+
+    whereClause = BuildMissingTranslationWhereClause(ObjectType, ObjectName)
+    missingCount = CountTranslationsByWhereClause(db, whereClause)
+    scopeDescription = BuildValidationScopeDescription(ObjectType, ObjectName)
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".ValidateTranslationsReady", _
+        "Missing translations found: " & CStr(missingCount) & " (" & scopeDescription & ")."
+
+    ValidateTranslationsReady = (missingCount = 0)
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ValidateTranslationsReady", Err
+    Err.Raise Err.Number, Err.Source, Err.description
+End Function
+
 Private Function GetControlStringProperty( _
-    ByVal objectType As String, _
+    ByVal ObjectType As String, _
     ByVal ObjectName As String, _
     ByVal ControlName As String, _
     ByVal PropertyName As String _
@@ -179,7 +262,7 @@ Private Function GetControlStringProperty( _
     Dim normalizedObjectType As String
     Dim wasOpenedByService As Boolean
 
-    normalizedObjectType = NormalizeObjectType(objectType)
+    normalizedObjectType = NormalizeObjectType(ObjectType)
 
     If IsComposerInternalObject(ObjectName) Then
         GetControlStringProperty = vbNullString
@@ -211,17 +294,17 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Function NormalizeObjectType(ByVal objectType As String) As String
+Private Function NormalizeObjectType(ByVal ObjectType As String) As String
     Dim normalizedType As String
 
-    normalizedType = UCase$(Trim$(objectType))
+    normalizedType = UCase$(Trim$(ObjectType))
 
     Select Case normalizedType
         Case OBJECT_TYPE_FORM, OBJECT_TYPE_REPORT
             NormalizeObjectType = normalizedType
         Case Else
             Err.Raise vbObjectError + 3201, MODULE_NAME & ".NormalizeObjectType", _
-                "Unsupported object type: " & objectType
+                "Unsupported object type: " & ObjectType
     End Select
 End Function
 
@@ -358,13 +441,13 @@ Private Function StripPrefix(ByVal Value As String, ByVal Prefix As String) As S
     End If
 End Function
 
-Private Function ObjectExists(ByVal objectType As String, ByVal ObjectName As String) As Boolean
+Private Function ObjectExists(ByVal ObjectType As String, ByVal ObjectName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim accessObject As Access.accessObject
     Dim normalizedObjectType As String
 
-    normalizedObjectType = NormalizeObjectType(objectType)
+    normalizedObjectType = NormalizeObjectType(ObjectType)
 
     Select Case normalizedObjectType
         Case OBJECT_TYPE_FORM
@@ -390,17 +473,17 @@ ErrorHandler:
     ObjectExists = False
 End Function
 
-Private Function OpenObjectHiddenDesign(ByVal objectType As String, ByVal ObjectName As String) As Boolean
+Private Function OpenObjectHiddenDesign(ByVal ObjectType As String, ByVal ObjectName As String) As Boolean
     On Error GoTo ErrorHandler
 
     OpenObjectHiddenDesign = False
 
-    If Not ObjectExists(objectType, ObjectName) Then
+    If Not ObjectExists(ObjectType, ObjectName) Then
         Err.Raise vbObjectError + 3202, MODULE_NAME & ".OpenObjectHiddenDesign", _
-            objectType & " '" & ObjectName & "' does not exist."
+            ObjectType & " '" & ObjectName & "' does not exist."
     End If
 
-    Select Case NormalizeObjectType(objectType)
+    Select Case NormalizeObjectType(ObjectType)
         Case OBJECT_TYPE_FORM
             If Not CurrentProject.AllForms(ObjectName).IsLoaded Then
                 DoCmd.OpenForm ObjectName, acDesign, , , , acHidden
@@ -420,10 +503,10 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.description
 End Function
 
-Private Sub CloseObjectNoSave(ByVal objectType As String, ByVal ObjectName As String)
+Private Sub CloseObjectNoSave(ByVal ObjectType As String, ByVal ObjectName As String)
     On Error Resume Next
 
-    Select Case UCase$(Trim$(objectType))
+    Select Case UCase$(Trim$(ObjectType))
         Case OBJECT_TYPE_FORM
             If ObjectExists(OBJECT_TYPE_FORM, ObjectName) Then
                 If CurrentProject.AllForms(ObjectName).IsLoaded Then
@@ -497,12 +580,12 @@ ErrorHandler:
     target.Add itemValue
 End Sub
 
-Private Function ControlExists(ByVal objectType As String, ByVal ObjectName As String, ByVal ControlName As String) As Boolean
+Private Function ControlExists(ByVal ObjectType As String, ByVal ObjectName As String, ByVal ControlName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim ctl As Control
 
-    Select Case NormalizeObjectType(objectType)
+    Select Case NormalizeObjectType(ObjectType)
         Case OBJECT_TYPE_FORM
             For Each ctl In Forms(ObjectName).Controls
                 If StrComp(ctl.Name, ControlName, vbTextCompare) = 0 Then
@@ -535,4 +618,242 @@ Private Function GetObjectPropertySafely(ByVal Obj As Object, ByVal PropertyName
 SafeExit:
     GetObjectPropertySafely = vbNullString
 End Function
+
+Private Function EnsureTranslationPlaceholderRow( _
+    ByVal db As DAO.Database, _
+    ByVal TranslationKey As String, _
+    ByVal LanguageCode As String _
+) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim rs As DAO.Recordset
+
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    If TranslationRowExists(db, TranslationKey, LanguageCode) Then
+        Exit Function
+    End If
+
+    Set rs = db.OpenRecordset(TRANSLATION_TABLE_NAME, dbOpenDynaset)
+
+    rs.AddNew
+    rs.Fields(FIELD_TRANSLATION_KEY).Value = TranslationKey
+    rs.Fields(FIELD_LANGUAGE_CODE).Value = LanguageCode
+    rs.Fields(FIELD_TRANSLATION_VALUE).Value = PLACEHOLDER_TRANSLATION_VALUE
+    SetRecordsetFieldIfExists rs, FIELD_IS_ACTIVE, True
+    SetRecordsetFieldIfExists rs, FIELD_MODULE_CODE, GetTranslationModuleCode(TranslationKey)
+    SetRecordsetFieldIfExists rs, FIELD_UPDATED_AT, Now
+    rs.Update
+
+    EnsureTranslationPlaceholderRow = True
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "EnsureTranslationPlaceholderRow", Err
+    Resume CleanExit
+End Function
+
+Private Function TranslationRowExists( _
+    ByVal db As DAO.Database, _
+    ByVal TranslationKey As String, _
+    ByVal LanguageCode As String _
+) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim rs As DAO.Recordset
+    Dim sql As String
+
+    sql = "SELECT TOP 1 " & FIELD_TRANSLATION_KEY & _
+          " FROM " & TRANSLATION_TABLE_NAME & _
+          " WHERE " & FIELD_TRANSLATION_KEY & " = " & sqlText(TranslationKey) & _
+          " AND " & FIELD_LANGUAGE_CODE & " = " & sqlText(LanguageCode)
+
+    Set rs = db.OpenRecordset(sql, dbOpenSnapshot)
+    TranslationRowExists = Not (rs.BOF And rs.EOF)
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "TranslationRowExists", Err
+    Resume CleanExit
+End Function
+
+Private Sub SetRecordsetFieldIfExists( _
+    ByVal rs As DAO.Recordset, _
+    ByVal FieldName As String, _
+    ByVal FieldValue As Variant _
+)
+    On Error GoTo SafeExit
+
+    Dim fld As DAO.Field
+
+    If rs Is Nothing Then
+        Exit Sub
+    End If
+
+    For Each fld In rs.Fields
+        If StrComp(fld.Name, FieldName, vbTextCompare) = 0 Then
+            fld.Value = FieldValue
+            Exit For
+        End If
+    Next fld
+
+SafeExit:
+End Sub
+
+Private Function GetTranslationModuleCode(ByVal TranslationKey As String) As String
+    TranslationKey = UCase$(Trim$(TranslationKey))
+
+    If Left$(TranslationKey, 7) = "REPORT." Then
+        GetTranslationModuleCode = "REPORT"
+    ElseIf Left$(TranslationKey, 5) = "FORM." Then
+        GetTranslationModuleCode = "FORM"
+    Else
+        GetTranslationModuleCode = "FRAMEWORK"
+    End If
+End Function
+
+Private Function sqlText(ByVal Value As String) As String
+    sqlText = "'" & Replace(Nz(Value, vbNullString), "'", "''") & "'"
+End Function
+
+Private Function BuildMissingTranslationWhereClause( _
+    ByVal ObjectType As String, _
+    ByVal ObjectName As String _
+) As String
+    Dim scopeClause As String
+
+    scopeClause = BuildTranslationScopeWhereClause(ObjectType, ObjectName)
+    BuildMissingTranslationWhereClause = BuildMissingTranslationValueWhereClause()
+
+    If LenB(scopeClause) > 0 Then
+        BuildMissingTranslationWhereClause = "(" & scopeClause & ") AND (" & _
+                                             BuildMissingTranslationWhereClause & ")"
+    End If
+End Function
+
+Private Function BuildMissingTranslationValueWhereClause() As String
+    BuildMissingTranslationValueWhereClause = _
+        "(" & FIELD_TRANSLATION_VALUE & " = " & sqlText(PLACEHOLDER_TRANSLATION_VALUE) & _
+        " OR " & FIELD_TRANSLATION_VALUE & " Is Null" & _
+        " OR Trim(Nz([" & FIELD_TRANSLATION_VALUE & "], '')) = '')"
+End Function
+
+Private Function BuildTranslationScopeWhereClause( _
+    ByVal ObjectType As String, _
+    ByVal ObjectName As String _
+) As String
+    Dim normalizedObjectType As String
+    Dim normalizedObjectName As String
+
+    normalizedObjectType = vbNullString
+    normalizedObjectName = UCase$(Trim$(ObjectName))
+
+    If LenB(Trim$(ObjectType)) > 0 Then
+        normalizedObjectType = NormalizeObjectType(ObjectType)
+    End If
+
+    Select Case normalizedObjectType
+        Case OBJECT_TYPE_FORM
+            If LenB(normalizedObjectName) > 0 Then
+                BuildTranslationScopeWhereClause = "[" & FIELD_TRANSLATION_KEY & "] Like " & _
+                    sqlText("FORM." & normalizedObjectName & ".*")
+            Else
+                BuildTranslationScopeWhereClause = "[" & FIELD_TRANSLATION_KEY & "] Like " & _
+                    sqlText("FORM.*")
+            End If
+
+        Case OBJECT_TYPE_REPORT
+            BuildTranslationScopeWhereClause = "[" & FIELD_TRANSLATION_KEY & "] Like " & _
+                sqlText("REPORT.*")
+
+        Case Else
+            BuildTranslationScopeWhereClause = vbNullString
+    End Select
+End Function
+
+Private Function CountTranslationsByWhereClause( _
+    ByVal db As DAO.Database, _
+    ByVal whereClause As String _
+) As Long
+    On Error GoTo ErrorHandler
+
+    Dim rs As DAO.Recordset
+    Dim sql As String
+
+    sql = "SELECT Count(*) AS MissingCount FROM " & TRANSLATION_TABLE_NAME
+    If LenB(Trim$(whereClause)) > 0 Then
+        sql = sql & " WHERE " & whereClause
+    End If
+
+    Set rs = db.OpenRecordset(sql, dbOpenSnapshot)
+    If Not (rs.BOF And rs.EOF) Then
+        CountTranslationsByWhereClause = Nz(rs.Fields(0).Value, 0)
+    End If
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "CountTranslationsByWhereClause", Err
+    Resume CleanExit
+End Function
+
+Private Function BuildValidationScopeDescription( _
+    ByVal ObjectType As String, _
+    ByVal ObjectName As String _
+) As String
+    Dim normalizedObjectType As String
+    Dim normalizedObjectName As String
+
+    normalizedObjectType = UCase$(Trim$(ObjectType))
+    normalizedObjectName = Trim$(ObjectName)
+
+    If LenB(normalizedObjectType) = 0 Then
+        BuildValidationScopeDescription = "all translations"
+    ElseIf LenB(normalizedObjectName) = 0 Then
+        BuildValidationScopeDescription = normalizedObjectType
+    ElseIf normalizedObjectType = OBJECT_TYPE_REPORT Then
+        BuildValidationScopeDescription = normalizedObjectType & " " & normalizedObjectName & " (report scope uses REPORT.*)"
+    Else
+        BuildValidationScopeDescription = normalizedObjectType & " " & normalizedObjectName
+    End If
+End Function
+
+Private Function TableExists(ByVal db As DAO.Database, ByVal TableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    For Each tdf In db.TableDefs
+        If StrComp(tdf.Name, TableName, vbTextCompare) = 0 Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tdf
+
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+End Function
+
 

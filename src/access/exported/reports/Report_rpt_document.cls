@@ -24,13 +24,13 @@ Private Function BuildTenantSenderLine() As String
     BuildTenantSenderLine = JoinNonEmpty(" | ", tenantName, tenantStreet, Trim$(tenantZip & " " & tenantCity))
 End Function
 
-Private Function JoinNonEmpty(ByVal Separator As String, ParamArray Values() As Variant) As String
+Private Function JoinNonEmpty(ByVal Separator As String, ParamArray values() As Variant) As String
     Dim i As Long
     Dim valueText As String
     Dim result As String
     
-    For i = LBound(Values) To UBound(Values)
-        valueText = Trim$(Nz(Values(i), ""))
+    For i = LBound(values) To UBound(values)
+        valueText = Trim$(Nz(values(i), ""))
         If Len(valueText) > 0 Then
             If Len(result) > 0 Then
                 result = result & Separator
@@ -110,13 +110,13 @@ End Sub
 
 
 Private Sub ApplyTranslations()
-    Dim languageCode As String
+    Dim LanguageCode As String
     Dim documentType As String
 
-    languageCode = Nz(GetControlValue("txtLanguageCode", "DE-CH"), "DE-CH")
+    LanguageCode = Nz(GetControlValue("txtLanguageCode", "DE-CH"), "DE-CH")
     documentType = UCase$(Nz(GetControlValue("txtDocumentType", ""), ""))
 
-    modTranslationService.SetCurrentLanguage languageCode
+    modTranslationService.SetCurrentLanguage LanguageCode
 
     If HasControl("txtDocumentTitle") Then
         Me!txtDocumentTitle = modTranslationService.T("DOCUMENT." & documentType, documentType)
@@ -259,16 +259,16 @@ Private Function BuildZipCityLine( _
     ByVal CountryCode As String _
 ) As String
     Dim normalizedCountryCode As String
-    Dim prefix As String
+    Dim Prefix As String
     
     normalizedCountryCode = UCase$(Trim$(Nz(CountryCode, "")))
     
     If Len(normalizedCountryCode) > 0 _
        And normalizedCountryCode <> TenantCountryCode() Then
-        prefix = normalizedCountryCode & "-"
+        Prefix = normalizedCountryCode & "-"
     End If
     
-    BuildZipCityLine = Trim$(prefix & Trim$(Nz(ZipCode, "")) & " " & Trim$(Nz(City, "")))
+    BuildZipCityLine = Trim$(Prefix & Trim$(Nz(ZipCode, "")) & " " & Trim$(Nz(City, "")))
 End Function
 
 Private Sub AppendLine(ByRef text As String, ByVal line As String)

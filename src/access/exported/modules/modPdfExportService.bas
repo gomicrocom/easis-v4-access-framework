@@ -136,7 +136,7 @@ ErrorHandler:
         "PDF export failed. DocumentId=" & CStr(DocumentId) & _
         "; TargetPdfPath=" & targetPdfPath & _
         "; Err.Number=" & CStr(Err.Number) & _
-        "; Err.Description=" & Err.Description, _
+        "; Err.Description=" & Err.description, _
         Err.Number
 
     modErrorHandler.HandleError MODULE_NAME, "ExportDocumentToPdfAtPath", Err
@@ -145,7 +145,7 @@ End Function
 Public Function ReportExists(ByVal ReportName As String) As Boolean
     On Error GoTo ErrorHandler
 
-    Dim reportObject As AccessObject
+    Dim reportObject As accessObject
     Dim normalizedReportName As String
 
     normalizedReportName = UCase$(Trim$(ReportName))
@@ -181,3 +181,13 @@ ErrorHandler:
     GetFolderFromFilePath = vbNullString
     modErrorHandler.HandleError MODULE_NAME, "GetFolderFromFilePath", Err
 End Function
+
+Public Sub PreviewDoc(ByVal DocId As Long)
+    On Error GoTo ErrorHandler
+
+    DoCmd.OpenReport "rpt_document", acViewPreview, , "document_id = " & DocId
+
+ErrorHandler:
+    Exit Sub
+    
+End Sub

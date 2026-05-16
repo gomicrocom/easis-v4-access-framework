@@ -246,8 +246,8 @@ Private Function TranslationExists( _
 
     sql = "SELECT [" & FIELD_TRANSLATION_KEY & "] " & _
           "FROM [" & TABLE_FW_TRANSLATIONS & "] " & _
-          "WHERE [" & FIELD_TRANSLATION_KEY & "] = " & SqlText(TranslationKey) & _
-          " AND [" & FIELD_LANGUAGE_CODE & "] = " & SqlText(LanguageCode) & ";"
+          "WHERE [" & FIELD_TRANSLATION_KEY & "] = " & sqlText(TranslationKey) & _
+          " AND [" & FIELD_LANGUAGE_CODE & "] = " & sqlText(LanguageCode) & ";"
 
     Set rs = db.OpenRecordset(sql, dbOpenSnapshot)
     TranslationExists = Not (rs.BOF And rs.EOF)
@@ -320,10 +320,10 @@ Private Sub SetFieldIfExists(ByVal rs As DAO.Recordset, ByVal FieldName As Strin
     End If
 End Sub
 
-Private Function SqlText(ByVal Value As Variant) As String
+Private Function sqlText(ByVal Value As Variant) As String
     If IsNull(Value) Then
-        SqlText = "NULL"
+        sqlText = "NULL"
     Else
-        SqlText = "'" & Replace(CStr(Value), "'", "''") & "'"
+        sqlText = "'" & Replace(CStr(Value), "'", "''") & "'"
     End If
 End Function

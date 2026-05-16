@@ -42,7 +42,7 @@ Public Sub InitializeModules()
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "InitializeModules", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
 Public Function IsModuleActive(ByVal moduleName As String) As Boolean
@@ -119,7 +119,7 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "RequireModule", Err
 
     If RaiseError Then
-        Err.Raise Err.Number, Err.Source, Err.Description
+        Err.Raise Err.Number, Err.Source, Err.description
     End If
 End Sub
 
@@ -134,7 +134,7 @@ Public Sub ResetModuleState()
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ResetModuleState", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
 Private Sub ActivateModule(ByVal moduleName As String)
@@ -161,7 +161,7 @@ Private Sub ActivateModule(ByVal moduleName As String)
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ActivateModule", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
 Private Sub EnsureModuleStore()
@@ -176,7 +176,7 @@ Private Sub EnsureModuleStore()
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "EnsureModuleStore", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
 Private Function NormalizeModuleName(ByVal moduleName As String) As String

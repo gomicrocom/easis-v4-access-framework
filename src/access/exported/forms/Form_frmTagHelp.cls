@@ -71,7 +71,7 @@ ErrorHandler:
     On Error Resume Next
     If Not rs Is Nothing Then rs.Close
     Set rs = Nothing
-    MsgBox "Fehler beim Laden der Hilfe: " & Err.Description, vbExclamation
+    MsgBox "Fehler beim Laden der Hilfe: " & Err.description, vbExclamation
 End Sub
 
 Private Sub ClearDetailFields()

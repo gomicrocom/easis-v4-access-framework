@@ -137,7 +137,7 @@ Private Function ResolveTenantParameterValue(ByVal rs As DAO.Recordset, ByVal Pa
     On Error GoTo ErrorHandler
 
     Dim targetKey As String
-    Dim tenantCode As String
+    Dim TenantCode As String
     Dim hasKeyField As Boolean
     Dim hasValueField As Boolean
     Dim hasTenantField As Boolean
@@ -145,7 +145,7 @@ Private Function ResolveTenantParameterValue(ByVal rs As DAO.Recordset, ByVal Pa
     Dim currentTenantCode As String
 
     targetKey = UCase$(Trim$(ParameterKey))
-    tenantCode = UCase$(Trim$(ResolveTenantCode()))
+    TenantCode = UCase$(Trim$(ResolveTenantCode()))
 
     hasKeyField = modDaoHelper.RecordsetHasField(rs, FIELD_PARAMETER_KEY)
     hasValueField = modDaoHelper.RecordsetHasField(rs, FIELD_PARAMETER_VALUE)
@@ -177,7 +177,7 @@ Private Function ResolveTenantParameterValue(ByVal rs As DAO.Recordset, ByVal Pa
                     Exit Function
                 End If
 
-                If LenB(tenantCode) > 0 And currentTenantCode = tenantCode Then
+                If LenB(TenantCode) > 0 And currentTenantCode = TenantCode Then
                     ResolveTenantParameterValue = modDaoHelper.NzString(rs.Fields(FIELD_PARAMETER_VALUE).Value, DefaultValue)
                     Exit Function
                 End If

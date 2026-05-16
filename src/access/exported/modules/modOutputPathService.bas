@@ -73,8 +73,8 @@ Public Function BuildDocumentPdfPath(ByVal DocumentId As Long) As String
     On Error GoTo ErrorHandler
 
     Dim rootPath As String
-    Dim customerName As String
-    Dim documentNo As String
+    Dim CustomerName As String
+    Dim DocumentNo As String
     Dim customerSegment As String
     Dim documentSegment As String
 
@@ -93,19 +93,19 @@ Public Function BuildDocumentPdfPath(ByVal DocumentId As Long) As String
         Exit Function
     End If
 
-    customerName = modDocumentRepository.GetDocumentCustomerName(DocumentId, DEFAULT_PATH_SEGMENT)
-    documentNo = modDocumentRepository.GetDocumentNumber(DocumentId, DOCUMENT_FILE_PREFIX & CStr(DocumentId))
+    CustomerName = modDocumentRepository.GetDocumentCustomerName(DocumentId, DEFAULT_PATH_SEGMENT)
+    DocumentNo = modDocumentRepository.GetDocumentNumber(DocumentId, DOCUMENT_FILE_PREFIX & CStr(DocumentId))
 
-    If LenB(Trim$(customerName)) = 0 Then
-        customerName = DEFAULT_PATH_SEGMENT
+    If LenB(Trim$(CustomerName)) = 0 Then
+        CustomerName = DEFAULT_PATH_SEGMENT
     End If
 
-    If LenB(Trim$(documentNo)) = 0 Then
-        documentNo = DOCUMENT_FILE_PREFIX & CStr(DocumentId)
+    If LenB(Trim$(DocumentNo)) = 0 Then
+        DocumentNo = DOCUMENT_FILE_PREFIX & CStr(DocumentId)
     End If
 
-    customerSegment = SanitizePathSegment(customerName)
-    documentSegment = SanitizePathSegment(documentNo)
+    customerSegment = SanitizePathSegment(CustomerName)
+    documentSegment = SanitizePathSegment(DocumentNo)
 
     BuildDocumentPdfPath = EnsureTrailingBackslash(rootPath) & _
                            customerSegment & "\" & _

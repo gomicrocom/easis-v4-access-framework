@@ -49,7 +49,7 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
-Public Sub SetCurrentLanguage(ByVal languageCode As String)
+Public Sub SetCurrentLanguage(ByVal LanguageCode As String)
     On Error GoTo ErrorHandler
 
     Dim normalizedLanguage As String
@@ -58,7 +58,7 @@ Public Sub SetCurrentLanguage(ByVal languageCode As String)
         mDefaultLanguage = ResolveDefaultLanguage()
     End If
 
-    normalizedLanguage = NormalizeLanguageCode(languageCode)
+    normalizedLanguage = NormalizeLanguageCode(LanguageCode)
     If LenB(normalizedLanguage) = 0 Then
         mCurrentLanguage = mDefaultLanguage
     Else
@@ -412,12 +412,12 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
-Private Sub AddTranslation(ByVal languageCode As String, ByVal TextKey As String, ByVal textValue As String)
+Private Sub AddTranslation(ByVal LanguageCode As String, ByVal TextKey As String, ByVal textValue As String)
     On Error GoTo ErrorHandler
 
     Dim compositeKey As String
 
-    compositeKey = BuildTranslationKey(languageCode, TextKey)
+    compositeKey = BuildTranslationKey(LanguageCode, TextKey)
     If LenB(compositeKey) = 0 Then
         Exit Sub
     End If
@@ -430,12 +430,12 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "AddTranslation", Err
 End Sub
 
-Private Function LookupTranslation(ByVal languageCode As String, ByVal TextKey As String) As String
+Private Function LookupTranslation(ByVal LanguageCode As String, ByVal TextKey As String) As String
     On Error GoTo ErrorHandler
 
     Dim compositeKey As String
 
-    compositeKey = BuildTranslationKey(languageCode, TextKey)
+    compositeKey = BuildTranslationKey(LanguageCode, TextKey)
     If LenB(compositeKey) = 0 Then
         Exit Function
     End If
@@ -449,11 +449,11 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "LookupTranslation", Err
 End Function
 
-Private Function BuildTranslationKey(ByVal languageCode As String, ByVal TextKey As String) As String
+Private Function BuildTranslationKey(ByVal LanguageCode As String, ByVal TextKey As String) As String
     Dim normalizedLanguage As String
     Dim normalizedTextKey As String
 
-    normalizedLanguage = NormalizeLanguageCode(languageCode)
+    normalizedLanguage = NormalizeLanguageCode(LanguageCode)
     normalizedTextKey = NormalizeTextKey(TextKey)
 
     If LenB(normalizedLanguage) = 0 Or LenB(normalizedTextKey) = 0 Then
@@ -463,11 +463,11 @@ Private Function BuildTranslationKey(ByVal languageCode As String, ByVal TextKey
     BuildTranslationKey = normalizedLanguage & "|" & normalizedTextKey
 End Function
 
-Private Function BaseLanguageCode(ByVal languageCode As String) As String
+Private Function BaseLanguageCode(ByVal LanguageCode As String) As String
     Dim normalizedLanguage As String
     Dim separatorPosition As Long
 
-    normalizedLanguage = NormalizeLanguageCode(languageCode)
+    normalizedLanguage = NormalizeLanguageCode(LanguageCode)
     If LenB(normalizedLanguage) = 0 Then
         Exit Function
     End If
@@ -480,12 +480,12 @@ Private Function BaseLanguageCode(ByVal languageCode As String) As String
     End If
 End Function
 
-Private Function NormalizeLanguageCode(ByVal languageCode As String) As String
+Private Function NormalizeLanguageCode(ByVal LanguageCode As String) As String
     Dim normalizedLanguage As String
     Dim languageParts() As String
     Dim i As Long
 
-    normalizedLanguage = Trim$(languageCode)
+    normalizedLanguage = Trim$(LanguageCode)
     If LenB(normalizedLanguage) = 0 Then
         Exit Function
     End If
@@ -563,10 +563,10 @@ ErrorHandler:
     TEx = T(TextKey, Fallback)
 End Function
 
-Public Sub DebugPrintReportTranslations(Optional ByVal languageCode As String = "DE-CH")
+Public Sub DebugPrintReportTranslations(Optional ByVal LanguageCode As String = "DE-CH")
     On Error GoTo ErrorHandler
 
-    SetCurrentLanguage languageCode
+    SetCurrentLanguage LanguageCode
 
     Debug.Print "Language=" & GetCurrentLanguage()
     Debug.Print "DOCUMENT.INVOICE=" & T("DOCUMENT.INVOICE", "Invoice")

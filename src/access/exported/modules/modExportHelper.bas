@@ -3,7 +3,7 @@ Option Compare Database
 Option Explicit
 
 Sub ExportAllModules()
-    Dim obj As AccessObject
+    Dim Obj As accessObject
     Dim path As String
     
     ' Ordnerpfad festlegen, wohin exportiert werden soll
@@ -13,15 +13,15 @@ Sub ExportAllModules()
     If Dir(path, vbDirectory) = "" Then MkDir path
     
     ' Standardmodule
-    For Each obj In CurrentProject.AllModules
-        If Not obj.Name = "modExportHelper" Then Application.SaveAsText acModule, obj.Name, path & obj.Name & ".bas"
-    Next obj
+    For Each Obj In CurrentProject.AllModules
+        If Not Obj.Name = "modExportHelper" Then Application.SaveAsText acModule, Obj.Name, path & Obj.Name & ".bas"
+    Next Obj
     
     ' Klassenmodule
-    For Each obj In CurrentProject.AllModules
+    For Each Obj In CurrentProject.AllModules
         ' Klassenmodule haben oft den Typ acClassModule
         ' Application.SaveAsText acClassModule, obj.Name, path & obj.Name & ".cls"
-    Next obj
+    Next Obj
     
     MsgBox "Alle Module wurden exportiert nach: " & path
 End Sub

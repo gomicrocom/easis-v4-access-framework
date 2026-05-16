@@ -183,8 +183,8 @@ End Sub
 
 Private Sub InsertPositions(ByVal db As DAO.Database)
     Dim i As Long
-    Dim vatRate As Double
-    Dim unitPrice As Currency
+    Dim VatRate As Double
+    Dim UnitPrice As Currency
     Dim quantity As Double
     Dim description As String
 
@@ -205,14 +205,14 @@ Private Sub InsertPositions(ByVal db As DAO.Database)
 
     For i = 1 To 50
         If i Mod 10 = 0 Then
-            vatRate = 2.5
+            VatRate = 2.5
         ElseIf i Mod 15 = 0 Then
-            vatRate = 0
+            VatRate = 0
         Else
-            vatRate = 7.7
+            VatRate = 7.7
         End If
 
-        unitPrice = CCur(45 + (i * 4.25))
+        UnitPrice = CCur(45 + (i * 4.25))
         quantity = 1 + (i Mod 5)
 
         description = _
@@ -226,8 +226,8 @@ Private Sub InsertPositions(ByVal db As DAO.Database)
             description, _
             quantity, _
             "Stk", _
-            unitPrice, _
-            vatRate
+            UnitPrice, _
+            VatRate
     Next i
 End Sub
 Private Function InsertAddress( _
@@ -458,7 +458,7 @@ Private Sub UpsertTenantParameter(ByVal db As DAO.Database, ByVal ParamKey As St
 
     hasTenantCodeField = FieldExists(db, TBL_TEN_PARAMETER, "tenant_code")
 
-    sql = "SELECT * FROM [" & TBL_TEN_PARAMETER & "] WHERE [param_key]=" & SqlText(UCase$(Trim$(ParamKey))) & ";"
+    sql = "SELECT * FROM [" & TBL_TEN_PARAMETER & "] WHERE [param_key]=" & sqlText(UCase$(Trim$(ParamKey))) & ";"
     Set rs = db.OpenRecordset(sql, dbOpenDynaset)
 
     If rs.BOF And rs.EOF Then
@@ -545,11 +545,11 @@ Private Sub ExecSql(ByVal db As DAO.Database, ByVal sql As String)
     db.Execute sql, dbFailOnError
 End Sub
 
-Private Function SqlText(ByVal Value As Variant) As String
+Private Function sqlText(ByVal Value As Variant) As String
     If IsNull(Value) Then
-        SqlText = "NULL"
+        sqlText = "NULL"
     Else
-        SqlText = "'" & Replace(CStr(Value), "'", "''") & "'"
+        sqlText = "'" & Replace(CStr(Value), "'", "''") & "'"
     End If
 End Function
 

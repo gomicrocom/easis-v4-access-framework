@@ -27,7 +27,7 @@ Public Sub InitializeLicenses()
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "InitializeLicenses", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
 Public Function IsFeatureLicensed(ByVal featureName As String) As Boolean
@@ -102,7 +102,7 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "RequireFeature", Err
 
     If RaiseError Then
-        Err.Raise Err.Number, Err.Source, Err.Description
+        Err.Raise Err.Number, Err.Source, Err.description
     End If
 End Sub
 
@@ -152,7 +152,7 @@ Private Sub LoadRuntimeLicenses(Optional ByVal IniPath As String = vbNullString)
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "LoadRuntimeLicenses", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
 Private Sub LoadFeatureList(ByVal FeatureList As String)
@@ -178,7 +178,7 @@ Private Sub LoadFeatureList(ByVal FeatureList As String)
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "LoadFeatureList", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
 Private Sub AddLicensedFeature(ByVal featureName As String)
@@ -199,7 +199,7 @@ Private Sub AddLicensedFeature(ByVal featureName As String)
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "AddLicensedFeature", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
 Private Sub ClearLicenseStore()
@@ -210,7 +210,7 @@ Private Sub ClearLicenseStore()
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ClearLicenseStore", Err
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
 Private Function GetLicenseStore() As Object

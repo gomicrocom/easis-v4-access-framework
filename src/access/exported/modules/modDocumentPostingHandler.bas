@@ -17,7 +17,7 @@ Public Function PostDocument(ByVal DocumentId As Long) As Boolean
     On Error GoTo ErrorHandler
 
     Dim currentStatus As String
-    Dim documentNo As String
+    Dim DocumentNo As String
 
     PostDocument = False
 
@@ -57,8 +57,8 @@ Public Function PostDocument(ByVal DocumentId As Long) As Boolean
         Exit Function
     End If
 
-    documentNo = Trim$(modDocumentRepository.GetDocumentNumber(DocumentId, vbNullString))
-    If LenB(documentNo) = 0 Then
+    DocumentNo = Trim$(modDocumentRepository.GetDocumentNumber(DocumentId, vbNullString))
+    If LenB(DocumentNo) = 0 Then
         If Not modDocumentRepository.AssignDocumentNumber(DocumentId) Then
             modLoggingHandler.LogWarning MODULE_NAME & ".PostDocument", _
                 "Document posting failed because document number could not be assigned for DocumentId=" & CStr(DocumentId) & "."

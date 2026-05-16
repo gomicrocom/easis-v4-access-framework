@@ -98,7 +98,7 @@ ErrorHandler:
 
     savedErrNumber = Err.Number
     savedErrSource = Err.Source
-    savedErrDescription = Err.Description
+    savedErrDescription = Err.description
 
     modErrorHandler.HandleError MODULE_NAME, "InitializeForm", Err
 
@@ -166,7 +166,7 @@ ErrorHandler:
 
     savedErrNumber = Err.Number
     savedErrSource = Err.Source
-    savedErrDescription = Err.Description
+    savedErrDescription = Err.description
 
     modErrorHandler.HandleError MODULE_NAME, "ValidateRequiredFields", Err
 
@@ -253,7 +253,7 @@ ErrorHandler:
 
     savedErrNumber = Err.Number
     savedErrSource = Err.Source
-    savedErrDescription = Err.Description
+    savedErrDescription = Err.description
 
     modErrorHandler.HandleError MODULE_NAME, "ValidateFormPolicies", Err
 
@@ -392,7 +392,7 @@ ErrorHandler:
 
     savedErrNumber = Err.Number
     savedErrSource = Err.Source
-    savedErrDescription = Err.Description
+    savedErrDescription = Err.description
 
     modErrorHandler.HandleError MODULE_NAME, "ApplyInitialFocusPolicy", Err
     
@@ -528,7 +528,7 @@ ErrorHandler:
 
     savedErrNumber = Err.Number
     savedErrSource = Err.Source
-    savedErrDescription = Err.Description
+    savedErrDescription = Err.description
 
     modErrorHandler.HandleError MODULE_NAME, "ApplyControlPolicies", Err
 
@@ -1133,7 +1133,7 @@ ErrorHandler:
 
     savedErrNumber = Err.Number
     savedErrSource = Err.Source
-    savedErrDescription = Err.Description
+    savedErrDescription = Err.description
 
     modErrorHandler.HandleError MODULE_NAME, "ApplyReadOnlyPolicy", Err
 
@@ -1186,7 +1186,7 @@ Private Sub TryShowRequiredFieldsMessage(ByVal MissingFieldNames As Collection, 
 
     Dim messageText As String
     Dim baseMessage As String
-    Dim fieldName As Variant
+    Dim FieldName As Variant
     Dim fieldList As String
     Dim fieldCount As Long
 
@@ -1197,15 +1197,15 @@ Private Sub TryShowRequiredFieldsMessage(ByVal MissingFieldNames As Collection, 
     End If
 
     If Not MissingFieldNames Is Nothing Then
-        For Each fieldName In MissingFieldNames
+        For Each FieldName In MissingFieldNames
             fieldCount = fieldCount + 1
 
             If fieldCount > 5 Then
                 Exit For
             End If
 
-            fieldList = fieldList & vbCrLf & "- " & CStr(fieldName)
-        Next fieldName
+            fieldList = fieldList & vbCrLf & "- " & CStr(FieldName)
+        Next FieldName
     End If
 
     If LenB(fieldList) > 0 Then
@@ -1224,7 +1224,7 @@ Private Sub TryShowInvalidFieldsMessage(ByVal InvalidFieldNames As Collection, B
 
     Dim messageText As String
     Dim baseMessage As String
-    Dim fieldName As Variant
+    Dim FieldName As Variant
     Dim fieldList As String
     Dim fieldCount As Long
 
@@ -1235,15 +1235,15 @@ Private Sub TryShowInvalidFieldsMessage(ByVal InvalidFieldNames As Collection, B
     End If
 
     If Not InvalidFieldNames Is Nothing Then
-        For Each fieldName In InvalidFieldNames
+        For Each FieldName In InvalidFieldNames
             fieldCount = fieldCount + 1
 
             If fieldCount > 5 Then
                 Exit For
             End If
 
-            fieldList = fieldList & vbCrLf & "- " & CStr(fieldName)
-        Next fieldName
+            fieldList = fieldList & vbCrLf & "- " & CStr(FieldName)
+        Next FieldName
     End If
 
     If LenB(fieldList) > 0 Then
@@ -1302,22 +1302,22 @@ End Sub
 Private Function BuildValidationFieldList(ByVal FieldNames As Collection) As String
     On Error GoTo SafeExit
 
-    Dim fieldName As Variant
+    Dim FieldName As Variant
     Dim fieldCount As Long
 
     If FieldNames Is Nothing Then
         Exit Function
     End If
 
-    For Each fieldName In FieldNames
+    For Each FieldName In FieldNames
         fieldCount = fieldCount + 1
 
         If fieldCount > 5 Then
             Exit For
         End If
 
-        BuildValidationFieldList = BuildValidationFieldList & "- " & CStr(fieldName) & vbCrLf
-    Next fieldName
+        BuildValidationFieldList = BuildValidationFieldList & "- " & CStr(FieldName) & vbCrLf
+    Next FieldName
 
     If LenB(BuildValidationFieldList) > 0 Then
         BuildValidationFieldList = Left$(BuildValidationFieldList, Len(BuildValidationFieldList) - Len(vbCrLf))

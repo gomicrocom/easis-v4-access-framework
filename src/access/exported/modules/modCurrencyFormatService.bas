@@ -76,7 +76,7 @@ Private Function GetCurrencyFormat(ByVal CurrencyCode As String) As tCurrencyFor
     CurrencyCode = NormalizeCurrencyCode(CurrencyCode)
 
     sql = "SELECT Symbol, SymbolPosition, DecimalSeparator, ThousandSeparator, MinorUnit " & _
-          "FROM refCurrencies " & _
+          "FROM ref_currency " & _
           "WHERE CurrencyCode = '" & Replace(CurrencyCode, "'", "''") & "'"
 
     Set rs = CurrentDb.OpenRecordset(sql, dbOpenSnapshot)

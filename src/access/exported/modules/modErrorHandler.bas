@@ -22,8 +22,8 @@ Public Function HandleError(ByVal moduleName As String, ByVal ProcedureName As S
         Exit Function
     End If
 
-    If LenB(SourceError.Description) > 0 Then
-        errorMessage = errorMessage & " | " & SourceError.Description
+    If LenB(SourceError.description) > 0 Then
+        errorMessage = errorMessage & " | " & SourceError.description
     End If
 
     HandleError = errorMessage

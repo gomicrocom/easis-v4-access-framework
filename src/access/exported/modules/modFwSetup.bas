@@ -67,7 +67,7 @@ Public Sub SeedTranslations()
     Exit Sub
 
 ErrorHandler:
-    MsgBox "Fehler beim Initialisieren von tblFwTranslations: " & Err.Description, vbExclamation
+    MsgBox "Fehler beim Initialisieren von tblFwTranslations: " & Err.description, vbExclamation
 End Sub
 
 Private Sub InsertTranslation( _
@@ -199,7 +199,7 @@ Public Sub SeedTagHelp()
     Exit Sub
 
 ErrorHandler:
-    MsgBox "Fehler beim Initialisieren von tblFwTagHelp: " & Err.Description, vbExclamation
+    MsgBox "Fehler beim Initialisieren von tblFwTagHelp: " & Err.description, vbExclamation
 End Sub
 
 Private Sub InsertTagHelp( _
