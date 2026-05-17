@@ -21,8 +21,8 @@ Option Explicit
 Private Const MODULE_NAME As String = "Form_frmTagComposer"
 Private Const OBJECT_TYPE_FORM As String = "FORM"
 Private Const OBJECT_TYPE_REPORT As String = "REPORT"
-Private Const TEMP_TABLE_NAME As String = "tblTmpTagComposer"
-Private Const TAG_HELP_TABLE_NAME As String = "tblFwTagHelp"
+Private Const TEMP_TABLE_NAME As String = "fw_tmp_tag_composer"
+Private Const TAG_HELP_TABLE_NAME As String = "fw_tag_help"
 
 Private m_TargetObjectType As String
 Private m_TargetObjectName As String
@@ -310,14 +310,14 @@ End Sub
 Private Sub BindTempSubform()
     On Error GoTo ErrorHandler
 
-    Dim sqlText As String
+    Dim SqlText As String
 
-    sqlText = "SELECT SessionId, RowNo, ControlName, ControlType, TagValue, IsDirty " & _
+    SqlText = "SELECT SessionId, RowNo, ControlName, ControlType, TagValue, IsDirty " & _
               "FROM " & TEMP_TABLE_NAME & " " & _
               "WHERE SessionId = '" & Replace(m_SessionId, "'", "''") & "' " & _
               "ORDER BY RowNo;"
 
-    Me!sfrmTmpTagComposer.Form.RecordSource = sqlText
+    Me!sfrmTmpTagComposer.Form.RecordSource = SqlText
     Me!sfrmTmpTagComposer.Form.Requery
     Exit Sub
 
@@ -367,7 +367,7 @@ Private Sub SaveCurrentControlTagToTemp(Optional ByVal RefreshSubform As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim sqlText As String
+    Dim SqlText As String
     Dim newTag As String
 
     If LenB(m_CurrentControl) = 0 Then Exit Sub
@@ -375,13 +375,13 @@ Private Sub SaveCurrentControlTagToTemp(Optional ByVal RefreshSubform As Boolean
     newTag = BuildTagString()
 
     Set db = CurrentDb
-    sqlText = "UPDATE " & TEMP_TABLE_NAME & " " & _
+    SqlText = "UPDATE " & TEMP_TABLE_NAME & " " & _
               "SET TagValue = '" & Replace(newTag, "'", "''") & "', " & _
               "    IsDirty = True " & _
               "WHERE SessionId = '" & Replace(m_SessionId, "'", "''") & "' " & _
               "  AND ControlName = '" & Replace(m_CurrentControl, "'", "''") & "';"
 
-    db.Execute sqlText, dbFailOnError
+    db.Execute SqlText, dbFailOnError
 
     Me!txtResult = newTag
 
@@ -932,16 +932,16 @@ Private Function IsActiveTagHelpToken(ByVal TokenKey As String) As Boolean
     On Error GoTo SafeExit
 
     Dim rs As DAO.Recordset
-    Dim sqlText As String
+    Dim SqlText As String
 
     If Not TableExists(TAG_HELP_TABLE_NAME) Then
         Exit Function
     End If
 
-    sqlText = "SELECT TokenKey FROM " & TAG_HELP_TABLE_NAME & " " & _
+    SqlText = "SELECT TokenKey FROM " & TAG_HELP_TABLE_NAME & " " & _
               "WHERE IsActive = True AND TokenKey = '" & Replace(TokenKey, "'", "''") & "';"
 
-    Set rs = CurrentDb.OpenRecordset(sqlText, dbOpenSnapshot)
+    Set rs = CurrentDb.OpenRecordset(SqlText, dbOpenSnapshot)
     If Not (rs.BOF And rs.EOF) Then
         IsActiveTagHelpToken = True
     End If
@@ -956,17 +956,17 @@ Private Function GetExistingTagForCurrentControl() As String
     On Error GoTo SafeExit
 
     Dim rs As DAO.Recordset
-    Dim sqlText As String
+    Dim SqlText As String
 
     If LenB(m_CurrentControl) = 0 Then Exit Function
     If LenB(m_SessionId) = 0 Then Exit Function
 
-    sqlText = "SELECT TagValue " & _
+    SqlText = "SELECT TagValue " & _
               "FROM " & TEMP_TABLE_NAME & " " & _
               "WHERE SessionId = '" & Replace(m_SessionId, "'", "''") & "' " & _
               "  AND ControlName = '" & Replace(m_CurrentControl, "'", "''") & "';"
 
-    Set rs = CurrentDb.OpenRecordset(sqlText, dbOpenSnapshot)
+    Set rs = CurrentDb.OpenRecordset(SqlText, dbOpenSnapshot)
 
     If Not rs.EOF Then
         GetExistingTagForCurrentControl = Nz(rs!TagValue, vbNullString)
@@ -1098,5 +1098,7 @@ Private Function TableExists(ByVal TableName As String) As Boolean
 
 SafeExit:
 End Function
+
+
 
 

@@ -11,7 +11,7 @@ Option Explicit
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFwComposerService"
-Private Const TRANSLATION_TABLE_NAME As String = "tblFwTranslations"
+Private Const TRANSLATION_TABLE_NAME As String = "fw_translation"
 Private Const PLACEHOLDER_TRANSLATION_VALUE As String = "<neu>"
 Private Const FIELD_TRANSLATION_KEY As String = "TranslationKey"
 Private Const FIELD_LANGUAGE_CODE As String = "LanguageCode"
@@ -261,11 +261,11 @@ Public Function ApplyTranslationTagsToObject( _
 
     Dim normalizedObjectType As String
     Dim controlList As Collection
-    Dim controlName As Variant
-    Dim translationKey As String
+    Dim ControlName As Variant
+    Dim TranslationKey As String
     Dim currentCaption As String
-    Dim wasLoaded As Boolean
-    Dim wasVisible As Boolean
+    Dim WasLoaded As Boolean
+    Dim WasVisible As Boolean
     Dim openedByService As Boolean
     Dim updatedObject As Boolean
 
@@ -277,26 +277,26 @@ Public Function ApplyTranslationTagsToObject( _
     End If
 
     Set controlList = GetComposerControlList(normalizedObjectType, ObjectName, "lbl")
-    If controlList Is Nothing Or controlList.Count = 0 Then
+    If controlList Is Nothing Or controlList.count = 0 Then
         modLoggingHandler.LogInfo MODULE_NAME & ".ApplyTranslationTagsToObject", _
             "No translation-relevant controls found for " & normalizedObjectType & "." & ObjectName & "."
         ApplyTranslationTagsToObject = True
         Exit Function
     End If
 
-    wasLoaded = IsObjectLoaded(normalizedObjectType, ObjectName)
-    wasVisible = GetObjectVisible(normalizedObjectType, ObjectName)
+    WasLoaded = IsObjectLoaded(normalizedObjectType, ObjectName)
+    WasVisible = GetObjectVisible(normalizedObjectType, ObjectName)
     openedByService = OpenObjectForUpdate(normalizedObjectType, ObjectName)
 
-    For Each controlName In controlList
-        translationKey = SuggestTranslationKey(normalizedObjectType, ObjectName, CStr(controlName))
+    For Each ControlName In controlList
+        TranslationKey = SuggestTranslationKey(normalizedObjectType, ObjectName, CStr(ControlName))
 
-        If LenB(translationKey) = 0 Then
+        If LenB(TranslationKey) = 0 Then
             SkippedCount = SkippedCount + 1
             GoTo NextControl
         End If
 
-        currentCaption = GetControlCaptionForLoadedObject(normalizedObjectType, ObjectName, CStr(controlName))
+        currentCaption = GetControlCaptionForLoadedObject(normalizedObjectType, ObjectName, CStr(ControlName))
 
         If LenB(currentCaption) = 0 Then
             SkippedCount = SkippedCount + 1
@@ -308,7 +308,7 @@ Public Function ApplyTranslationTagsToObject( _
             GoTo NextControl
         End If
 
-        If SetControlCaptionForLoadedObject(normalizedObjectType, ObjectName, CStr(controlName), "TR:" & translationKey) Then
+        If SetControlCaptionForLoadedObject(normalizedObjectType, ObjectName, CStr(ControlName), "TR:" & TranslationKey) Then
             AppliedCount = AppliedCount + 1
             updatedObject = True
         Else
@@ -316,7 +316,7 @@ Public Function ApplyTranslationTagsToObject( _
         End If
 
 NextControl:
-    Next controlName
+    Next ControlName
 
     If updatedObject Then
         SaveOpenedObject normalizedObjectType, ObjectName
@@ -326,7 +326,7 @@ NextControl:
         CloseObjectNoSave normalizedObjectType, ObjectName
     End If
 
-    RestoreObjectState normalizedObjectType, ObjectName, wasLoaded, wasVisible
+    RestoreObjectState normalizedObjectType, ObjectName, WasLoaded, WasVisible
 
     modLoggingHandler.LogInfo MODULE_NAME & ".ApplyTranslationTagsToObject", _
         "Updated " & normalizedObjectType & "." & ObjectName & _
@@ -342,7 +342,7 @@ ErrorHandler:
     If openedByService Then
         CloseObjectNoSave normalizedObjectType, ObjectName
     End If
-    RestoreObjectState normalizedObjectType, ObjectName, wasLoaded, wasVisible
+    RestoreObjectState normalizedObjectType, ObjectName, WasLoaded, WasVisible
     Err.Raise Err.Number, Err.Source, Err.description
 End Function
 
@@ -689,11 +689,11 @@ End Sub
 Private Sub RestoreObjectState( _
     ByVal ObjectType As String, _
     ByVal ObjectName As String, _
-    ByVal wasLoaded As Boolean, _
-    ByVal wasVisible As Boolean)
+    ByVal WasLoaded As Boolean, _
+    ByVal WasVisible As Boolean)
     On Error GoTo SafeExit
 
-    If Not wasLoaded Then
+    If Not WasLoaded Then
         Exit Sub
     End If
 
@@ -702,7 +702,7 @@ Private Sub RestoreObjectState( _
             If Not CurrentProject.AllForms(ObjectName).IsLoaded Then
                 DoCmd.OpenForm ObjectName, acNormal
             End If
-            If Not wasVisible Then
+            If Not WasVisible Then
                 Forms(ObjectName).Visible = False
             End If
 
@@ -905,8 +905,8 @@ Private Function TranslationRowExists( _
 
     sql = "SELECT TOP 1 " & FIELD_TRANSLATION_KEY & _
           " FROM " & TRANSLATION_TABLE_NAME & _
-          " WHERE " & FIELD_TRANSLATION_KEY & " = " & sqlText(TranslationKey) & _
-          " AND " & FIELD_LANGUAGE_CODE & " = " & sqlText(LanguageCode)
+          " WHERE " & FIELD_TRANSLATION_KEY & " = " & SqlText(TranslationKey) & _
+          " AND " & FIELD_LANGUAGE_CODE & " = " & SqlText(LanguageCode)
 
     Set rs = db.OpenRecordset(sql, dbOpenSnapshot)
     TranslationRowExists = Not (rs.BOF And rs.EOF)
@@ -957,8 +957,8 @@ Private Function GetTranslationModuleCode(ByVal TranslationKey As String) As Str
     End If
 End Function
 
-Private Function sqlText(ByVal Value As String) As String
-    sqlText = "'" & Replace(Nz(Value, vbNullString), "'", "''") & "'"
+Private Function SqlText(ByVal Value As String) As String
+    SqlText = "'" & Replace(Nz(Value, vbNullString), "'", "''") & "'"
 End Function
 
 Private Function BuildMissingTranslationWhereClause( _
@@ -978,7 +978,7 @@ End Function
 
 Private Function BuildMissingTranslationValueWhereClause() As String
     BuildMissingTranslationValueWhereClause = _
-        "(" & FIELD_TRANSLATION_VALUE & " = " & sqlText(PLACEHOLDER_TRANSLATION_VALUE) & _
+        "(" & FIELD_TRANSLATION_VALUE & " = " & SqlText(PLACEHOLDER_TRANSLATION_VALUE) & _
         " OR " & FIELD_TRANSLATION_VALUE & " Is Null" & _
         " OR Trim(Nz([" & FIELD_TRANSLATION_VALUE & "], '')) = '')"
 End Function
@@ -1001,15 +1001,15 @@ Private Function BuildTranslationScopeWhereClause( _
         Case OBJECT_TYPE_FORM
             If LenB(normalizedObjectName) > 0 Then
                 BuildTranslationScopeWhereClause = "[" & FIELD_TRANSLATION_KEY & "] Like " & _
-                    sqlText("FORM." & normalizedObjectName & ".*")
+                    SqlText("FORM." & normalizedObjectName & ".*")
             Else
                 BuildTranslationScopeWhereClause = "[" & FIELD_TRANSLATION_KEY & "] Like " & _
-                    sqlText("FORM.*")
+                    SqlText("FORM.*")
             End If
 
         Case OBJECT_TYPE_REPORT
             BuildTranslationScopeWhereClause = "[" & FIELD_TRANSLATION_KEY & "] Like " & _
-                sqlText("REPORT.*")
+                SqlText("REPORT.*")
 
         Case Else
             BuildTranslationScopeWhereClause = vbNullString

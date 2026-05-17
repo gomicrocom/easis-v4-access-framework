@@ -19,7 +19,7 @@ Public Sub SeedTranslations()
     Dim db As DAO.Database
     Set db = CurrentDb
 
-    db.Execute "DELETE FROM tblFwTranslations", dbFailOnError
+    db.Execute "DELETE FROM fw_translation", dbFailOnError
 
     ' ===== EN =====
     InsertTranslation db, "EN", "MSG_REQUIRED_FIELDS_MISSING", "Please fill in all required fields.", True
@@ -63,11 +63,11 @@ Public Sub SeedTranslations()
     InsertTranslation db, "DE", "CUSTOMER", "Kunde", True
     InsertTranslation db, "DE", "TOTAL", "Total", True
 
-    MsgBox "tblFwTranslations wurde erfolgreich initialisiert.", vbInformation
+    MsgBox "fw_translation wurde erfolgreich initialisiert.", vbInformation
     Exit Sub
 
 ErrorHandler:
-    MsgBox "Fehler beim Initialisieren von tblFwTranslations: " & Err.description, vbExclamation
+    MsgBox "Fehler beim Initialisieren von fw_translation: " & Err.description, vbExclamation
 End Sub
 
 Private Sub InsertTranslation( _
@@ -79,7 +79,7 @@ Private Sub InsertTranslation( _
 
     Dim sqlStmt As String
 
-    sqlStmt = "INSERT INTO tblFwTranslations " & _
+    sqlStmt = "INSERT INTO fw_translation " & _
               "(LanguageCode, TranslationKey, TranslationValue, IsActive) " & _
               "VALUES (" & _
               "'" & EscapeSqlText(LanguageCode) & "', " & _
@@ -97,7 +97,7 @@ Public Sub SeedTagHelp()
     Dim db As DAO.Database
     Set db = CurrentDb
 
-    db.Execute "DELETE FROM tblFwTagHelp", dbFailOnError
+    db.Execute "DELETE FROM fw_tag_help", dbFailOnError
 
     InsertTagHelp db, "REQUIRED", "VALIDATION", "REQUIRED", _
         "Feld ist ein Pflichtfeld. Leere Werte sind nicht erlaubt.", _
@@ -195,11 +195,11 @@ Public Sub SeedTagHelp()
         "Soll vom Tag-Composer erhalten, aber nicht überschrieben werden.", _
         160, True
 
-    MsgBox "tblFwTagHelp wurde erfolgreich initialisiert.", vbInformation
+    MsgBox "fw_tag_help wurde erfolgreich initialisiert.", vbInformation
     Exit Sub
 
 ErrorHandler:
-    MsgBox "Fehler beim Initialisieren von tblFwTagHelp: " & Err.description, vbExclamation
+    MsgBox "Fehler beim Initialisieren von fw_tag_help: " & Err.description, vbExclamation
 End Sub
 
 Private Sub InsertTagHelp( _
@@ -215,7 +215,7 @@ Private Sub InsertTagHelp( _
 
     Dim sqlStmt As String
 
-    sqlStmt = "INSERT INTO tblFwTagHelp " & _
+    sqlStmt = "INSERT INTO fw_tag_help " & _
               "(TokenKey, Category, SyntaxText, DescriptionText, ExampleText, NotesText, SortOrder, IsActive) " & _
               "VALUES (" & _
               "'" & EscapeSqlText(TokenKey) & "', " & _

@@ -1072,7 +1072,7 @@ Private Function GetDisplayNameForRequiredControl(ByVal FormInstance As Access.F
     On Error GoTo SafeExit
 
     Dim associatedLabel As Control
-    Dim DisplayName As String
+    Dim displayName As String
 
     If ControlInstance Is Nothing Then
         GetDisplayNameForRequiredControl = "<unknown>"
@@ -1081,13 +1081,13 @@ Private Function GetDisplayNameForRequiredControl(ByVal FormInstance As Access.F
 
     Set associatedLabel = GetAssociatedLabel(FormInstance, ControlInstance)
     If Not associatedLabel Is Nothing Then
-        DisplayName = Trim$(CStr(associatedLabel.Caption))
-        If Right$(DisplayName, 1) = "*" Then
-            DisplayName = RTrim$(Left$(DisplayName, Len(DisplayName) - 1))
+        displayName = Trim$(CStr(associatedLabel.Caption))
+        If Right$(displayName, 1) = "*" Then
+            displayName = RTrim$(Left$(displayName, Len(displayName) - 1))
         End If
 
-        If LenB(DisplayName) > 0 Then
-            GetDisplayNameForRequiredControl = DisplayName
+        If LenB(displayName) > 0 Then
+            GetDisplayNameForRequiredControl = displayName
             Exit Function
         End If
     End If

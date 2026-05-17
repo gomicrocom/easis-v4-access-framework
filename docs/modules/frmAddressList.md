@@ -155,7 +155,7 @@ This keeps the form open for future extension without redesigning every list row
 
 Preferred table:
 
-- `tblAddressActions`
+- `fw_list_action`
 
 Fields:
 
@@ -180,7 +180,7 @@ Usage notes:
 
 ### Form Load
 
-- load active actions from `tblAddressActions`
+- load active actions from `fw_list_action`
 - default to current sort order
 - load address list
 
@@ -232,7 +232,7 @@ The action menu approach is preferred because it:
 
 ## Recommended Next Technical Steps
 
-- create `tblAddressActions`
+- create `fw_list_action`
 - seed initial actions
 - define the address list query with `AddressSearchText`
 - build `frmAddressList` as a continuous form

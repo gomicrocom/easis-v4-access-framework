@@ -10,7 +10,7 @@ Option Explicit
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFwTranslationRuntime"
-Private Const TABLE_FW_TRANSLATIONS As String = "tblFwTranslations"
+Private Const TABLE_FW_TRANSLATIONS As String = "fw_translation"
 Private Const FIELD_TRANSLATION_KEY As String = "TranslationKey"
 Private Const FIELD_LANGUAGE_CODE As String = "LanguageCode"
 Private Const FIELD_TRANSLATION_VALUE As String = "TranslationValue"
@@ -21,8 +21,8 @@ Private Const FALLBACK_LANGUAGE_CODE As String = "EN"
 Public Sub ApplyTranslations(ByVal TargetObject As Object)
     On Error GoTo ErrorHandler
 
-    Dim languageCode As String
-    Dim objectName As String
+    Dim LanguageCode As String
+    Dim ObjectName As String
     Dim objectKind As String
     Dim resolvedCount As Long
     Dim missingCount As Long
@@ -34,13 +34,13 @@ Public Sub ApplyTranslations(ByVal TargetObject As Object)
         Exit Sub
     End If
 
-    languageCode = GetCurrentLanguageCode()
-    objectName = GetTargetObjectName(TargetObject)
+    LanguageCode = GetCurrentLanguageCode()
+    ObjectName = GetTargetObjectName(TargetObject)
     objectKind = GetTargetObjectKind(TargetObject)
 
     rawCaption = GetCaptionValue(TargetObject)
     If HasTranslationPrefix(rawCaption) Then
-        translatedCaption = ResolveTranslation(rawCaption, languageCode)
+        translatedCaption = ResolveTranslation(rawCaption, LanguageCode)
         If StrComp(translatedCaption, rawCaption, vbBinaryCompare) <> 0 Then
             If SetCaptionValue(TargetObject, translatedCaption) Then
                 resolvedCount = resolvedCount + 1
@@ -57,7 +57,7 @@ Public Sub ApplyTranslations(ByVal TargetObject As Object)
             GoTo NextControl
         End If
 
-        translatedCaption = ResolveTranslation(rawCaption, languageCode)
+        translatedCaption = ResolveTranslation(rawCaption, LanguageCode)
         If StrComp(translatedCaption, rawCaption, vbBinaryCompare) <> 0 Then
             If SetCaptionValue(ctl, translatedCaption) Then
                 resolvedCount = resolvedCount + 1
@@ -70,7 +70,7 @@ NextControl:
     Next ctl
 
     modLoggingHandler.LogInfo MODULE_NAME & ".ApplyTranslations", _
-        "Translated " & objectKind & " '" & objectName & "' with " & _
+        "Translated " & objectKind & " '" & ObjectName & "' with " & _
         CStr(resolvedCount) & " resolved caption(s) and " & _
         CStr(missingCount) & " missing translation(s)."
     Exit Sub
@@ -86,7 +86,7 @@ Public Function ResolveTranslation(ByVal TranslationKey As String, Optional ByVa
     Dim originalValue As String
     Dim normalizedKey As String
     Dim normalizedLanguageCode As String
-    Dim baseLanguageCode As String
+    Dim BaseLanguageCode As String
     Dim translatedValue As String
 
     originalValue = NzString(TranslationKey)
@@ -116,10 +116,10 @@ Public Function ResolveTranslation(ByVal TranslationKey As String, Optional ByVa
         Exit Function
     End If
 
-    baseLanguageCode = BaseLanguageCode(normalizedLanguageCode)
-    If LenB(baseLanguageCode) > 0 Then
-        If StrComp(baseLanguageCode, normalizedLanguageCode, vbTextCompare) <> 0 Then
-            translatedValue = LookupTranslation(db, normalizedKey, baseLanguageCode)
+    BaseLanguageCode = GetBaseLanguageCode(normalizedLanguageCode)
+    If LenB(BaseLanguageCode) > 0 Then
+        If StrComp(BaseLanguageCode, normalizedLanguageCode, vbTextCompare) <> 0 Then
+            translatedValue = LookupTranslation(db, normalizedKey, BaseLanguageCode)
             If LenB(translatedValue) > 0 Then
                 ResolveTranslation = translatedValue
                 Exit Function
@@ -160,22 +160,24 @@ Private Function LookupTranslation( _
     ByVal db As DAO.Database, _
     ByVal TranslationKey As String, _
     ByVal LanguageCode As String) As String
+
     On Error GoTo ErrorHandler
 
     Dim rs As DAO.Recordset
-    Dim sqlText As String
+    Dim sqlStatement As String
 
     If db Is Nothing Then
         Exit Function
     End If
 
-    sqlText = "SELECT TOP 1 [" & FIELD_TRANSLATION_VALUE & "] " & _
-              "FROM [" & TABLE_FW_TRANSLATIONS & "] " & _
-              "WHERE [" & FIELD_TRANSLATION_KEY & "] = " & SqlText(TranslationKey) & " " & _
-              "AND [" & FIELD_LANGUAGE_CODE & "] = " & SqlText(LanguageCode) & " " & _
-              "AND Trim(Nz([" & FIELD_TRANSLATION_VALUE & "], '')) <> ''"
+    sqlStatement = "SELECT TOP 1 [" & FIELD_TRANSLATION_VALUE & "] " & _
+                   "FROM [" & TABLE_FW_TRANSLATIONS & "] " & _
+                   "WHERE [" & FIELD_TRANSLATION_KEY & "] = " & SqlText(TranslationKey) & " " & _
+                   "AND [" & FIELD_LANGUAGE_CODE & "] = " & SqlText(LanguageCode) & " " & _
+                   "AND Trim(Nz([" & FIELD_TRANSLATION_VALUE & "], '')) <> ''"
 
-    Set rs = db.OpenRecordset(sqlText, dbOpenSnapshot)
+    Set rs = db.OpenRecordset(sqlStatement, dbOpenSnapshot)
+
     If Not (rs.BOF And rs.EOF) Then
         LookupTranslation = NzString(rs.Fields(0).Value)
     End If
@@ -190,7 +192,6 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "LookupTranslation", Err
     Resume CleanExit
 End Function
-
 Private Function NormalizeTranslationKey(ByVal TranslationKey As String) As String
     TranslationKey = Trim$(NzString(TranslationKey))
 
@@ -223,7 +224,7 @@ Private Function NormalizeLanguageCode(ByVal LanguageCode As String) As String
     End If
 End Function
 
-Private Function BaseLanguageCode(ByVal LanguageCode As String) As String
+Private Function GetBaseLanguageCode(ByVal LanguageCode As String) As String
     Dim normalizedLanguageCode As String
     Dim separatorPosition As Long
 
@@ -231,9 +232,9 @@ Private Function BaseLanguageCode(ByVal LanguageCode As String) As String
     separatorPosition = InStr(1, normalizedLanguageCode, "-", vbBinaryCompare)
 
     If separatorPosition > 0 Then
-        BaseLanguageCode = Left$(normalizedLanguageCode, separatorPosition - 1)
+        GetBaseLanguageCode = Left$(normalizedLanguageCode, separatorPosition - 1)
     Else
-        BaseLanguageCode = normalizedLanguageCode
+        GetBaseLanguageCode = normalizedLanguageCode
     End If
 End Function
 
@@ -246,20 +247,20 @@ Private Function HasTranslationPrefix(ByVal CaptionValue As String) As Boolean
     HasTranslationPrefix = (StrComp(Left$(CaptionValue, Len(TR_PREFIX)), TR_PREFIX, vbTextCompare) = 0)
 End Function
 
-Private Function GetCaptionValue(ByVal Target As Object) As String
+Private Function GetCaptionValue(ByVal target As Object) As String
     On Error GoTo SafeExit
 
-    GetCaptionValue = NzString(Target.Properties("Caption").Value)
+    GetCaptionValue = NzString(target.Properties("Caption").Value)
     Exit Function
 
 SafeExit:
     GetCaptionValue = vbNullString
 End Function
 
-Private Function SetCaptionValue(ByVal Target As Object, ByVal CaptionValue As String) As Boolean
+Private Function SetCaptionValue(ByVal target As Object, ByVal CaptionValue As String) As Boolean
     On Error GoTo SafeExit
 
-    Target.Properties("Caption").Value = CaptionValue
+    target.Properties("Caption").Value = CaptionValue
     SetCaptionValue = True
     Exit Function
 
@@ -295,7 +296,7 @@ End Function
 Private Function TableExists(ByVal db As DAO.Database, ByVal TableName As String) As Boolean
     On Error GoTo ErrorHandler
 
-    Dim tdf As DAO.TableDef
+    Dim tdf As DAO.tableDef
 
     If db Is Nothing Then
         Exit Function

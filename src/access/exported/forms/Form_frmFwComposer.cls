@@ -100,8 +100,8 @@ Private Sub cmdApplyTranslationTags_Click()
 
     Dim ObjectType As String
     Dim ObjectName As String
-    Dim appliedCount As Long
-    Dim skippedCount As Long
+    Dim AppliedCount As Long
+    Dim SkippedCount As Long
 
     ObjectType = Nz(Me!cboObjectType.Value, vbNullString)
     ObjectName = Nz(Me!lstObjects.Value, vbNullString)
@@ -117,12 +117,12 @@ Private Sub cmdApplyTranslationTags_Click()
         Exit Sub
     End If
 
-    modFwComposerService.ApplyTranslationTagsToObject ObjectType, ObjectName, appliedCount, skippedCount
+    modFwComposerService.ApplyTranslationTagsToObject ObjectType, ObjectName, AppliedCount, SkippedCount
 
     modLoggingHandler.LogInfo MODULE_NAME & ".cmdApplyTranslationTags_Click", _
         "Applied TR captions for " & ObjectType & "." & ObjectName & _
-        " | applied=" & CStr(appliedCount) & _
-        " | skipped=" & CStr(skippedCount) & "."
+        " | applied=" & CStr(AppliedCount) & _
+        " | skipped=" & CStr(SkippedCount) & "."
 
     MsgBox "TR-Tags wurden erfolgreich angewendet.", vbInformation, MODULE_NAME
     Exit Sub
@@ -251,7 +251,7 @@ Private Sub ApplyTranslationFilter(Optional ByVal TranslationKey As String = vbN
     Dim filterExpression As String
 
     If LenB(Trim$(TranslationKey)) > 0 Then
-        filterExpression = "[TranslationKey] = " & sqlText(TranslationKey)
+        filterExpression = "[TranslationKey] = " & SqlText(TranslationKey)
     Else
         filterExpression = vbNullString
     End If
@@ -304,7 +304,7 @@ Private Function BuildCurrentContextFilter() As String
     TranslationKey = Trim$(Nz(Me!txtSuggestedTranslationKey.Value, vbNullString))
     If LenB(TranslationKey) > 0 Then
         If Left$(TranslationKey, 1) <> "(" Then
-            BuildCurrentContextFilter = "[TranslationKey] = " & sqlText(TranslationKey)
+            BuildCurrentContextFilter = "[TranslationKey] = " & SqlText(TranslationKey)
             Exit Function
         End If
     End If
@@ -315,13 +315,13 @@ Private Function BuildCurrentContextFilter() As String
     Select Case ObjectType
         Case modFwComposerService.OBJECT_TYPE_FORM
             If LenB(ObjectName) > 0 Then
-                BuildCurrentContextFilter = "[TranslationKey] Like " & sqlText("FORM." & ObjectName & ".*")
+                BuildCurrentContextFilter = "[TranslationKey] Like " & SqlText("FORM." & ObjectName & ".*")
             Else
-                BuildCurrentContextFilter = "[TranslationKey] Like " & sqlText("FORM.*")
+                BuildCurrentContextFilter = "[TranslationKey] Like " & SqlText("FORM.*")
             End If
 
         Case modFwComposerService.OBJECT_TYPE_REPORT
-            BuildCurrentContextFilter = "[TranslationKey] Like " & sqlText("REPORT.*")
+            BuildCurrentContextFilter = "[TranslationKey] Like " & SqlText("REPORT.*")
 
         Case Else
             BuildCurrentContextFilter = vbNullString
@@ -330,7 +330,7 @@ End Function
 
 Private Function BuildMissingTranslationFilter() As String
     BuildMissingTranslationFilter = _
-        "([TranslationValue] = " & sqlText(PLACEHOLDER_TRANSLATION_VALUE) & _
+        "([TranslationValue] = " & SqlText(PLACEHOLDER_TRANSLATION_VALUE) & _
         " OR [TranslationValue] Is Null" & _
         " OR Trim(Nz([TranslationValue], '')) = '')"
 End Function
@@ -381,8 +381,8 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
-Private Function sqlText(ByVal Value As String) As String
-    sqlText = "'" & Replace(Nz(Value, vbNullString), "'", "''") & "'"
+Private Function SqlText(ByVal Value As String) As String
+    SqlText = "'" & Replace(Nz(Value, vbNullString), "'", "''") & "'"
 End Function
 
 

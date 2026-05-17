@@ -458,7 +458,7 @@ Private Sub UpsertTenantParameter(ByVal db As DAO.Database, ByVal ParamKey As St
 
     hasTenantCodeField = FieldExists(db, TBL_TEN_PARAMETER, "tenant_code")
 
-    sql = "SELECT * FROM [" & TBL_TEN_PARAMETER & "] WHERE [param_key]=" & sqlText(UCase$(Trim$(ParamKey))) & ";"
+    sql = "SELECT * FROM [" & TBL_TEN_PARAMETER & "] WHERE [param_key]=" & SqlText(UCase$(Trim$(ParamKey))) & ";"
     Set rs = db.OpenRecordset(sql, dbOpenDynaset)
 
     If rs.BOF And rs.EOF Then
@@ -545,11 +545,11 @@ Private Sub ExecSql(ByVal db As DAO.Database, ByVal sql As String)
     db.Execute sql, dbFailOnError
 End Sub
 
-Private Function sqlText(ByVal Value As Variant) As String
+Private Function SqlText(ByVal Value As Variant) As String
     If IsNull(Value) Then
-        sqlText = "NULL"
+        SqlText = "NULL"
     Else
-        sqlText = "'" & Replace(CStr(Value), "'", "''") & "'"
+        SqlText = "'" & Replace(CStr(Value), "'", "''") & "'"
     End If
 End Function
 

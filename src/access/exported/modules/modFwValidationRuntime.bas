@@ -73,7 +73,7 @@ Public Function ValidateControl(ByVal ctl As Control) As Boolean
         Exit Function
     End If
 
-    If tagTokens.Count = 0 Then
+    If tagTokens.count = 0 Then
         Exit Function
     End If
 
@@ -234,29 +234,29 @@ End Function
 Private Function GetControlDisplayName(ByVal ctl As Control) As String
     On Error GoTo ErrorHandler
 
-    Dim captionValue As String
+    Dim CaptionValue As String
 
     If ctl Is Nothing Then
         Exit Function
     End If
 
     If ctl.ControlType = acCheckBox Then
-        captionValue = GetCaptionPropertySafely(ctl)
-        If LenB(captionValue) > 0 Then
-            GetControlDisplayName = ResolveDisplayCaption(captionValue)
+        CaptionValue = GetCaptionPropertySafely(ctl)
+        If LenB(CaptionValue) > 0 Then
+            GetControlDisplayName = ResolveDisplayCaption(CaptionValue)
             Exit Function
         End If
     End If
 
-    captionValue = GetAttachedLabelCaption(ctl)
-    If LenB(captionValue) > 0 Then
-        GetControlDisplayName = ResolveDisplayCaption(captionValue)
+    CaptionValue = GetAttachedLabelCaption(ctl)
+    If LenB(CaptionValue) > 0 Then
+        GetControlDisplayName = ResolveDisplayCaption(CaptionValue)
         Exit Function
     End If
 
-    captionValue = GetCaptionPropertySafely(ctl)
-    If LenB(captionValue) > 0 Then
-        GetControlDisplayName = ResolveDisplayCaption(captionValue)
+    CaptionValue = GetCaptionPropertySafely(ctl)
+    If LenB(CaptionValue) > 0 Then
+        GetControlDisplayName = ResolveDisplayCaption(CaptionValue)
         Exit Function
     End If
 
@@ -289,7 +289,7 @@ Private Function GetAttachedLabelCaption(ByVal ctl As Control) As String
         Exit Function
     End If
 
-    If ctl.Controls.Count > 0 Then
+    If ctl.Controls.count > 0 Then
         GetAttachedLabelCaption = GetCaptionPropertySafely(ctl.Controls(0))
     End If
     Exit Function
@@ -356,26 +356,26 @@ Private Function IsMissingValue(ByVal ctl As Control, ByVal rawValue As Variant)
 End Function
 
 Private Function TryParseLong( _
-    ByVal TextValue As String, _
+    ByVal textValue As String, _
     ByRef ParsedValue As Long, _
     ByVal ControlName As String, _
     ByVal TagName As String) As Boolean
     On Error GoTo ErrorHandler
 
-    TextValue = Trim$(NzString(TextValue))
-    If LenB(TextValue) = 0 Then
+    textValue = Trim$(NzString(textValue))
+    If LenB(textValue) = 0 Then
         modLoggingHandler.LogWarning MODULE_NAME & ".TryParseLong", _
             "Invalid tag format for " & ControlName & ": " & TagName & " requires a numeric value."
         Exit Function
     End If
 
-    If Not IsNumeric(TextValue) Then
+    If Not IsNumeric(textValue) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".TryParseLong", _
-            "Invalid tag format for " & ControlName & ": " & TagName & "='" & TextValue & "'."
+            "Invalid tag format for " & ControlName & ": " & TagName & "='" & textValue & "'."
         Exit Function
     End If
 
-    ParsedValue = CLng(TextValue)
+    ParsedValue = CLng(textValue)
     TryParseLong = True
     Exit Function
 

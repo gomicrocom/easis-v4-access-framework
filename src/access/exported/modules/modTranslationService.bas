@@ -11,7 +11,7 @@ Option Explicit
 
 Private Const MODULE_NAME As String = "modTranslationService"
 Private Const FALLBACK_LANGUAGE As String = "EN"
-Private Const TABLE_FW_TRANSLATIONS As String = "tblFwTranslations"
+Private Const TABLE_FW_TRANSLATIONS As String = "fw_translation"
 Private Const FIELD_TRANSLATION_KEY As String = "TranslationKey"
 Private Const FIELD_LANGUAGE_CODE As String = "LanguageCode"
 Private Const FIELD_TRANSLATION_VALUE As String = "TranslationValue"
@@ -233,7 +233,7 @@ Private Function LoadTranslationsFromTable() As Long
 
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
-    Dim sqlText As String
+    Dim SqlText As String
     Dim hasIsActiveField As Boolean
 
     If Not TranslationTableExists(TABLE_FW_TRANSLATIONS) Then
@@ -248,8 +248,8 @@ Private Function LoadTranslationsFromTable() As Long
             "Current database could not be resolved."
     End If
 
-    sqlText = "SELECT * FROM [" & TABLE_FW_TRANSLATIONS & "];"
-    Set rs = db.OpenRecordset(sqlText, dbOpenSnapshot)
+    SqlText = "SELECT * FROM [" & TABLE_FW_TRANSLATIONS & "];"
+    Set rs = db.OpenRecordset(SqlText, dbOpenSnapshot)
 
     If rs.EOF Then
         modLoggingHandler.LogWarning MODULE_NAME & ".LoadTranslationsFromTable", _

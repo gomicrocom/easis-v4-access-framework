@@ -21,13 +21,13 @@ This document focuses on the tenant backend structures now actively used by Basi
 
 Reference tables provide controlled reusable business values for the tenant application layer.
 
-- `refPaymentTerms`
+- `ref_payment_term`
   - payment term definitions used by orders and documents
-- `refVatCodes`
+- `ref_vat_code`
   - VAT code and VAT-rate definitions
-- `refUnits`
+- `ref_unit`
   - quantity and unit definitions
-- `tblListActions`
+- `fw_list_action`
   - configurable list navigation and action source for business UI flows
 
 ### Master Tables
@@ -36,18 +36,18 @@ Master tables hold reusable business entities.
 
 - `tblAddresses`
   - address and business partner master data
-- `tblProductGroups`
+- `art_product_group`
   - product and service grouping definitions
-- `tblArticles`
+- `art_article`
   - article master data used in order entry
 
 ### Transaction Tables
 
 Transaction tables represent operational business flow.
 
-- `tblOrders`
+- `ord_order`
   - order header records
-- `tblOrderLines`
+- `ord_order_line`
   - order position records
 
 ## Primary Keys
@@ -57,14 +57,14 @@ The exact physical field names may evolve by implementation detail, but the inte
 | Table | Primary Key |
 |---|---|
 | `tblAddresses` | `AddressID` |
-| `tblProductGroups` | `ProductGroupID` |
-| `tblArticles` | `ArticleID` |
-| `tblOrders` | `OrderID` |
-| `tblOrderLines` | `OrderLineID` |
-| `refPaymentTerms` | `PaymentTermID` or stable business code |
-| `refVatCodes` | `VatCodeID` or stable VAT code |
-| `refUnits` | `UnitID` or stable unit code |
-| `tblListActions` | `ActionId` |
+| `art_product_group` | `ProductGroupID` |
+| `art_article` | `ArticleID` |
+| `ord_order` | `OrderID` |
+| `ord_order_line` | `OrderLineID` |
+| `ref_payment_term` | `PaymentTermID` or stable business code |
+| `ref_vat_code` | `VatCodeID` or stable VAT code |
+| `ref_unit` | `UnitID` or stable unit code |
+| `fw_list_action` | `ActionId` |
 
 If a table uses a business code as a technical primary identifier, that code must remain stable and unique within the tenant backend.
 
@@ -74,14 +74,14 @@ The following business relationships are expected to be central:
 
 | Parent | Child | Purpose |
 |---|---|---|
-| `tblProductGroups` | `tblArticles` | article classification |
-| `tblAddresses` | `tblOrders` | customer / invoice / delivery linkage |
-| `tblOrders` | `tblOrderLines` | order header to line items |
-| `tblArticles` | `tblOrderLines` | line-level article reference |
-| `refUnits` | `tblArticles` / `tblOrderLines` | unit standardization |
-| `refVatCodes` | `tblArticles` / `tblOrderLines` | VAT assignment |
-| `refPaymentTerms` | `tblOrders` | commercial payment handling |
-| `tblListActions` | `frm<Entity>List` | configurable navigation/action menu |
+| `art_product_group` | `art_article` | article classification |
+| `tblAddresses` | `ord_order` | customer / invoice / delivery linkage |
+| `ord_order` | `ord_order_line` | order header to line items |
+| `art_article` | `ord_order_line` | line-level article reference |
+| `ref_unit` | `art_article` / `ord_order_line` | unit standardization |
+| `ref_vat_code` | `art_article` / `ord_order_line` | VAT assignment |
+| `ref_payment_term` | `ord_order` | commercial payment handling |
+| `fw_list_action` | `frm<Entity>List` | configurable navigation/action menu |
 
 Typical tenant-business relationships include:
 
@@ -145,35 +145,35 @@ The business layer interacts with the framework as follows:
 
 Stores customer and address master data used in business documents and order processing.
 
-### `tblProductGroups`
+### `art_product_group`
 
 Stores the grouping structure used to classify articles and support article organization.
 
-### `tblArticles`
+### `art_article`
 
 Stores sellable products and services, including business defaults such as unit and VAT context.
 
-### `tblOrders`
+### `ord_order`
 
 Stores the commercial order header, customer linkage, status, date information, and later document-generation context.
 
-### `tblOrderLines`
+### `ord_order_line`
 
 Stores quantity, article, pricing, and VAT-relevant transactional detail for each order position.
 
-### `refPaymentTerms`
+### `ref_payment_term`
 
 Stores reusable payment-term definitions used for order and document communication.
 
-### `refVatCodes`
+### `ref_vat_code`
 
 Stores VAT reference definitions used in calculations and document presentation.
 
-### `refUnits`
+### `ref_unit`
 
 Stores standardized unit definitions used by articles and order lines.
 
-### `tblListActions`
+### `fw_list_action`
 
 Stores configurable action definitions for list-form driven navigation and workflow menus.
 

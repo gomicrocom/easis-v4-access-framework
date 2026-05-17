@@ -18,7 +18,7 @@ Option Explicit
 '===============================================================================
 
 Private Const MODULE_NAME As String = "Form_frmFwTranslationList"
-Private Const TABLE_FW_TRANSLATIONS As String = "tblFwTranslations"
+Private Const TABLE_FW_TRANSLATIONS As String = "fw_translation"
 
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
@@ -35,7 +35,7 @@ Private Sub Form_Load()
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "Form_Load", Err
-    MsgBox "Fehler beim Initialisieren der Übersetzungsliste: " & Err.description, vbExclamation, MODULE_NAME
+    MsgBox "Fehler beim Initialisieren der ?bersetzungsliste: " & Err.description, vbExclamation, MODULE_NAME
 End Sub
 
 Private Sub Form_Current()
@@ -92,17 +92,17 @@ Private Sub Form_BeforeUpdate(Cancel As Integer)
     duplicateCount = DCount( _
         "*", _
         TABLE_FW_TRANSLATIONS, _
-        "[TranslationKey] = " & sqlText(TranslationKey) & _
-        " AND [LanguageCode] = " & sqlText(LanguageCode))
+        "[TranslationKey] = " & SqlText(TranslationKey) & _
+        " AND [LanguageCode] = " & SqlText(LanguageCode))
 
     If Me.NewRecord Then
         If duplicateCount > 0 Then
-            MsgBox "Übersetzung für diese Sprache existiert bereits.", vbExclamation, MODULE_NAME
+            MsgBox "?bersetzung f?r diese Sprache existiert bereits.", vbExclamation, MODULE_NAME
             Cancel = True
             Exit Sub
         End If
     ElseIf duplicateCount > 1 Then
-        MsgBox "Übersetzung für diese Sprache existiert bereits.", vbExclamation, MODULE_NAME
+        MsgBox "?bersetzung f?r diese Sprache existiert bereits.", vbExclamation, MODULE_NAME
         Cancel = True
         Exit Sub
     End If
@@ -111,7 +111,7 @@ Private Sub Form_BeforeUpdate(Cancel As Integer)
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "Form_BeforeUpdate", Err
-    MsgBox "Fehler beim Prüfen der Übersetzung: " & Err.description, vbExclamation, MODULE_NAME
+    MsgBox "Fehler beim Pr?fen der ?bersetzung: " & Err.description, vbExclamation, MODULE_NAME
     Cancel = True
 End Sub
 
@@ -136,8 +136,10 @@ Private Sub EnsureCurrentTranslationKeyDefault()
     End If
 End Sub
 
-Private Function sqlText(ByVal Value As String) As String
-    sqlText = "'" & Replace(Nz(Value, vbNullString), "'", "''") & "'"
+Private Function SqlText(ByVal Value As String) As String
+    SqlText = "'" & Replace(Nz(Value, vbNullString), "'", "''") & "'"
 End Function
+
+
 
 

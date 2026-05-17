@@ -29,20 +29,20 @@ Detailed table definitions are intentionally deferred until the framework servic
 ## Framework Tables (Frontend or Backend)
 
 ### Translations
-- tblFwTranslations
+- fw_translation
   - key
   - language
   - value
   - active flag
 
 ### Help System
-- tblFwTagHelp
+- fw_tag_help
   - token
   - description
   - example
   - category
 
 ### Tag Composer (temporary)
-- tblTmpTagComposer
+- fw_tmp_tag_composer
   - ControlName
   - TagValue

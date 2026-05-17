@@ -49,224 +49,224 @@ ErrorHandler:
 End Sub
 
 Private Sub CreateRefPaymentTerms(ByVal db As DAO.Database)
-    Dim sqlText As String
+    Dim SqlText As String
 
-    sqlText = ""
-    sqlText = sqlText & "CREATE TABLE refPaymentTerms ("
-    sqlText = sqlText & "PaymentTermId AUTOINCREMENT CONSTRAINT pk_refPaymentTerms PRIMARY KEY, "
-    sqlText = sqlText & "PaymentTermCode TEXT(30) NOT NULL, "
-    sqlText = sqlText & "PaymentTermName TEXT(100), "
-    sqlText = sqlText & "DueDays LONG, "
-    sqlText = sqlText & "CashDiscountDays LONG, "
-    sqlText = sqlText & "CashDiscountPercent DOUBLE, "
-    sqlText = sqlText & "IsActive YESNO, "
-    sqlText = sqlText & "SortOrder LONG"
-    sqlText = sqlText & ");"
+    SqlText = ""
+    SqlText = SqlText & "CREATE TABLE ref_payment_term ("
+    SqlText = SqlText & "PaymentTermId AUTOINCREMENT CONSTRAINT pk_ref_payment_term PRIMARY KEY, "
+    SqlText = SqlText & "PaymentTermCode TEXT(30) NOT NULL, "
+    SqlText = SqlText & "PaymentTermName TEXT(100), "
+    SqlText = SqlText & "DueDays LONG, "
+    SqlText = SqlText & "CashDiscountDays LONG, "
+    SqlText = SqlText & "CashDiscountPercent DOUBLE, "
+    SqlText = SqlText & "IsActive YESNO, "
+    SqlText = SqlText & "SortOrder LONG"
+    SqlText = SqlText & ");"
 
-    ExecuteDdl db, sqlText
-    ExecuteDdl db, "CREATE UNIQUE INDEX ux_refPaymentTerms_Code ON refPaymentTerms (PaymentTermCode);"
+    ExecuteDdl db, SqlText
+    ExecuteDdl db, "CREATE UNIQUE INDEX ux_ref_payment_term_Code ON ref_payment_term (PaymentTermCode);"
 End Sub
 
 Private Sub CreateRefVatCodes(ByVal db As DAO.Database)
-    Dim sqlText As String
+    Dim SqlText As String
 
-    sqlText = ""
-    sqlText = sqlText & "CREATE TABLE refVatCodes ("
-    sqlText = sqlText & "VatCode TEXT(20) CONSTRAINT pk_refVatCodes PRIMARY KEY, "
-    sqlText = sqlText & "VatName TEXT(100), "
-    sqlText = sqlText & "VatRate DOUBLE, "
-    sqlText = sqlText & "CountryCode TEXT(2), "
-    sqlText = sqlText & "IsActive YESNO, "
-    sqlText = sqlText & "ValidFrom DATETIME, "
-    sqlText = sqlText & "ValidTo DATETIME"
-    sqlText = sqlText & ");"
+    SqlText = ""
+    SqlText = SqlText & "CREATE TABLE ref_vat_code ("
+    SqlText = SqlText & "VatCode TEXT(20) CONSTRAINT pk_ref_vat_code PRIMARY KEY, "
+    SqlText = SqlText & "VatName TEXT(100), "
+    SqlText = SqlText & "VatRate DOUBLE, "
+    SqlText = SqlText & "CountryCode TEXT(2), "
+    SqlText = SqlText & "IsActive YESNO, "
+    SqlText = SqlText & "ValidFrom DATETIME, "
+    SqlText = SqlText & "ValidTo DATETIME"
+    SqlText = SqlText & ");"
 
-    ExecuteDdl db, sqlText
+    ExecuteDdl db, SqlText
 End Sub
 
 Private Sub CreateRefUnits(ByVal db As DAO.Database)
-    Dim sqlText As String
+    Dim SqlText As String
 
-    sqlText = ""
-    sqlText = sqlText & "CREATE TABLE refUnits ("
-    sqlText = sqlText & "UnitCode TEXT(20) CONSTRAINT pk_refUnits PRIMARY KEY, "
-    sqlText = sqlText & "UnitName TEXT(100), "
-    sqlText = sqlText & "SortOrder LONG, "
-    sqlText = sqlText & "IsActive YESNO"
-    sqlText = sqlText & ");"
+    SqlText = ""
+    SqlText = SqlText & "CREATE TABLE ref_unit ("
+    SqlText = SqlText & "UnitCode TEXT(20) CONSTRAINT pk_ref_unit PRIMARY KEY, "
+    SqlText = SqlText & "UnitName TEXT(100), "
+    SqlText = SqlText & "SortOrder LONG, "
+    SqlText = SqlText & "IsActive YESNO"
+    SqlText = SqlText & ");"
 
-    ExecuteDdl db, sqlText
+    ExecuteDdl db, SqlText
 End Sub
 
 Private Sub CreateTblAddresses(ByVal db As DAO.Database)
-    Dim sqlText As String
+    Dim SqlText As String
 
-    sqlText = ""
-    sqlText = sqlText & "CREATE TABLE tblAddresses ("
-    sqlText = sqlText & "AddressId AUTOINCREMENT CONSTRAINT pk_tblAddresses PRIMARY KEY, "
-    sqlText = sqlText & "AddressType TEXT(30), "
-    sqlText = sqlText & "CompanyName TEXT(150), "
-    sqlText = sqlText & "FirstName TEXT(80), "
-    sqlText = sqlText & "LastName TEXT(80), "
-    sqlText = sqlText & "Street TEXT(120), "
-    sqlText = sqlText & "HouseNo TEXT(20), "
-    sqlText = sqlText & "PostalCode TEXT(20), "
-    sqlText = sqlText & "City TEXT(100), "
-    sqlText = sqlText & "CountryCode TEXT(2), "
-    sqlText = sqlText & "Email TEXT(150), "
-    sqlText = sqlText & "Phone TEXT(50), "
-    sqlText = sqlText & "VatNo TEXT(50), "
-    sqlText = sqlText & "LanguageCode TEXT(10), "
-    sqlText = sqlText & "CurrencyCode TEXT(3), "
-    sqlText = sqlText & "PaymentTermId LONG, "
-    sqlText = sqlText & "IsActive YESNO, "
-    sqlText = sqlText & "CreatedAt DATETIME, "
-    sqlText = sqlText & "CreatedBy TEXT(50), "
-    sqlText = sqlText & "UpdatedAt DATETIME, "
-    sqlText = sqlText & "UpdatedBy TEXT(50)"
-    sqlText = sqlText & ");"
+    SqlText = ""
+    SqlText = SqlText & "CREATE TABLE tblAddresses ("
+    SqlText = SqlText & "AddressId AUTOINCREMENT CONSTRAINT pk_tblAddresses PRIMARY KEY, "
+    SqlText = SqlText & "AddressType TEXT(30), "
+    SqlText = SqlText & "CompanyName TEXT(150), "
+    SqlText = SqlText & "FirstName TEXT(80), "
+    SqlText = SqlText & "LastName TEXT(80), "
+    SqlText = SqlText & "Street TEXT(120), "
+    SqlText = SqlText & "HouseNo TEXT(20), "
+    SqlText = SqlText & "PostalCode TEXT(20), "
+    SqlText = SqlText & "City TEXT(100), "
+    SqlText = SqlText & "CountryCode TEXT(2), "
+    SqlText = SqlText & "Email TEXT(150), "
+    SqlText = SqlText & "Phone TEXT(50), "
+    SqlText = SqlText & "VatNo TEXT(50), "
+    SqlText = SqlText & "LanguageCode TEXT(10), "
+    SqlText = SqlText & "CurrencyCode TEXT(3), "
+    SqlText = SqlText & "PaymentTermId LONG, "
+    SqlText = SqlText & "IsActive YESNO, "
+    SqlText = SqlText & "CreatedAt DATETIME, "
+    SqlText = SqlText & "CreatedBy TEXT(50), "
+    SqlText = SqlText & "UpdatedAt DATETIME, "
+    SqlText = SqlText & "UpdatedBy TEXT(50)"
+    SqlText = SqlText & ");"
 
-    ExecuteDdl db, sqlText
+    ExecuteDdl db, SqlText
     ExecuteDdl db, "CREATE INDEX ix_tblAddresses_AddressType ON tblAddresses (AddressType);"
     ExecuteDdl db, "CREATE INDEX ix_tblAddresses_CompanyName ON tblAddresses (CompanyName);"
     ExecuteDdl db, "CREATE INDEX ix_tblAddresses_PaymentTermId ON tblAddresses (PaymentTermId);"
 End Sub
 
 Private Sub CreateTblProductGroups(ByVal db As DAO.Database)
-    Dim sqlText As String
+    Dim SqlText As String
 
-    sqlText = ""
-    sqlText = sqlText & "CREATE TABLE tblProductGroups ("
-    sqlText = sqlText & "ProductGroupId AUTOINCREMENT CONSTRAINT pk_tblProductGroups PRIMARY KEY, "
-    sqlText = sqlText & "ProductGroupCode TEXT(30) NOT NULL, "
-    sqlText = sqlText & "ProductGroupName TEXT(100), "
-    sqlText = sqlText & "RevenueAccount TEXT(20), "
-    sqlText = sqlText & "ExpenseAccount TEXT(20), "
-    sqlText = sqlText & "VatCode TEXT(20), "
-    sqlText = sqlText & "IsActive YESNO, "
-    sqlText = sqlText & "SortOrder LONG, "
-    sqlText = sqlText & "CreatedAt DATETIME, "
-    sqlText = sqlText & "CreatedBy TEXT(50), "
-    sqlText = sqlText & "UpdatedAt DATETIME, "
-    sqlText = sqlText & "UpdatedBy TEXT(50)"
-    sqlText = sqlText & ");"
+    SqlText = ""
+    SqlText = SqlText & "CREATE TABLE art_product_group ("
+    SqlText = SqlText & "ProductGroupId AUTOINCREMENT CONSTRAINT pk_art_product_group PRIMARY KEY, "
+    SqlText = SqlText & "ProductGroupCode TEXT(30) NOT NULL, "
+    SqlText = SqlText & "ProductGroupName TEXT(100), "
+    SqlText = SqlText & "RevenueAccount TEXT(20), "
+    SqlText = SqlText & "ExpenseAccount TEXT(20), "
+    SqlText = SqlText & "VatCode TEXT(20), "
+    SqlText = SqlText & "IsActive YESNO, "
+    SqlText = SqlText & "SortOrder LONG, "
+    SqlText = SqlText & "CreatedAt DATETIME, "
+    SqlText = SqlText & "CreatedBy TEXT(50), "
+    SqlText = SqlText & "UpdatedAt DATETIME, "
+    SqlText = SqlText & "UpdatedBy TEXT(50)"
+    SqlText = SqlText & ");"
 
-    ExecuteDdl db, sqlText
-    ExecuteDdl db, "CREATE UNIQUE INDEX ux_tblProductGroups_Code ON tblProductGroups (ProductGroupCode);"
-    ExecuteDdl db, "CREATE INDEX ix_tblProductGroups_VatCode ON tblProductGroups (VatCode);"
+    ExecuteDdl db, SqlText
+    ExecuteDdl db, "CREATE UNIQUE INDEX ux_art_product_group_Code ON art_product_group (ProductGroupCode);"
+    ExecuteDdl db, "CREATE INDEX ix_art_product_group_VatCode ON art_product_group (VatCode);"
 End Sub
 
 Private Sub CreateTblArticles(ByVal db As DAO.Database)
-    Dim sqlText As String
+    Dim SqlText As String
 
-    sqlText = ""
-    sqlText = sqlText & "CREATE TABLE tblArticles ("
-    sqlText = sqlText & "ArticleId AUTOINCREMENT CONSTRAINT pk_tblArticles PRIMARY KEY, "
-    sqlText = sqlText & "ArticleNo TEXT(50) NOT NULL, "
-    sqlText = sqlText & "ArticleName TEXT(150), "
-    sqlText = sqlText & "Description LONGTEXT, "
-    sqlText = sqlText & "ProductGroupId LONG, "
-    sqlText = sqlText & "UnitCode TEXT(20), "
-    sqlText = sqlText & "SalesPrice CURRENCY, "
-    sqlText = sqlText & "PurchasePrice CURRENCY, "
-    sqlText = sqlText & "CurrencyCode TEXT(3), "
-    sqlText = sqlText & "VatCode TEXT(20), "
-    sqlText = sqlText & "IsStockArticle YESNO, "
-    sqlText = sqlText & "IsServiceArticle YESNO, "
-    sqlText = sqlText & "IsActive YESNO, "
-    sqlText = sqlText & "CreatedAt DATETIME, "
-    sqlText = sqlText & "CreatedBy TEXT(50), "
-    sqlText = sqlText & "UpdatedAt DATETIME, "
-    sqlText = sqlText & "UpdatedBy TEXT(50)"
-    sqlText = sqlText & ");"
+    SqlText = ""
+    SqlText = SqlText & "CREATE TABLE art_article ("
+    SqlText = SqlText & "ArticleId AUTOINCREMENT CONSTRAINT pk_art_article PRIMARY KEY, "
+    SqlText = SqlText & "ArticleNo TEXT(50) NOT NULL, "
+    SqlText = SqlText & "ArticleName TEXT(150), "
+    SqlText = SqlText & "Description LONGTEXT, "
+    SqlText = SqlText & "ProductGroupId LONG, "
+    SqlText = SqlText & "UnitCode TEXT(20), "
+    SqlText = SqlText & "SalesPrice CURRENCY, "
+    SqlText = SqlText & "PurchasePrice CURRENCY, "
+    SqlText = SqlText & "CurrencyCode TEXT(3), "
+    SqlText = SqlText & "VatCode TEXT(20), "
+    SqlText = SqlText & "IsStockArticle YESNO, "
+    SqlText = SqlText & "IsServiceArticle YESNO, "
+    SqlText = SqlText & "IsActive YESNO, "
+    SqlText = SqlText & "CreatedAt DATETIME, "
+    SqlText = SqlText & "CreatedBy TEXT(50), "
+    SqlText = SqlText & "UpdatedAt DATETIME, "
+    SqlText = SqlText & "UpdatedBy TEXT(50)"
+    SqlText = SqlText & ");"
 
-    ExecuteDdl db, sqlText
-    ExecuteDdl db, "CREATE UNIQUE INDEX ux_tblArticles_ArticleNo ON tblArticles (ArticleNo);"
-    ExecuteDdl db, "CREATE INDEX ix_tblArticles_ProductGroupId ON tblArticles (ProductGroupId);"
-    ExecuteDdl db, "CREATE INDEX ix_tblArticles_UnitCode ON tblArticles (UnitCode);"
-    ExecuteDdl db, "CREATE INDEX ix_tblArticles_VatCode ON tblArticles (VatCode);"
+    ExecuteDdl db, SqlText
+    ExecuteDdl db, "CREATE UNIQUE INDEX ux_art_article_ArticleNo ON art_article (ArticleNo);"
+    ExecuteDdl db, "CREATE INDEX ix_art_article_ProductGroupId ON art_article (ProductGroupId);"
+    ExecuteDdl db, "CREATE INDEX ix_art_article_UnitCode ON art_article (UnitCode);"
+    ExecuteDdl db, "CREATE INDEX ix_art_article_VatCode ON art_article (VatCode);"
 End Sub
 
 Private Sub CreateTblOrders(ByVal db As DAO.Database)
-    Dim sqlText As String
+    Dim SqlText As String
 
-    sqlText = ""
-    sqlText = sqlText & "CREATE TABLE tblOrders ("
-    sqlText = sqlText & "OrderId AUTOINCREMENT CONSTRAINT pk_tblOrders PRIMARY KEY, "
-    sqlText = sqlText & "OrderNo TEXT(50), "
-    sqlText = sqlText & "OrderType TEXT(30), "
-    sqlText = sqlText & "OrderStatus TEXT(30), "
-    sqlText = sqlText & "CustomerAddressId LONG, "
-    sqlText = sqlText & "OrderDate DATETIME, "
-    sqlText = sqlText & "DeliveryDate DATETIME, "
-    sqlText = sqlText & "ValidUntil DATETIME, "
-    sqlText = sqlText & "ReferenceText TEXT(150), "
-    sqlText = sqlText & "LanguageCode TEXT(10), "
-    sqlText = sqlText & "CurrencyCode TEXT(3), "
-    sqlText = sqlText & "PaymentTermId LONG, "
-    sqlText = sqlText & "SubtotalNet CURRENCY, "
-    sqlText = sqlText & "TotalDiscount CURRENCY, "
-    sqlText = sqlText & "TotalSurcharge CURRENCY, "
-    sqlText = sqlText & "TotalVat CURRENCY, "
-    sqlText = sqlText & "TotalGross CURRENCY, "
-    sqlText = sqlText & "Notes LONGTEXT, "
-    sqlText = sqlText & "InternalNotes LONGTEXT, "
-    sqlText = sqlText & "CreatedAt DATETIME, "
-    sqlText = sqlText & "CreatedBy TEXT(50), "
-    sqlText = sqlText & "UpdatedAt DATETIME, "
-    sqlText = sqlText & "UpdatedBy TEXT(50)"
-    sqlText = sqlText & ");"
+    SqlText = ""
+    SqlText = SqlText & "CREATE TABLE ord_order ("
+    SqlText = SqlText & "OrderId AUTOINCREMENT CONSTRAINT pk_ord_order PRIMARY KEY, "
+    SqlText = SqlText & "OrderNo TEXT(50), "
+    SqlText = SqlText & "OrderType TEXT(30), "
+    SqlText = SqlText & "OrderStatus TEXT(30), "
+    SqlText = SqlText & "CustomerAddressId LONG, "
+    SqlText = SqlText & "OrderDate DATETIME, "
+    SqlText = SqlText & "DeliveryDate DATETIME, "
+    SqlText = SqlText & "ValidUntil DATETIME, "
+    SqlText = SqlText & "ReferenceText TEXT(150), "
+    SqlText = SqlText & "LanguageCode TEXT(10), "
+    SqlText = SqlText & "CurrencyCode TEXT(3), "
+    SqlText = SqlText & "PaymentTermId LONG, "
+    SqlText = SqlText & "SubtotalNet CURRENCY, "
+    SqlText = SqlText & "TotalDiscount CURRENCY, "
+    SqlText = SqlText & "TotalSurcharge CURRENCY, "
+    SqlText = SqlText & "TotalVat CURRENCY, "
+    SqlText = SqlText & "TotalGross CURRENCY, "
+    SqlText = SqlText & "Notes LONGTEXT, "
+    SqlText = SqlText & "InternalNotes LONGTEXT, "
+    SqlText = SqlText & "CreatedAt DATETIME, "
+    SqlText = SqlText & "CreatedBy TEXT(50), "
+    SqlText = SqlText & "UpdatedAt DATETIME, "
+    SqlText = SqlText & "UpdatedBy TEXT(50)"
+    SqlText = SqlText & ");"
 
-    ExecuteDdl db, sqlText
-    ExecuteDdl db, "CREATE UNIQUE INDEX ux_tblOrders_OrderNo ON tblOrders (OrderNo);"
-    ExecuteDdl db, "CREATE INDEX ix_tblOrders_CustomerAddressId ON tblOrders (CustomerAddressId);"
-    ExecuteDdl db, "CREATE INDEX ix_tblOrders_OrderDate ON tblOrders (OrderDate);"
-    ExecuteDdl db, "CREATE INDEX ix_tblOrders_OrderStatus ON tblOrders (OrderStatus);"
-    ExecuteDdl db, "CREATE INDEX ix_tblOrders_PaymentTermId ON tblOrders (PaymentTermId);"
+    ExecuteDdl db, SqlText
+    ExecuteDdl db, "CREATE UNIQUE INDEX ux_ord_order_OrderNo ON ord_order (OrderNo);"
+    ExecuteDdl db, "CREATE INDEX ix_ord_order_CustomerAddressId ON ord_order (CustomerAddressId);"
+    ExecuteDdl db, "CREATE INDEX ix_ord_order_OrderDate ON ord_order (OrderDate);"
+    ExecuteDdl db, "CREATE INDEX ix_ord_order_OrderStatus ON ord_order (OrderStatus);"
+    ExecuteDdl db, "CREATE INDEX ix_ord_order_PaymentTermId ON ord_order (PaymentTermId);"
 End Sub
 
 Private Sub CreateTblOrderLines(ByVal db As DAO.Database)
-    Dim sqlText As String
+    Dim SqlText As String
 
-    sqlText = ""
-    sqlText = sqlText & "CREATE TABLE tblOrderLines ("
-    sqlText = sqlText & "OrderLineId AUTOINCREMENT CONSTRAINT pk_tblOrderLines PRIMARY KEY, "
-    sqlText = sqlText & "OrderId LONG NOT NULL, "
-    sqlText = sqlText & "LineNo LONG, "
-    sqlText = sqlText & "ArticleId LONG, "
-    sqlText = sqlText & "LineType TEXT(30), "
-    sqlText = sqlText & "Description LONGTEXT, "
-    sqlText = sqlText & "Quantity DOUBLE, "
-    sqlText = sqlText & "UnitCode TEXT(20), "
-    sqlText = sqlText & "UnitPrice CURRENCY, "
-    sqlText = sqlText & "DiscountPercent DOUBLE, "
-    sqlText = sqlText & "DiscountAmount CURRENCY, "
-    sqlText = sqlText & "SurchargePercent DOUBLE, "
-    sqlText = sqlText & "SurchargeAmount CURRENCY, "
-    sqlText = sqlText & "VatCode TEXT(20), "
-    sqlText = sqlText & "VatRate DOUBLE, "
-    sqlText = sqlText & "LineNetAmount CURRENCY, "
-    sqlText = sqlText & "LineVatAmount CURRENCY, "
-    sqlText = sqlText & "LineGrossAmount CURRENCY, "
-    sqlText = sqlText & "SortOrder LONG, "
-    sqlText = sqlText & "CreatedAt DATETIME, "
-    sqlText = sqlText & "CreatedBy TEXT(50), "
-    sqlText = sqlText & "UpdatedAt DATETIME, "
-    sqlText = sqlText & "UpdatedBy TEXT(50)"
-    sqlText = sqlText & ");"
+    SqlText = ""
+    SqlText = SqlText & "CREATE TABLE ord_order_line ("
+    SqlText = SqlText & "OrderLineId AUTOINCREMENT CONSTRAINT pk_ord_order_line PRIMARY KEY, "
+    SqlText = SqlText & "OrderId LONG NOT NULL, "
+    SqlText = SqlText & "LineNo LONG, "
+    SqlText = SqlText & "ArticleId LONG, "
+    SqlText = SqlText & "LineType TEXT(30), "
+    SqlText = SqlText & "Description LONGTEXT, "
+    SqlText = SqlText & "Quantity DOUBLE, "
+    SqlText = SqlText & "UnitCode TEXT(20), "
+    SqlText = SqlText & "UnitPrice CURRENCY, "
+    SqlText = SqlText & "DiscountPercent DOUBLE, "
+    SqlText = SqlText & "DiscountAmount CURRENCY, "
+    SqlText = SqlText & "SurchargePercent DOUBLE, "
+    SqlText = SqlText & "SurchargeAmount CURRENCY, "
+    SqlText = SqlText & "VatCode TEXT(20), "
+    SqlText = SqlText & "VatRate DOUBLE, "
+    SqlText = SqlText & "LineNetAmount CURRENCY, "
+    SqlText = SqlText & "LineVatAmount CURRENCY, "
+    SqlText = SqlText & "LineGrossAmount CURRENCY, "
+    SqlText = SqlText & "SortOrder LONG, "
+    SqlText = SqlText & "CreatedAt DATETIME, "
+    SqlText = SqlText & "CreatedBy TEXT(50), "
+    SqlText = SqlText & "UpdatedAt DATETIME, "
+    SqlText = SqlText & "UpdatedBy TEXT(50)"
+    SqlText = SqlText & ");"
 
-    ExecuteDdl db, sqlText
-    ExecuteDdl db, "CREATE INDEX ix_tblOrderLines_OrderId ON tblOrderLines (OrderId);"
-    ExecuteDdl db, "CREATE INDEX ix_tblOrderLines_ArticleId ON tblOrderLines (ArticleId);"
-    ExecuteDdl db, "CREATE INDEX ix_tblOrderLines_LineNo ON tblOrderLines (LineNo);"
-    ExecuteDdl db, "CREATE INDEX ix_tblOrderLines_VatCode ON tblOrderLines (VatCode);"
+    ExecuteDdl db, SqlText
+    ExecuteDdl db, "CREATE INDEX ix_ord_order_line_OrderId ON ord_order_line (OrderId);"
+    ExecuteDdl db, "CREATE INDEX ix_ord_order_line_ArticleId ON ord_order_line (ArticleId);"
+    ExecuteDdl db, "CREATE INDEX ix_ord_order_line_LineNo ON ord_order_line (LineNo);"
+    ExecuteDdl db, "CREATE INDEX ix_ord_order_line_VatCode ON ord_order_line (VatCode);"
 End Sub
 
-Private Sub ExecuteDdl(ByVal db As DAO.Database, ByVal sqlText As String)
+Private Sub ExecuteDdl(ByVal db As DAO.Database, ByVal SqlText As String)
     On Error GoTo ErrorHandler
 
-    db.Execute sqlText, dbFailOnError
-    Debug.Print "OK: " & sqlText
+    db.Execute SqlText, dbFailOnError
+    Debug.Print "OK: " & SqlText
     Exit Sub
 
 ErrorHandler:
@@ -277,7 +277,7 @@ ErrorHandler:
 
         Case Else
             Debug.Print "ERROR: " & Err.Number & " - " & Err.description
-            Debug.Print sqlText
+            Debug.Print SqlText
             Err.Raise Err.Number, MODULE_NAME & ".ExecuteDdl", Err.description
     End Select
 End Sub

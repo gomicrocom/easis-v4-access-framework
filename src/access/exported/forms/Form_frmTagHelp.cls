@@ -15,22 +15,22 @@ Private Sub Form_Load()
 End Sub
 
 Private Sub LoadHelpList(Optional ByVal FilterText As String = vbNullString)
-    Dim sqlText As String
+    Dim SqlText As String
 
-    sqlText = "SELECT TokenKey, SyntaxText " & _
-              "FROM tblFwTagHelp " & _
+    SqlText = "SELECT TokenKey, SyntaxText " & _
+              "FROM fw_tag_help " & _
               "WHERE IsActive = True "
 
     If Len(Trim$(FilterText)) > 0 Then
-        sqlText = sqlText & _
+        SqlText = SqlText & _
                   "AND (TokenKey LIKE '*" & Replace(FilterText, "'", "''") & "*' " & _
                   "OR SyntaxText LIKE '*" & Replace(FilterText, "'", "''") & "*' " & _
                   "OR Category LIKE '*" & Replace(FilterText, "'", "''") & "*') "
     End If
 
-    sqlText = sqlText & "ORDER BY SortOrder, TokenKey;"
+    SqlText = SqlText & "ORDER BY SortOrder, TokenKey;"
 
-    Me.lstHelpTokens.RowSource = sqlText
+    Me.lstHelpTokens.RowSource = SqlText
     Me.lstHelpTokens.Requery
 End Sub
 
@@ -42,17 +42,17 @@ Private Sub LoadHelpDetail(ByVal TokenKey As String)
     On Error GoTo ErrorHandler
 
     Dim rs As DAO.Recordset
-    Dim sqlText As String
+    Dim SqlText As String
 
     ClearDetailFields
 
     If Len(Trim$(TokenKey)) = 0 Then Exit Sub
 
-    sqlText = "SELECT * FROM tblFwTagHelp " & _
+    SqlText = "SELECT * FROM fw_tag_help " & _
               "WHERE IsActive = True " & _
               "AND TokenKey = '" & Replace(TokenKey, "'", "''") & "';"
 
-    Set rs = CurrentDb.OpenRecordset(sqlText, dbOpenSnapshot)
+    Set rs = CurrentDb.OpenRecordset(SqlText, dbOpenSnapshot)
 
     If Not rs.EOF Then
         Me.txtTokenKey = Nz(rs!TokenKey, "")
@@ -90,4 +90,6 @@ End Sub
 Private Sub cmdClose_Click()
     DoCmd.Close acForm, Me.Name
 End Sub
+
+
 

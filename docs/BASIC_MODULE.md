@@ -63,13 +63,13 @@ The current repository state supports the first business phase through:
 BasicModule v1 database scope is now explicitly active in the tenant backend through:
 
 - `tblAddresses`
-- `tblProductGroups`
-- `tblArticles`
-- `tblOrders`
-- `tblOrderLines`
-- `refPaymentTerms`
-- `refVatCodes`
-- `refUnits`
+- `art_product_group`
+- `art_article`
+- `ord_order`
+- `ord_order_line`
+- `ref_payment_term`
+- `ref_vat_code`
+- `ref_unit`
 
 At this stage, the technical framework and the first business entities already interact, but the end-to-end business UI is still being expanded.
 

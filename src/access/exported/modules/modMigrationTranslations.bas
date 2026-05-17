@@ -5,14 +5,14 @@ Option Explicit
 '===============================================================================
 ' Module    : modMigrationTranslations
 ' Purpose   : Seeds missing standard report and document translations into
-'             tblFwTranslations without overwriting existing values.
+'             fw_translation without overwriting existing values.
 ' Author    : Codex
 ' Version   : 0.1.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modMigrationTranslations"
 
-Private Const TABLE_FW_TRANSLATIONS As String = "tblFwTranslations"
+Private Const TABLE_FW_TRANSLATIONS As String = "fw_translation"
 Private Const FIELD_TRANSLATION_KEY As String = "TranslationKey"
 Private Const FIELD_LANGUAGE_CODE As String = "LanguageCode"
 Private Const FIELD_TRANSLATION_VALUE As String = "TranslationValue"
@@ -246,8 +246,8 @@ Private Function TranslationExists( _
 
     sql = "SELECT [" & FIELD_TRANSLATION_KEY & "] " & _
           "FROM [" & TABLE_FW_TRANSLATIONS & "] " & _
-          "WHERE [" & FIELD_TRANSLATION_KEY & "] = " & sqlText(TranslationKey) & _
-          " AND [" & FIELD_LANGUAGE_CODE & "] = " & sqlText(LanguageCode) & ";"
+          "WHERE [" & FIELD_TRANSLATION_KEY & "] = " & SqlText(TranslationKey) & _
+          " AND [" & FIELD_LANGUAGE_CODE & "] = " & SqlText(LanguageCode) & ";"
 
     Set rs = db.OpenRecordset(sql, dbOpenSnapshot)
     TranslationExists = Not (rs.BOF And rs.EOF)
@@ -320,10 +320,10 @@ Private Sub SetFieldIfExists(ByVal rs As DAO.Recordset, ByVal FieldName As Strin
     End If
 End Sub
 
-Private Function sqlText(ByVal Value As Variant) As String
+Private Function SqlText(ByVal Value As Variant) As String
     If IsNull(Value) Then
-        sqlText = "NULL"
+        SqlText = "NULL"
     Else
-        sqlText = "'" & Replace(CStr(Value), "'", "''") & "'"
+        SqlText = "'" & Replace(CStr(Value), "'", "''") & "'"
     End If
 End Function

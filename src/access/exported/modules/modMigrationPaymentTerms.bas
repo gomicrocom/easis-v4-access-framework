@@ -253,10 +253,10 @@ Private Sub EnsurePaymentTerm( _
     sql = sql & FIELD_CREATED_BY & ", "
     sql = sql & FIELD_UPDATED_AT & ", "
     sql = sql & FIELD_UPDATED_BY & ") VALUES ("
-    sql = sql & sqlText(PaymentTermCode) & ", "
-    sql = sql & sqlText(LanguageCode) & ", "
-    sql = sql & sqlText(Title) & ", "
-    sql = sql & sqlText(TermsText) & ", "
+    sql = sql & SqlText(PaymentTermCode) & ", "
+    sql = sql & SqlText(LanguageCode) & ", "
+    sql = sql & SqlText(Title) & ", "
+    sql = sql & SqlText(TermsText) & ", "
     sql = sql & SqlNumber(DaysNet) & ", "
     sql = sql & SqlNumber(DiscountDays) & ", "
     sql = sql & SqlNumber(DiscountPercent) & ", "
@@ -264,9 +264,9 @@ Private Sub EnsurePaymentTerm( _
     sql = sql & SqlBool(IsActive) & ", "
     sql = sql & SqlNumber(SortOrder) & ", "
     sql = sql & SqlDate(Now()) & ", "
-    sql = sql & sqlText(DEFAULT_CREATED_BY) & ", "
+    sql = sql & SqlText(DEFAULT_CREATED_BY) & ", "
     sql = sql & SqlDate(Now()) & ", "
-    sql = sql & sqlText(DEFAULT_UPDATED_BY) & ")"
+    sql = sql & SqlText(DEFAULT_UPDATED_BY) & ")"
 
     ExecSql db, sql
     Exit Sub
@@ -297,8 +297,8 @@ Private Function PaymentTermExists( _
 
     sql = "SELECT " & FIELD_PAYMENT_TERM_ID & _
           " FROM " & TABLE_TEN_PAYMENT_TERM & _
-          " WHERE " & FIELD_PAYMENT_TERM_CODE & " = " & sqlText(PaymentTermCode) & _
-          " AND " & FIELD_LANGUAGE_CODE & " = " & sqlText(LanguageCode)
+          " WHERE " & FIELD_PAYMENT_TERM_CODE & " = " & SqlText(PaymentTermCode) & _
+          " AND " & FIELD_LANGUAGE_CODE & " = " & SqlText(LanguageCode)
 
     Set rs = db.OpenRecordset(sql, dbOpenSnapshot)
     PaymentTermExists = Not (rs.BOF And rs.EOF)
@@ -495,11 +495,11 @@ Private Sub ExecSql(ByVal db As DAO.Database, ByVal sql As String)
     db.Execute sql, dbFailOnError
 End Sub
 
-Private Function sqlText(ByVal v As Variant) As String
+Private Function SqlText(ByVal v As Variant) As String
     If IsNull(v) Then
-        sqlText = "NULL"
+        SqlText = "NULL"
     Else
-        sqlText = "'" & Replace(CStr(v), "'", "''") & "'"
+        SqlText = "'" & Replace(CStr(v), "'", "''") & "'"
     End If
 End Function
 

@@ -106,19 +106,19 @@ BasicModule v1 currently centers around the following tenant-backend tables:
 
 - `tblAddresses`
   - address master data for customers, contacts, invoice addresses, and delivery addresses
-- `tblProductGroups`
+- `art_product_group`
   - logical grouping and classification of sellable items
-- `tblArticles`
+- `art_article`
   - article and service master data used in order lines
-- `tblOrders`
+- `ord_order`
   - order header data including customer, status, dates, totals, and downstream document context
-- `tblOrderLines`
+- `ord_order_line`
   - transactional line items belonging to an order
-- `refPaymentTerms`
+- `ref_payment_term`
   - tenant-side payment-term reference data used by orders and document generation
-- `refVatCodes`
+- `ref_vat_code`
   - VAT code definitions used for pricing, tax logic, and document totals
-- `refUnits`
+- `ref_unit`
   - allowed quantity and unit definitions for articles and order lines
 
 ### Order Workflow
@@ -211,22 +211,22 @@ The naming convention is not cosmetic only. It defines expected workflow roles:
 
 The framework is therefore designed around reusable workflow-oriented UI patterns instead of isolated one-off forms.
 
-### Relationship to `tblListActions`
+### Relationship to `fw_list_action`
 
 Dynamic navigation from list forms should be driven through:
 
-- `tblListActions`
+- `fw_list_action`
 
 This means:
 
-- `tblListActions` stores `TargetForm` values
+- `fw_list_action` stores `TargetForm` values
 - naming consistency is important for generic navigation handlers
 - future runtime handlers may dynamically open target forms based on naming conventions and action metadata
 
 The preferred pattern is:
 
 - `frm<Entity>List` as the navigation host
-- `tblListActions` as the configurable action source
+- `fw_list_action` as the configurable action source
 - `frm<Entity>Detail` and related forms as targets
 
 This keeps business navigation extensible without adding many hard-coded per-row UI actions.
@@ -239,22 +239,22 @@ This keeps business navigation extensible without adding many hard-coded per-row
 
 - `tblAddresses`
   - stores business partner and address master records
-- `tblProductGroups`
+- `art_product_group`
   - stores product or service grouping definitions
-- `tblArticles`
+- `art_article`
   - stores article master records including pricing and unit defaults
-- `refPaymentTerms`
+- `ref_payment_term`
   - stores reusable payment-term definitions for the business module
-- `refVatCodes`
+- `ref_vat_code`
   - stores VAT code and VAT-rate related reference definitions
-- `refUnits`
+- `ref_unit`
   - stores reusable units for quantities and article definitions
 
 ### Transaction Scope
 
-- `tblOrders`
+- `ord_order`
   - stores order headers and commercial context
-- `tblOrderLines`
+- `ord_order_line`
   - stores order positions and line-level commercial detail
 
 ### Business Document Direction
@@ -319,7 +319,7 @@ Functions:
 Features:
 - placeholder support `{0}`, `{1}`
 - multi-language (EN / DE)
-- table-driven (`tblFwTranslations`)
+- table-driven (`fw_translation`)
 
 ---
 
@@ -331,7 +331,7 @@ Form:
 Features:
 - visual editing of Tag strings
 - multi-control editing
-- temporary storage via `tblTmpTagComposer`
+- temporary storage via `fw_tmp_tag_composer`
 - preserves `TR:*` tags
 - prevents syntax errors
 
