@@ -14,7 +14,7 @@ Option Explicit
 ' Module    : Form_frmPostalCodeSelect
 ' Purpose   : Modal selection dialog for ambiguous postal-code matches.
 ' Author    : Codex
-' Version   : 0.1.0
+' Version   : 0.1.1
 '===============================================================================
 
 Private Const MODULE_NAME As String = "Form_frmPostalCodeSelect"
@@ -116,9 +116,7 @@ Private Function BuildRowSource() As String
     lookupMode = UCase$(Trim$(GetOpenArgValue("lookup_mode")))
 
     sqlStatement = "SELECT postal_code_id, country_code, postal_code, place_name, " & _
-                   "Nz(state_name, '') AS state_name, " & _
-                   "Nz(province_name, '') AS province_name, " & _
-                   "Nz(community_name, '') AS community_name " & _
+                   "state_name, province_name, community_name " & _
                    "FROM ref_postal_code " & _
                    "WHERE "
 

@@ -15,7 +15,7 @@ Option Explicit
 ' Purpose   : Address detail maintenance with runtime translations, validation,
 '             and postal reference lookups.
 ' Author    : Codex
-' Version   : 0.5.0
+' Version   : 0.6.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "Form_frmAddressDetail"
@@ -120,6 +120,9 @@ Private Sub ConfigureReferenceCombos()
     On Error GoTo ErrorHandler
 
     ConfigureAddressTypeCombo
+    ConfigureSalutationCombo
+    ConfigureAddressingModeCombo
+    ConfigurePreferredNameControl
     ConfigureCountryCombo
     ConfigureLanguageCombo
     ConfigureCityCombo
@@ -127,6 +130,23 @@ Private Sub ConfigureReferenceCombos()
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ConfigureReferenceCombos", Err
+    Err.Raise Err.Number, Err.Source, Err.description
+End Sub
+
+Private Sub ConfigurePreferredNameControl()
+    On Error GoTo ErrorHandler
+
+    If Not HasControl("txtPreferredName") Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".ConfigurePreferredNameControl", _
+            "Control txtPreferredName not found."
+        Exit Sub
+    End If
+
+    Me!txtPreferredName.ControlSource = "preferred_name"
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ConfigurePreferredNameControl", Err
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
@@ -143,19 +163,7 @@ Private Sub ConfigureAddressTypeCombo()
     End If
 
     currentLanguageCode = modFwTranslationRuntime.GetCurrentLanguageCode()
-
-    sqlStatement = ""
-    sqlStatement = sqlStatement & "SELECT "
-    sqlStatement = sqlStatement & "a.address_type_code, "
-    sqlStatement = sqlStatement & "IIf(t.translation_value Is Null, "
-    sqlStatement = sqlStatement & "a.address_type_code, "
-    sqlStatement = sqlStatement & "Left(t.translation_value, 255)) AS display_text "
-    sqlStatement = sqlStatement & "FROM ref_address_type AS a "
-    sqlStatement = sqlStatement & "LEFT JOIN fw_translation AS t "
-    sqlStatement = sqlStatement & "ON a.translation_key = t.translation_key "
-    sqlStatement = sqlStatement & "WHERE a.is_active = True "
-    sqlStatement = sqlStatement & "AND t.language_code = " & SqlText(currentLanguageCode) & " "
-    sqlStatement = sqlStatement & "ORDER BY a.sort_order, a.address_type_code;"
+    sqlStatement = modFwTranslationRuntime.BuildTranslatedReferenceRowSource("ref_address_type", "address_type_code", currentLanguageCode)
     
     With Me!cboAddressType
         .ControlSource = "address_type_code"
@@ -171,6 +179,70 @@ Private Sub ConfigureAddressTypeCombo()
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ConfigureAddressTypeCombo", Err
+    Err.Raise Err.Number, Err.Source, Err.description
+End Sub
+
+Private Sub ConfigureSalutationCombo()
+    On Error GoTo ErrorHandler
+
+    Dim currentLanguageCode As String
+    Dim sqlStatement As String
+
+    If Not HasControl("cboSalutation") Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".ConfigureSalutationCombo", _
+            "Control cboSalutation not found."
+        Exit Sub
+    End If
+
+    currentLanguageCode = modFwTranslationRuntime.GetCurrentLanguageCode()
+    sqlStatement = modFwTranslationRuntime.BuildTranslatedReferenceRowSource("ref_salutation", "salutation_code", currentLanguageCode)
+
+    With Me!cboSalutation
+        .ControlSource = "salutation_code"
+        .RowSourceType = "Table/Query"
+        .RowSource = sqlStatement
+        .BoundColumn = 1
+        .ColumnCount = 2
+        .ColumnWidths = "0cm;4cm"
+        .LimitToList = True
+        .Requery
+    End With
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ConfigureSalutationCombo", Err
+    Err.Raise Err.Number, Err.Source, Err.description
+End Sub
+
+Private Sub ConfigureAddressingModeCombo()
+    On Error GoTo ErrorHandler
+
+    Dim currentLanguageCode As String
+    Dim sqlStatement As String
+
+    If Not HasControl("cboAddressingMode") Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".ConfigureAddressingModeCombo", _
+            "Control cboAddressingMode not found."
+        Exit Sub
+    End If
+
+    currentLanguageCode = modFwTranslationRuntime.GetCurrentLanguageCode()
+    sqlStatement = modFwTranslationRuntime.BuildTranslatedReferenceRowSource("ref_addressing_mode", "addressing_mode_code", currentLanguageCode)
+
+    With Me!cboAddressingMode
+        .ControlSource = "addressing_mode_code"
+        .RowSourceType = "Table/Query"
+        .RowSource = sqlStatement
+        .BoundColumn = 1
+        .ColumnCount = 2
+        .ColumnWidths = "0cm;4cm"
+        .LimitToList = True
+        .Requery
+    End With
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ConfigureAddressingModeCombo", Err
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 

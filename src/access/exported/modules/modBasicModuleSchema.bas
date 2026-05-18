@@ -6,7 +6,7 @@ Option Explicit
 ' Module    : modBasicModuleSchema
 ' Purpose   : Creates BasicModule v1 tables for addresses, articles and orders.
 ' Author    : Codex
-' Version   : 0.1.2
+' Version   : 0.1.4
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modBasicModuleSchema"
@@ -26,6 +26,9 @@ Public Sub CreateBasicModuleTables(Optional ByVal BackendPath As String = vbNull
     CreateRefVatCodes db
     CreateRefUnits db
     CreateRefAddressType db
+    CreateRefSalutation db
+    CreateRefAddressingMode db
+    CreateRefContactType db
 
     CreateTblAddresses db
     CreateTblProductGroups db
@@ -55,6 +58,60 @@ Private Sub CreateRefAddressType(ByVal db As DAO.Database)
     sqlStatement = ""
     sqlStatement = sqlStatement & "CREATE TABLE ref_address_type ("
     sqlStatement = sqlStatement & "address_type_code TEXT(50) CONSTRAINT pk_ref_address_type PRIMARY KEY, "
+    sqlStatement = sqlStatement & "translation_key TEXT(100), "
+    sqlStatement = sqlStatement & "sort_order LONG, "
+    sqlStatement = sqlStatement & "is_active YESNO, "
+    sqlStatement = sqlStatement & "created_at DATETIME, "
+    sqlStatement = sqlStatement & "created_by TEXT(50), "
+    sqlStatement = sqlStatement & "updated_at DATETIME, "
+    sqlStatement = sqlStatement & "updated_by TEXT(50)"
+    sqlStatement = sqlStatement & ");"
+
+    ExecuteDdl db, sqlStatement
+End Sub
+
+Private Sub CreateRefSalutation(ByVal db As DAO.Database)
+    Dim sqlStatement As String
+
+    sqlStatement = ""
+    sqlStatement = sqlStatement & "CREATE TABLE ref_salutation ("
+    sqlStatement = sqlStatement & "salutation_code TEXT(30) CONSTRAINT pk_ref_salutation PRIMARY KEY, "
+    sqlStatement = sqlStatement & "translation_key TEXT(100), "
+    sqlStatement = sqlStatement & "sort_order LONG, "
+    sqlStatement = sqlStatement & "is_active YESNO, "
+    sqlStatement = sqlStatement & "created_at DATETIME, "
+    sqlStatement = sqlStatement & "created_by TEXT(50), "
+    sqlStatement = sqlStatement & "updated_at DATETIME, "
+    sqlStatement = sqlStatement & "updated_by TEXT(50)"
+    sqlStatement = sqlStatement & ");"
+
+    ExecuteDdl db, sqlStatement
+End Sub
+
+Private Sub CreateRefAddressingMode(ByVal db As DAO.Database)
+    Dim sqlStatement As String
+
+    sqlStatement = ""
+    sqlStatement = sqlStatement & "CREATE TABLE ref_addressing_mode ("
+    sqlStatement = sqlStatement & "addressing_mode_code TEXT(30) CONSTRAINT pk_ref_addressing_mode PRIMARY KEY, "
+    sqlStatement = sqlStatement & "translation_key TEXT(100), "
+    sqlStatement = sqlStatement & "sort_order LONG, "
+    sqlStatement = sqlStatement & "is_active YESNO, "
+    sqlStatement = sqlStatement & "created_at DATETIME, "
+    sqlStatement = sqlStatement & "created_by TEXT(50), "
+    sqlStatement = sqlStatement & "updated_at DATETIME, "
+    sqlStatement = sqlStatement & "updated_by TEXT(50)"
+    sqlStatement = sqlStatement & ");"
+
+    ExecuteDdl db, sqlStatement
+End Sub
+
+Private Sub CreateRefContactType(ByVal db As DAO.Database)
+    Dim sqlStatement As String
+
+    sqlStatement = ""
+    sqlStatement = sqlStatement & "CREATE TABLE ref_contact_type ("
+    sqlStatement = sqlStatement & "contact_type_code TEXT(30) CONSTRAINT pk_ref_contact_type PRIMARY KEY, "
     sqlStatement = sqlStatement & "translation_key TEXT(100), "
     sqlStatement = sqlStatement & "sort_order LONG, "
     sqlStatement = sqlStatement & "is_active YESNO, "

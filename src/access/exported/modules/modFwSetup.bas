@@ -7,7 +7,7 @@ Option Explicit
 ' Purpose   : Provides initialization and seeding routines for framework data
 '             such as translations, tag help definitions, and demo content.
 ' Author    : Codex
-' Version   : 1.1.0
+' Version   : 1.3.0
 ' Notes     : Safe to re-run. Existing data will be replaced.
 '===============================================================================
 
@@ -64,6 +64,9 @@ Public Sub SeedTranslations()
     InsertTranslation db, "DE", "TOTAL", "Total", True
 
     InsertAddressTypeTranslations db
+    InsertSalutationTranslations db
+    InsertAddressingModeTranslations db
+    InsertContactTypeTranslations db
 
     MsgBox "fw_translation wurde erfolgreich initialisiert.", vbInformation
     Exit Sub
@@ -96,6 +99,60 @@ Public Sub SeedAddressTypeReference()
 
 ErrorHandler:
     MsgBox "Fehler beim Initialisieren von ref_address_type: " & Err.description, vbExclamation, MODULE_NAME
+End Sub
+
+Public Sub SeedAddressPersonalizationReference()
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Set db = CurrentDb
+
+    db.Execute "DELETE FROM ref_salutation", dbFailOnError
+    db.Execute "DELETE FROM ref_addressing_mode", dbFailOnError
+    db.Execute "DELETE FROM fw_translation WHERE translation_key Like 'SALUTATION.*'", dbFailOnError
+    db.Execute "DELETE FROM fw_translation WHERE translation_key Like 'ADDRESSING_MODE.*'", dbFailOnError
+
+    InsertSalutation db, "MR", "SALUTATION.MR", 10, True
+    InsertSalutation db, "MS", "SALUTATION.MS", 20, True
+    InsertSalutation db, "COMPANY", "SALUTATION.COMPANY", 30, True
+    InsertSalutation db, "NEUTRAL", "SALUTATION.NEUTRAL", 90, True
+
+    InsertAddressingMode db, "FORMAL", "ADDRESSING_MODE.FORMAL", 10, True
+    InsertAddressingMode db, "INFORMAL", "ADDRESSING_MODE.INFORMAL", 20, True
+
+    InsertSalutationTranslations db
+    InsertAddressingModeTranslations db
+
+    MsgBox "ref_salutation, ref_addressing_mode und Personalisierungs-Uebersetzungen wurden erfolgreich initialisiert.", vbInformation, MODULE_NAME
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Fehler beim Initialisieren der Personalisierungs-Referenzen: " & Err.description, vbExclamation, MODULE_NAME
+End Sub
+
+Public Sub SeedContactTypeReference()
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Set db = CurrentDb
+
+    db.Execute "DELETE FROM ref_contact_type", dbFailOnError
+    db.Execute "DELETE FROM fw_translation WHERE translation_key Like 'CONTACT_TYPE.*'", dbFailOnError
+
+    InsertContactType db, "EMAIL", "CONTACT_TYPE.EMAIL", 10, True
+    InsertContactType db, "PHONE", "CONTACT_TYPE.PHONE", 20, True
+    InsertContactType db, "MOBILE", "CONTACT_TYPE.MOBILE", 30, True
+    InsertContactType db, "WEBSITE", "CONTACT_TYPE.WEBSITE", 40, True
+    InsertContactType db, "FAX", "CONTACT_TYPE.FAX", 50, True
+    InsertContactType db, "OTHER", "CONTACT_TYPE.OTHER", 90, True
+
+    InsertContactTypeTranslations db
+
+    MsgBox "ref_contact_type und CONTACT_TYPE-Uebersetzungen wurden erfolgreich initialisiert.", vbInformation, MODULE_NAME
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Fehler beim Initialisieren von ref_contact_type: " & Err.description, vbExclamation, MODULE_NAME
 End Sub
 
 Private Sub InsertTranslation( _
@@ -131,6 +188,69 @@ Private Sub InsertAddressType( _
                    "(address_type_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
                    "'" & EscapeSqlText(addressTypeCode) & "', " & _
+                   "'" & EscapeSqlText(TranslationKey) & "', " & _
+                   CStr(SortOrder) & ", " & _
+                   IIf(IsActive, "True", "False") & ", " & _
+                   "Now(), 'SYSTEM', Now(), 'SYSTEM')"
+
+    db.Execute sqlStatement, dbFailOnError
+End Sub
+
+Private Sub InsertSalutation( _
+    ByVal db As DAO.Database, _
+    ByVal salutationCode As String, _
+    ByVal TranslationKey As String, _
+    ByVal SortOrder As Long, _
+    ByVal IsActive As Boolean)
+
+    Dim sqlStatement As String
+
+    sqlStatement = "INSERT INTO ref_salutation " & _
+                   "(salutation_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
+                   "VALUES (" & _
+                   "'" & EscapeSqlText(salutationCode) & "', " & _
+                   "'" & EscapeSqlText(TranslationKey) & "', " & _
+                   CStr(SortOrder) & ", " & _
+                   IIf(IsActive, "True", "False") & ", " & _
+                   "Now(), 'SYSTEM', Now(), 'SYSTEM')"
+
+    db.Execute sqlStatement, dbFailOnError
+End Sub
+
+Private Sub InsertAddressingMode( _
+    ByVal db As DAO.Database, _
+    ByVal addressingModeCode As String, _
+    ByVal TranslationKey As String, _
+    ByVal SortOrder As Long, _
+    ByVal IsActive As Boolean)
+
+    Dim sqlStatement As String
+
+    sqlStatement = "INSERT INTO ref_addressing_mode " & _
+                   "(addressing_mode_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
+                   "VALUES (" & _
+                   "'" & EscapeSqlText(addressingModeCode) & "', " & _
+                   "'" & EscapeSqlText(TranslationKey) & "', " & _
+                   CStr(SortOrder) & ", " & _
+                   IIf(IsActive, "True", "False") & ", " & _
+                   "Now(), 'SYSTEM', Now(), 'SYSTEM')"
+
+    db.Execute sqlStatement, dbFailOnError
+End Sub
+
+Private Sub InsertContactType( _
+    ByVal db As DAO.Database, _
+    ByVal contactTypeCode As String, _
+    ByVal TranslationKey As String, _
+    ByVal SortOrder As Long, _
+    ByVal IsActive As Boolean)
+
+    Dim sqlStatement As String
+
+    sqlStatement = "INSERT INTO ref_contact_type " & _
+                   "(contact_type_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
+                   "VALUES (" & _
+                   "'" & EscapeSqlText(contactTypeCode) & "', " & _
                    "'" & EscapeSqlText(TranslationKey) & "', " & _
                    CStr(SortOrder) & ", " & _
                    IIf(IsActive, "True", "False") & ", " & _
@@ -181,6 +301,84 @@ Private Sub InsertAddressTypeTranslations(ByVal db As DAO.Database)
     InsertTranslation db, "FR-FR", "ADDRESS_TYPE.OTHER", "Autre", True
     InsertTranslation db, "IT-CH", "ADDRESS_TYPE.OTHER", "Altro", True
     InsertTranslation db, "EN-US", "ADDRESS_TYPE.OTHER", "Other", True
+End Sub
+
+Private Sub InsertSalutationTranslations(ByVal db As DAO.Database)
+    InsertTranslation db, "DE-CH", "SALUTATION.MR", "Herr", True
+    InsertTranslation db, "DE-DE", "SALUTATION.MR", "Herr", True
+    InsertTranslation db, "FR-FR", "SALUTATION.MR", "Monsieur", True
+    InsertTranslation db, "IT-CH", "SALUTATION.MR", "Signor", True
+    InsertTranslation db, "EN-US", "SALUTATION.MR", "Mr.", True
+
+    InsertTranslation db, "DE-CH", "SALUTATION.MS", "Frau", True
+    InsertTranslation db, "DE-DE", "SALUTATION.MS", "Frau", True
+    InsertTranslation db, "FR-FR", "SALUTATION.MS", "Madame", True
+    InsertTranslation db, "IT-CH", "SALUTATION.MS", "Signora", True
+    InsertTranslation db, "EN-US", "SALUTATION.MS", "Ms.", True
+
+    InsertTranslation db, "DE-CH", "SALUTATION.COMPANY", "Firma", True
+    InsertTranslation db, "DE-DE", "SALUTATION.COMPANY", "Unternehmen", True
+    InsertTranslation db, "FR-FR", "SALUTATION.COMPANY", "Entreprise", True
+    InsertTranslation db, "IT-CH", "SALUTATION.COMPANY", "Azienda", True
+    InsertTranslation db, "EN-US", "SALUTATION.COMPANY", "Company", True
+
+    InsertTranslation db, "DE-CH", "SALUTATION.NEUTRAL", "Neutral", True
+    InsertTranslation db, "DE-DE", "SALUTATION.NEUTRAL", "Neutral", True
+    InsertTranslation db, "FR-FR", "SALUTATION.NEUTRAL", "Neutre", True
+    InsertTranslation db, "IT-CH", "SALUTATION.NEUTRAL", "Neutrale", True
+    InsertTranslation db, "EN-US", "SALUTATION.NEUTRAL", "Neutral", True
+End Sub
+
+Private Sub InsertAddressingModeTranslations(ByVal db As DAO.Database)
+    InsertTranslation db, "DE-CH", "ADDRESSING_MODE.FORMAL", "Formal", True
+    InsertTranslation db, "DE-DE", "ADDRESSING_MODE.FORMAL", "Formal", True
+    InsertTranslation db, "FR-FR", "ADDRESSING_MODE.FORMAL", "Formel", True
+    InsertTranslation db, "IT-CH", "ADDRESSING_MODE.FORMAL", "Formale", True
+    InsertTranslation db, "EN-US", "ADDRESSING_MODE.FORMAL", "Formal", True
+
+    InsertTranslation db, "DE-CH", "ADDRESSING_MODE.INFORMAL", "Informell", True
+    InsertTranslation db, "DE-DE", "ADDRESSING_MODE.INFORMAL", "Informell", True
+    InsertTranslation db, "FR-FR", "ADDRESSING_MODE.INFORMAL", "Informel", True
+    InsertTranslation db, "IT-CH", "ADDRESSING_MODE.INFORMAL", "Informale", True
+    InsertTranslation db, "EN-US", "ADDRESSING_MODE.INFORMAL", "Informal", True
+End Sub
+
+Private Sub InsertContactTypeTranslations(ByVal db As DAO.Database)
+    InsertTranslation db, "DE-CH", "CONTACT_TYPE.EMAIL", "E-Mail", True
+    InsertTranslation db, "DE-DE", "CONTACT_TYPE.EMAIL", "E-Mail", True
+    InsertTranslation db, "FR-FR", "CONTACT_TYPE.EMAIL", "E-mail", True
+    InsertTranslation db, "IT-CH", "CONTACT_TYPE.EMAIL", "E-mail", True
+    InsertTranslation db, "EN-US", "CONTACT_TYPE.EMAIL", "E-Mail", True
+
+    InsertTranslation db, "DE-CH", "CONTACT_TYPE.PHONE", "Telefon", True
+    InsertTranslation db, "DE-DE", "CONTACT_TYPE.PHONE", "Telefon", True
+    InsertTranslation db, "FR-FR", "CONTACT_TYPE.PHONE", "Telephone", True
+    InsertTranslation db, "IT-CH", "CONTACT_TYPE.PHONE", "Telefono", True
+    InsertTranslation db, "EN-US", "CONTACT_TYPE.PHONE", "Phone", True
+
+    InsertTranslation db, "DE-CH", "CONTACT_TYPE.MOBILE", "Mobil", True
+    InsertTranslation db, "DE-DE", "CONTACT_TYPE.MOBILE", "Mobil", True
+    InsertTranslation db, "FR-FR", "CONTACT_TYPE.MOBILE", "Mobile", True
+    InsertTranslation db, "IT-CH", "CONTACT_TYPE.MOBILE", "Mobile", True
+    InsertTranslation db, "EN-US", "CONTACT_TYPE.MOBILE", "Mobile", True
+
+    InsertTranslation db, "DE-CH", "CONTACT_TYPE.WEBSITE", "Webseite", True
+    InsertTranslation db, "DE-DE", "CONTACT_TYPE.WEBSITE", "Webseite", True
+    InsertTranslation db, "FR-FR", "CONTACT_TYPE.WEBSITE", "Site web", True
+    InsertTranslation db, "IT-CH", "CONTACT_TYPE.WEBSITE", "Sito web", True
+    InsertTranslation db, "EN-US", "CONTACT_TYPE.WEBSITE", "Website", True
+
+    InsertTranslation db, "DE-CH", "CONTACT_TYPE.FAX", "Fax", True
+    InsertTranslation db, "DE-DE", "CONTACT_TYPE.FAX", "Fax", True
+    InsertTranslation db, "FR-FR", "CONTACT_TYPE.FAX", "Fax", True
+    InsertTranslation db, "IT-CH", "CONTACT_TYPE.FAX", "Fax", True
+    InsertTranslation db, "EN-US", "CONTACT_TYPE.FAX", "Fax", True
+
+    InsertTranslation db, "DE-CH", "CONTACT_TYPE.OTHER", "Sonstige", True
+    InsertTranslation db, "DE-DE", "CONTACT_TYPE.OTHER", "Sonstige", True
+    InsertTranslation db, "FR-FR", "CONTACT_TYPE.OTHER", "Autre", True
+    InsertTranslation db, "IT-CH", "CONTACT_TYPE.OTHER", "Altro", True
+    InsertTranslation db, "EN-US", "CONTACT_TYPE.OTHER", "Other", True
 End Sub
 
 Public Sub SeedTagHelp()

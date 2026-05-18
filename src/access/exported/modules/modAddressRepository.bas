@@ -23,6 +23,9 @@ Private Const FIELD_ZIP_CODE As String = "zip_code"
 Private Const FIELD_CITY As String = "city"
 Private Const FIELD_COUNTRY_CODE As String = "country_code"
 Private Const FIELD_LANGUAGE_CODE As String = "language_code"
+Private Const FIELD_SALUTATION_CODE As String = "salutation_code"
+Private Const FIELD_ADDRESSING_MODE_CODE As String = "addressing_mode_code"
+Private Const FIELD_PREFERRED_NAME As String = "preferred_name"
 Private Const FIELD_IS_ACTIVE As String = "is_active"
 Private Const FIELD_CREATED_AT As String = "created_at"
 Private Const FIELD_CREATED_BY As String = "created_by"
@@ -37,7 +40,10 @@ Public Function CreateAddress( _
     Optional ByVal zipCode As String = "", _
     Optional ByVal City As String = "", _
     Optional ByVal countryCode As String = "", _
-    Optional ByVal LanguageCode As String = "" _
+    Optional ByVal LanguageCode As String = "", _
+    Optional ByVal salutationCode As String = "", _
+    Optional ByVal addressingModeCode As String = "", _
+    Optional ByVal preferredName As String = "" _
 ) As Long
     On Error GoTo ErrorHandler
 
@@ -62,6 +68,9 @@ Public Function CreateAddress( _
     SetRecordsetValue rs, FIELD_CITY, Trim$(City)
     SetRecordsetValue rs, FIELD_COUNTRY_CODE, UCase$(Trim$(countryCode))
     SetRecordsetValue rs, FIELD_LANGUAGE_CODE, Trim$(LanguageCode)
+    SetRecordsetValue rs, FIELD_SALUTATION_CODE, UCase$(Trim$(salutationCode))
+    SetRecordsetValue rs, FIELD_ADDRESSING_MODE_CODE, UCase$(Trim$(addressingModeCode))
+    SetRecordsetValue rs, FIELD_PREFERRED_NAME, Trim$(preferredName)
     SetRecordsetValue rs, FIELD_IS_ACTIVE, True
     SetRecordsetValue rs, FIELD_CREATED_AT, Now()
     SetRecordsetValue rs, FIELD_CREATED_BY, ResolveCreatedBy()

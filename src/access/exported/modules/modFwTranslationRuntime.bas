@@ -6,7 +6,7 @@ Option Explicit
 ' Module    : modFwTranslationRuntime
 ' Purpose   : Resolves TR:* captions at runtime for forms and reports.
 ' Author    : Codex
-' Version   : 0.1.0
+' Version   : 0.2.1
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFwTranslationRuntime"
@@ -154,6 +154,44 @@ Public Function GetCurrentLanguageCode() As String
 ErrorHandler:
     GetCurrentLanguageCode = DEFAULT_LANGUAGE_CODE
     modErrorHandler.HandleError MODULE_NAME, "GetCurrentLanguageCode", Err
+End Function
+
+Public Function BuildTranslatedReferenceRowSource( _
+    ByVal referenceTableName As String, _
+    ByVal codeFieldName As String, _
+    Optional ByVal languageCode As String = "") As String
+    On Error GoTo ErrorHandler
+
+    Dim currentLanguageCode As String
+    Dim sqlStatement As String
+
+    currentLanguageCode = NormalizeLanguageCode(languageCode)
+    If LenB(currentLanguageCode) = 0 Then
+        currentLanguageCode = GetCurrentLanguageCode()
+    End If
+
+    sqlStatement = ""
+    sqlStatement = sqlStatement & "SELECT "
+    sqlStatement = sqlStatement & "r." & codeFieldName & ", "
+    sqlStatement = sqlStatement & "IIf(t.translation_value Is Null, "
+    sqlStatement = sqlStatement & "r." & codeFieldName & ", "
+    sqlStatement = sqlStatement & "Left(t.translation_value, 255)) AS display_text "
+    sqlStatement = sqlStatement & "FROM " & referenceTableName & " AS r "
+    sqlStatement = sqlStatement & "LEFT JOIN fw_translation AS t "
+    sqlStatement = sqlStatement & "ON r.translation_key = t.translation_key "
+    sqlStatement = sqlStatement & "WHERE Nz(r.is_active, True) = True "
+    sqlStatement = sqlStatement & "AND (t.language_code = " & SqlText(currentLanguageCode) & " "
+    sqlStatement = sqlStatement & "OR t.language_code Is Null) "
+    sqlStatement = sqlStatement & "AND (Nz(t.is_active, True) = True "
+    sqlStatement = sqlStatement & "OR t.translation_key Is Null) "
+    sqlStatement = sqlStatement & "ORDER BY r.sort_order, r." & codeFieldName & ";"
+
+    BuildTranslatedReferenceRowSource = sqlStatement
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "BuildTranslatedReferenceRowSource", Err
+    Err.Raise Err.Number, Err.Source, Err.description
 End Function
 
 Private Function LookupTranslation( _
