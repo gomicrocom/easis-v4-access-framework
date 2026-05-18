@@ -37,12 +37,12 @@ Detailed table definitions are intentionally deferred until the framework servic
 
 ### Help System
 - fw_tag_help
-  - token
-  - description
-  - example
+  - token_key
+  - description_text
+  - example_text
   - category
 
 ### Tag Composer (temporary)
 - fw_tmp_tag_composer
-  - ControlName
-  - TagValue
+  - control_name
+  - tag_value

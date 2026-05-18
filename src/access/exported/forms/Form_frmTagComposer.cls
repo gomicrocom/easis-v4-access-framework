@@ -15,7 +15,7 @@ Option Explicit
 ' Purpose   : Tag composer for framework-managed control tags on forms and
 '             reports.
 ' Author    : Codex
-' Version   : 0.2.0
+' Version   : 0.2.1
 '===============================================================================
 
 Private Const MODULE_NAME As String = "Form_frmTagComposer"
@@ -23,6 +23,12 @@ Private Const OBJECT_TYPE_FORM As String = "FORM"
 Private Const OBJECT_TYPE_REPORT As String = "REPORT"
 Private Const TEMP_TABLE_NAME As String = "fw_tmp_tag_composer"
 Private Const TAG_HELP_TABLE_NAME As String = "fw_tag_help"
+Private Const FIELD_SESSION_ID As String = "session_id"
+Private Const FIELD_ROW_NO As String = "row_no"
+Private Const FIELD_CONTROL_NAME As String = "control_name"
+Private Const FIELD_CONTROL_TYPE As String = "control_type"
+Private Const FIELD_TAG_VALUE As String = "tag_value"
+Private Const FIELD_IS_DIRTY As String = "is_dirty"
 
 Private m_TargetObjectType As String
 Private m_TargetObjectName As String
@@ -116,13 +122,14 @@ Private Sub cmdSave_Click()
 
     Set db = CurrentDb
     Set rs = db.OpenRecordset( _
-        "SELECT ControlName, TagValue FROM " & TEMP_TABLE_NAME & " " & _
-        "WHERE SessionId = '" & Replace(m_SessionId, "'", "''") & "' " & _
-        "ORDER BY RowNo;", dbOpenSnapshot)
+        "SELECT " & FIELD_CONTROL_NAME & ", " & FIELD_TAG_VALUE & " FROM " & TEMP_TABLE_NAME & " " & _
+        "WHERE " & FIELD_SESSION_ID & " = '" & Replace(m_SessionId, "'", "''") & "' " & _
+        "ORDER BY " & FIELD_ROW_NO & ";", dbOpenSnapshot)
 
     Do While Not rs.EOF
         WriteTagToTargetControl m_TargetObjectType, m_TargetObjectName, _
-            Nz(rs!ControlName, vbNullString), Nz(rs!TagValue, vbNullString)
+            Nz(rs.Fields(FIELD_CONTROL_NAME).Value, vbNullString), _
+            Nz(rs.Fields(FIELD_TAG_VALUE).Value, vbNullString)
         rs.MoveNext
     Loop
 
@@ -272,7 +279,7 @@ Private Sub InitializeTempComposerData()
     End If
 
     Set db = CurrentDb
-    db.Execute "DELETE FROM " & TEMP_TABLE_NAME & " WHERE SessionId = '" & Replace(m_SessionId, "'", "''") & "'", dbFailOnError
+    db.Execute "DELETE FROM " & TEMP_TABLE_NAME & " WHERE " & FIELD_SESSION_ID & " = '" & Replace(m_SessionId, "'", "''") & "'", dbFailOnError
 
     OpenTargetObjectForRead m_TargetObjectType, m_TargetObjectName, OpenedByComposer
     Set rs = db.OpenRecordset(TEMP_TABLE_NAME, dbOpenDynaset)
@@ -283,12 +290,12 @@ Private Sub InitializeTempComposerData()
         controlTypeName = GetControlTypeName(ctl)
 
         rs.AddNew
-        rs!SessionId = m_SessionId
-        rs!RowNo = RowNo
-        rs!ControlName = ctl.Name
-        rs!ControlType = controlTypeName
-        rs!TagValue = GetControlTagSafely(ctl)
-        rs!IsDirty = False
+        rs.Fields(FIELD_SESSION_ID).Value = m_SessionId
+        rs.Fields(FIELD_ROW_NO).Value = RowNo
+        rs.Fields(FIELD_CONTROL_NAME).Value = ctl.Name
+        rs.Fields(FIELD_CONTROL_TYPE).Value = controlTypeName
+        rs.Fields(FIELD_TAG_VALUE).Value = GetControlTagSafely(ctl)
+        rs.Fields(FIELD_IS_DIRTY).Value = False
         rs.Update
     Next ctl
 
@@ -310,14 +317,16 @@ End Sub
 Private Sub BindTempSubform()
     On Error GoTo ErrorHandler
 
-    Dim SqlText As String
+    Dim sqlStatement As String
 
-    SqlText = "SELECT SessionId, RowNo, ControlName, ControlType, TagValue, IsDirty " & _
+    sqlStatement = "SELECT " & FIELD_SESSION_ID & ", " & FIELD_ROW_NO & ", " & _
+                   FIELD_CONTROL_NAME & ", " & FIELD_CONTROL_TYPE & ", " & _
+                   FIELD_TAG_VALUE & ", " & FIELD_IS_DIRTY & " " & _
               "FROM " & TEMP_TABLE_NAME & " " & _
-              "WHERE SessionId = '" & Replace(m_SessionId, "'", "''") & "' " & _
-              "ORDER BY RowNo;"
+              "WHERE " & FIELD_SESSION_ID & " = '" & Replace(m_SessionId, "'", "''") & "' " & _
+                   "ORDER BY " & FIELD_ROW_NO & ";"
 
-    Me!sfrmTmpTagComposer.Form.RecordSource = SqlText
+    Me!sfrmTmpTagComposer.Form.RecordSource = sqlStatement
     Me!sfrmTmpTagComposer.Form.Requery
     Exit Sub
 
@@ -330,7 +339,9 @@ Private Sub BindEmptySubform()
     On Error Resume Next
 
     Me!sfrmTmpTagComposer.Form.RecordSource = _
-        "SELECT SessionId, RowNo, ControlName, ControlType, TagValue, IsDirty FROM " & TEMP_TABLE_NAME & " WHERE 1=0;"
+        "SELECT " & FIELD_SESSION_ID & ", " & FIELD_ROW_NO & ", " & _
+        FIELD_CONTROL_NAME & ", " & FIELD_CONTROL_TYPE & ", " & _
+        FIELD_TAG_VALUE & ", " & FIELD_IS_DIRTY & " FROM " & TEMP_TABLE_NAME & " WHERE 1=0;"
     Me!sfrmTmpTagComposer.Form.Requery
 End Sub
 
@@ -367,7 +378,7 @@ Private Sub SaveCurrentControlTagToTemp(Optional ByVal RefreshSubform As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Dim SqlText As String
+    Dim sqlStatement As String
     Dim newTag As String
 
     If LenB(m_CurrentControl) = 0 Then Exit Sub
@@ -375,13 +386,13 @@ Private Sub SaveCurrentControlTagToTemp(Optional ByVal RefreshSubform As Boolean
     newTag = BuildTagString()
 
     Set db = CurrentDb
-    SqlText = "UPDATE " & TEMP_TABLE_NAME & " " & _
-              "SET TagValue = '" & Replace(newTag, "'", "''") & "', " & _
-              "    IsDirty = True " & _
-              "WHERE SessionId = '" & Replace(m_SessionId, "'", "''") & "' " & _
-              "  AND ControlName = '" & Replace(m_CurrentControl, "'", "''") & "';"
+    sqlStatement = "UPDATE " & TEMP_TABLE_NAME & " " & _
+                   "SET " & FIELD_TAG_VALUE & " = '" & Replace(newTag, "'", "''") & "', " & _
+                   "    " & FIELD_IS_DIRTY & " = True " & _
+              "WHERE " & FIELD_SESSION_ID & " = '" & Replace(m_SessionId, "'", "''") & "' " & _
+                   "  AND " & FIELD_CONTROL_NAME & " = '" & Replace(m_CurrentControl, "'", "''") & "';"
 
-    db.Execute SqlText, dbFailOnError
+    db.Execute sqlStatement, dbFailOnError
 
     Me!txtResult = newTag
 
@@ -653,7 +664,7 @@ Private Sub CleanupTempSession()
     On Error Resume Next
 
     If LenB(m_SessionId) = 0 Then Exit Sub
-    CurrentDb.Execute "DELETE FROM " & TEMP_TABLE_NAME & " WHERE SessionId = '" & Replace(m_SessionId, "'", "''") & "';", dbFailOnError
+    CurrentDb.Execute "DELETE FROM " & TEMP_TABLE_NAME & " WHERE " & FIELD_SESSION_ID & " = '" & Replace(m_SessionId, "'", "''") & "';", dbFailOnError
 End Sub
 
 Private Function BuildTagString() As String
@@ -846,7 +857,7 @@ Private Sub RefreshSubformCurrentRow(ByVal ControlName As String)
     Me!sfrmTmpTagComposer.Form.Requery
 
     Set rsClone = Me!sfrmTmpTagComposer.Form.RecordsetClone
-    rsClone.FindFirst "ControlName = '" & Replace(ControlName, "'", "''") & "'"
+    rsClone.FindFirst FIELD_CONTROL_NAME & " = '" & Replace(ControlName, "'", "''") & "'"
 
     If Not rsClone.NoMatch Then
         Me!sfrmTmpTagComposer.Form.Bookmark = rsClone.Bookmark
@@ -932,16 +943,16 @@ Private Function IsActiveTagHelpToken(ByVal TokenKey As String) As Boolean
     On Error GoTo SafeExit
 
     Dim rs As DAO.Recordset
-    Dim SqlText As String
+    Dim sqlStatement As String
 
     If Not TableExists(TAG_HELP_TABLE_NAME) Then
         Exit Function
     End If
 
-    SqlText = "SELECT TokenKey FROM " & TAG_HELP_TABLE_NAME & " " & _
-              "WHERE IsActive = True AND TokenKey = '" & Replace(TokenKey, "'", "''") & "';"
+    sqlStatement = "SELECT token_key FROM " & TAG_HELP_TABLE_NAME & " " & _
+              "WHERE is_active = True AND token_key = '" & Replace(TokenKey, "'", "''") & "';"
 
-    Set rs = CurrentDb.OpenRecordset(SqlText, dbOpenSnapshot)
+    Set rs = CurrentDb.OpenRecordset(sqlStatement, dbOpenSnapshot)
     If Not (rs.BOF And rs.EOF) Then
         IsActiveTagHelpToken = True
     End If
@@ -956,20 +967,20 @@ Private Function GetExistingTagForCurrentControl() As String
     On Error GoTo SafeExit
 
     Dim rs As DAO.Recordset
-    Dim SqlText As String
+    Dim sqlStatement As String
 
     If LenB(m_CurrentControl) = 0 Then Exit Function
     If LenB(m_SessionId) = 0 Then Exit Function
 
-    SqlText = "SELECT TagValue " & _
+    sqlStatement = "SELECT " & FIELD_TAG_VALUE & " " & _
               "FROM " & TEMP_TABLE_NAME & " " & _
-              "WHERE SessionId = '" & Replace(m_SessionId, "'", "''") & "' " & _
-              "  AND ControlName = '" & Replace(m_CurrentControl, "'", "''") & "';"
+              "WHERE " & FIELD_SESSION_ID & " = '" & Replace(m_SessionId, "'", "''") & "' " & _
+                   "  AND " & FIELD_CONTROL_NAME & " = '" & Replace(m_CurrentControl, "'", "''") & "';"
 
-    Set rs = CurrentDb.OpenRecordset(SqlText, dbOpenSnapshot)
+    Set rs = CurrentDb.OpenRecordset(sqlStatement, dbOpenSnapshot)
 
     If Not rs.EOF Then
-        GetExistingTagForCurrentControl = Nz(rs!TagValue, vbNullString)
+        GetExistingTagForCurrentControl = Nz(rs.Fields(FIELD_TAG_VALUE).Value, vbNullString)
     End If
 
     rs.Close

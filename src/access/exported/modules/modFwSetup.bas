@@ -503,21 +503,22 @@ Private Sub InsertTagHelp( _
     ByVal SortOrder As Long, _
     ByVal IsActive As Boolean)
 
-    Dim sqlStmt As String
+    Dim sqlStatement As String
 
-    sqlStmt = "INSERT INTO fw_tag_help " & _
-              "(TokenKey, Category, SyntaxText, DescriptionText, ExampleText, NotesText, SortOrder, IsActive) " & _
-              "VALUES (" & _
-              "'" & EscapeSqlText(TokenKey) & "', " & _
-              "'" & EscapeSqlText(Category) & "', " & _
-              "'" & EscapeSqlText(SyntaxText) & "', " & _
-              "'" & EscapeSqlText(DescriptionText) & "', " & _
-              "'" & EscapeSqlText(ExampleText) & "', " & _
-              "'" & EscapeSqlText(NotesText) & "', " & _
-              CStr(SortOrder) & ", " & _
-              IIf(IsActive, "True", "False") & ")"
+    sqlStatement = "INSERT INTO fw_tag_help " & _
+                   "(token_key, category, syntax_text, description_text, example_text, notes_text, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
+                   "VALUES (" & _
+                   "'" & EscapeSqlText(TokenKey) & "', " & _
+                   "'" & EscapeSqlText(Category) & "', " & _
+                   "'" & EscapeSqlText(SyntaxText) & "', " & _
+                   "'" & EscapeSqlText(DescriptionText) & "', " & _
+                   "'" & EscapeSqlText(ExampleText) & "', " & _
+                   "'" & EscapeSqlText(NotesText) & "', " & _
+                   CStr(SortOrder) & ", " & _
+                   IIf(IsActive, "True", "False") & ", " & _
+                   "Now(), 'SYSTEM', Now(), 'SYSTEM')"
 
-    db.Execute sqlStmt, dbFailOnError
+    db.Execute sqlStatement, dbFailOnError
 End Sub
 
 Private Function EscapeSqlText(ByVal Value As String) As String
