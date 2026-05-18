@@ -11,9 +11,9 @@ Option Explicit
 
 Private Const MODULE_NAME As String = "modFwTranslationRuntime"
 Private Const TABLE_FW_TRANSLATIONS As String = "fw_translation"
-Private Const FIELD_TRANSLATION_KEY As String = "TranslationKey"
-Private Const FIELD_LANGUAGE_CODE As String = "LanguageCode"
-Private Const FIELD_TRANSLATION_VALUE As String = "TranslationValue"
+Private Const FIELD_TRANSLATION_KEY As String = "translation_key"
+Private Const FIELD_LANGUAGE_CODE As String = "language_code"
+Private Const FIELD_TRANSLATION_VALUE As String = "translation_value"
 Private Const TR_PREFIX As String = "TR:"
 Private Const DEFAULT_LANGUAGE_CODE As String = "DE-CH"
 Private Const FALLBACK_LANGUAGE_CODE As String = "EN"
@@ -86,7 +86,7 @@ Public Function ResolveTranslation(ByVal TranslationKey As String, Optional ByVa
     Dim originalValue As String
     Dim normalizedKey As String
     Dim normalizedLanguageCode As String
-    Dim BaseLanguageCode As String
+    Dim baseLanguageValue As String
     Dim translatedValue As String
 
     originalValue = NzString(TranslationKey)
@@ -116,10 +116,10 @@ Public Function ResolveTranslation(ByVal TranslationKey As String, Optional ByVa
         Exit Function
     End If
 
-    BaseLanguageCode = GetBaseLanguageCode(normalizedLanguageCode)
-    If LenB(BaseLanguageCode) > 0 Then
-        If StrComp(BaseLanguageCode, normalizedLanguageCode, vbTextCompare) <> 0 Then
-            translatedValue = LookupTranslation(db, normalizedKey, BaseLanguageCode)
+    baseLanguageValue = GetBaseLanguageCode(normalizedLanguageCode)
+    If LenB(baseLanguageValue) > 0 Then
+        If StrComp(baseLanguageValue, normalizedLanguageCode, vbTextCompare) <> 0 Then
+            translatedValue = LookupTranslation(db, normalizedKey, baseLanguageValue)
             If LenB(translatedValue) > 0 Then
                 ResolveTranslation = translatedValue
                 Exit Function

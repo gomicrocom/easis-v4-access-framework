@@ -98,30 +98,36 @@ Key fields:
 | `UTC Offset DST` | daylight-saving UTC offset |
 | `DST Detail` | DST detail |
 
-### `refPostalCodes_DACH`
+### `ref_postal_code`
 
 Purpose:
 
-- postal-code pool for structured address capture in the DACH region
+- postal-code pool for structured address capture in CH, DE, and AT
 
 Key fields:
 
 | Field | Meaning |
 |---|---|
-| `CountryCodeISO2` | foreign key to `refCountries` |
-| `PostalCode` | postal code |
-| `PlaceName` | place name |
-| `Admin1Name` | region, canton, or state |
-| `MunicipalityID` | municipality identifier |
-| `Language` | language code |
-| `IsPrimary` | preferred record indicator |
+| `country_code` | foreign key to `ref_country` |
+| `postal_code` | postal code |
+| `place_name` | place name |
+| `state_name` | state, canton, or Bundesland name |
+| `state_code` | state, canton, or Bundesland code |
+| `province_name` | province or secondary region name |
+| `province_code` | province or secondary region code |
+| `community_name` | municipality or community name |
+| `community_code` | municipality or community code |
+| `is_active` | preferred record indicator |
 
 Additional fields:
 
-- `Latitude`
-- `Longitude`
-- `SourceFile`
-- `SourceQuality`
+- `postal_code_id`
+- `latitude`
+- `longitude`
+- `created_at`
+- `created_by`
+- `updated_at`
+- `updated_by`
 
 ### `refCurrencies`
 
@@ -174,7 +180,7 @@ The intended core relations are:
 | Parent | Child | Meaning |
 |---|---|---|
 | `refCountries.ALPHA-2` | `refCountryTimezones.ALPHA-2` | country to timezone |
-| `refCountries.ALPHA-2` | `refPostalCodes_DACH.CountryCodeISO2` | country to postal-code set |
+| `ref_country.country_code` | `ref_postal_code.country_code` | country to postal-code set |
 
 `refCurrencies` is a standalone shared reference table keyed by `CurrencyCode`.
 

@@ -64,7 +64,7 @@ The exact physical field names may evolve by implementation detail, but the inte
 | `ref_payment_term` | `PaymentTermID` or stable business code |
 | `ref_vat_code` | `VatCodeID` or stable VAT code |
 | `ref_unit` | `UnitID` or stable unit code |
-| `fw_list_action` | `ActionId` |
+| `fw_list_action` | `action_id` |
 
 If a table uses a business code as a technical primary identifier, that code must remain stable and unique within the tenant backend.
 
@@ -179,22 +179,26 @@ Stores configurable action definitions for list-form driven navigation and workf
 
 The initial concept includes:
 
-- `ActionId`
-- `ListCode`
-- `ActionCode`
-- `ActionLabel`
-- `TargetForm`
-- `RequiresSelection`
-- `ModuleCode`
-- `RoleCode`
-- `SortOrder`
-- `IsActive`
+- `action_id`
+- `list_code`
+- `action_code`
+- `action_label`
+- `target_form`
+- `requires_selection`
+- `module_code`
+- `role_code`
+- `sort_order`
+- `is_active`
+- `created_at`
+- `created_by`
+- `updated_at`
+- `updated_by`
 
 The intended use is framework-oriented rather than address-specific:
 
 - one list form such as `frmAddressList` or `frmOrderList` can load its actions dynamically
-- `TargetForm` points to standardized UI targets such as `frmAddressDetail`
-- `ModuleCode` and `RoleCode` allow later module- and permission-aware action filtering
+- `target_form` points to standardized UI targets such as `frmAddressDetail`
+- `module_code` and `role_code` allow later module- and permission-aware action filtering
 
 ## Roadmap Context
 

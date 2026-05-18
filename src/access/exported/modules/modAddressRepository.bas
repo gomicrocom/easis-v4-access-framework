@@ -28,15 +28,15 @@ Private Const FIELD_CREATED_AT As String = "created_at"
 Private Const FIELD_CREATED_BY As String = "created_by"
 
 Public Function CreateAddress( _
-    ByVal AddressTypeCode As String, _
+    ByVal addressTypeCode As String, _
     Optional ByVal CompanyName As String = "", _
     Optional ByVal FirstName As String = "", _
     Optional ByVal LastName As String = "", _
     Optional ByVal Street As String = "", _
     Optional ByVal HouseNo As String = "", _
-    Optional ByVal ZipCode As String = "", _
+    Optional ByVal zipCode As String = "", _
     Optional ByVal City As String = "", _
-    Optional ByVal CountryCode As String = "", _
+    Optional ByVal countryCode As String = "", _
     Optional ByVal LanguageCode As String = "" _
 ) As Long
     On Error GoTo ErrorHandler
@@ -52,15 +52,15 @@ Public Function CreateAddress( _
     Set rs = db.OpenRecordset(TABLE_ADR_ADDRESS, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
-    SetRecordsetValue rs, FIELD_ADDRESS_TYPE_CODE, UCase$(Trim$(AddressTypeCode))
+    SetRecordsetValue rs, FIELD_ADDRESS_TYPE_CODE, UCase$(Trim$(addressTypeCode))
     SetRecordsetValue rs, FIELD_COMPANY_NAME, Trim$(CompanyName)
     SetRecordsetValue rs, FIELD_FIRST_NAME, Trim$(FirstName)
     SetRecordsetValue rs, FIELD_LAST_NAME, Trim$(LastName)
     SetRecordsetValue rs, FIELD_STREET, Trim$(Street)
     SetRecordsetValue rs, FIELD_HOUSE_NO, Trim$(HouseNo)
-    SetRecordsetValue rs, FIELD_ZIP_CODE, Trim$(ZipCode)
+    SetRecordsetValue rs, FIELD_ZIP_CODE, Trim$(zipCode)
     SetRecordsetValue rs, FIELD_CITY, Trim$(City)
-    SetRecordsetValue rs, FIELD_COUNTRY_CODE, UCase$(Trim$(CountryCode))
+    SetRecordsetValue rs, FIELD_COUNTRY_CODE, UCase$(Trim$(countryCode))
     SetRecordsetValue rs, FIELD_LANGUAGE_CODE, Trim$(LanguageCode)
     SetRecordsetValue rs, FIELD_IS_ACTIVE, True
     SetRecordsetValue rs, FIELD_CREATED_AT, Now()

@@ -13,12 +13,12 @@ Option Explicit
 Private Const MODULE_NAME As String = "modFwComposerService"
 Private Const TRANSLATION_TABLE_NAME As String = "fw_translation"
 Private Const PLACEHOLDER_TRANSLATION_VALUE As String = "<neu>"
-Private Const FIELD_TRANSLATION_KEY As String = "TranslationKey"
-Private Const FIELD_LANGUAGE_CODE As String = "LanguageCode"
-Private Const FIELD_TRANSLATION_VALUE As String = "TranslationValue"
-Private Const FIELD_IS_ACTIVE As String = "IsActive"
-Private Const FIELD_MODULE_CODE As String = "ModuleCode"
-Private Const FIELD_UPDATED_AT As String = "UpdatedAt"
+Private Const FIELD_TRANSLATION_KEY As String = "translation_key"
+Private Const FIELD_LANGUAGE_CODE As String = "language_code"
+Private Const FIELD_TRANSLATION_VALUE As String = "translation_value"
+Private Const FIELD_IS_ACTIVE As String = "is_active"
+Private Const FIELD_MODULE_CODE As String = "module_code"
+Private Const FIELD_UPDATED_AT As String = "updated_at"
 
 Public Const COMPOSER_MODE_TAGS As String = "TAGS"
 Public Const COMPOSER_MODE_TRANSLATIONS As String = "TRANSLATIONS"
@@ -901,14 +901,14 @@ Private Function TranslationRowExists( _
     On Error GoTo ErrorHandler
 
     Dim rs As DAO.Recordset
-    Dim sql As String
+    Dim sqlStatement As String
 
-    sql = "SELECT TOP 1 " & FIELD_TRANSLATION_KEY & _
-          " FROM " & TRANSLATION_TABLE_NAME & _
-          " WHERE " & FIELD_TRANSLATION_KEY & " = " & SqlText(TranslationKey) & _
-          " AND " & FIELD_LANGUAGE_CODE & " = " & SqlText(LanguageCode)
+    sqlStatement = "SELECT TOP 1 " & FIELD_TRANSLATION_KEY & _
+                   " FROM " & TRANSLATION_TABLE_NAME & _
+                   " WHERE " & FIELD_TRANSLATION_KEY & " = " & SqlText(TranslationKey) & _
+                   " AND " & FIELD_LANGUAGE_CODE & " = " & SqlText(LanguageCode)
 
-    Set rs = db.OpenRecordset(sql, dbOpenSnapshot)
+    Set rs = db.OpenRecordset(sqlStatement, dbOpenSnapshot)
     TranslationRowExists = Not (rs.BOF And rs.EOF)
 
 CleanExit:
@@ -1023,14 +1023,14 @@ Private Function CountTranslationsByWhereClause( _
     On Error GoTo ErrorHandler
 
     Dim rs As DAO.Recordset
-    Dim sql As String
+    Dim sqlStatement As String
 
-    sql = "SELECT Count(*) AS MissingCount FROM " & TRANSLATION_TABLE_NAME
+    sqlStatement = "SELECT Count(*) AS MissingCount FROM " & TRANSLATION_TABLE_NAME
     If LenB(Trim$(whereClause)) > 0 Then
-        sql = sql & " WHERE " & whereClause
+        sqlStatement = sqlStatement & " WHERE " & whereClause
     End If
 
-    Set rs = db.OpenRecordset(sql, dbOpenSnapshot)
+    Set rs = db.OpenRecordset(sqlStatement, dbOpenSnapshot)
     If Not (rs.BOF And rs.EOF) Then
         CountTranslationsByWhereClause = Nz(rs.Fields(0).Value, 0)
     End If

@@ -6,7 +6,7 @@ Option Explicit
 ' Module    : modBasicModuleSchema
 ' Purpose   : Creates BasicModule v1 tables for addresses, articles and orders.
 ' Author    : Codex
-' Version   : 0.1.1
+' Version   : 0.1.2
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modBasicModuleSchema"
@@ -25,6 +25,7 @@ Public Sub CreateBasicModuleTables(Optional ByVal BackendPath As String = vbNull
     CreateRefPaymentTerms db
     CreateRefVatCodes db
     CreateRefUnits db
+    CreateRefAddressType db
 
     CreateTblAddresses db
     CreateTblProductGroups db
@@ -46,6 +47,24 @@ CleanExit:
 ErrorHandler:
     MsgBox "Fehler beim Erstellen der BasicModule-Tabellen: " & Err.description, vbExclamation, MODULE_NAME
     Resume CleanExit
+End Sub
+
+Private Sub CreateRefAddressType(ByVal db As DAO.Database)
+    Dim sqlStatement As String
+
+    sqlStatement = ""
+    sqlStatement = sqlStatement & "CREATE TABLE ref_address_type ("
+    sqlStatement = sqlStatement & "address_type_code TEXT(50) CONSTRAINT pk_ref_address_type PRIMARY KEY, "
+    sqlStatement = sqlStatement & "translation_key TEXT(100), "
+    sqlStatement = sqlStatement & "sort_order LONG, "
+    sqlStatement = sqlStatement & "is_active YESNO, "
+    sqlStatement = sqlStatement & "created_at DATETIME, "
+    sqlStatement = sqlStatement & "created_by TEXT(50), "
+    sqlStatement = sqlStatement & "updated_at DATETIME, "
+    sqlStatement = sqlStatement & "updated_by TEXT(50)"
+    sqlStatement = sqlStatement & ");"
+
+    ExecuteDdl db, sqlStatement
 End Sub
 
 Private Sub CreateRefPaymentTerms(ByVal db As DAO.Database)

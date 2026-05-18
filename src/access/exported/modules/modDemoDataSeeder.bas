@@ -21,7 +21,7 @@ Private Const TBL_DOC_DOCUMENT As String = "doc_document"
 Private Const TBL_DOC_POSITION As String = "doc_document_position"
 Private Const TBL_TEN_PARAMETER As String = "ten_parameter"
 
-Private Const CREATED_BY As String = "DemoDataSeeder"
+Private Const created_by As String = "DemoDataSeeder"
 
 ' Cached IDs generated during one seed run.
 Private mAddressBillingCh As Long
@@ -232,15 +232,15 @@ Private Sub InsertPositions(ByVal db As DAO.Database)
 End Sub
 Private Function InsertAddress( _
     ByVal db As DAO.Database, _
-    ByVal AddressTypeCode As String, _
+    ByVal addressTypeCode As String, _
     ByVal CompanyName As String, _
     ByVal FirstName As String, _
     ByVal LastName As String, _
     ByVal Street As String, _
     ByVal HouseNo As String, _
-    ByVal ZipCode As String, _
+    ByVal zipCode As String, _
     ByVal City As String, _
-    ByVal CountryCode As String, _
+    ByVal countryCode As String, _
     ByVal LanguageCode As String _
 ) As Long
     Dim rs As DAO.Recordset
@@ -248,19 +248,19 @@ Private Function InsertAddress( _
     Set rs = db.OpenRecordset(TBL_ADR_ADDRESS, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
-    SetFieldIfExists rs, "address_type_code", UCase$(Trim$(AddressTypeCode))
+    SetFieldIfExists rs, "address_type_code", UCase$(Trim$(addressTypeCode))
     SetFieldIfExists rs, "company_name", Trim$(CompanyName)
     SetFieldIfExists rs, "first_name", Trim$(FirstName)
     SetFieldIfExists rs, "last_name", Trim$(LastName)
     SetFieldIfExists rs, "street", Trim$(Street)
     SetFieldIfExists rs, "house_no", Trim$(HouseNo)
-    SetFieldIfExists rs, "zip_code", Trim$(ZipCode)
+    SetFieldIfExists rs, "zip_code", Trim$(zipCode)
     SetFieldIfExists rs, "city", Trim$(City)
-    SetFieldIfExists rs, "country_code", UCase$(Trim$(CountryCode))
+    SetFieldIfExists rs, "country_code", UCase$(Trim$(countryCode))
     SetFieldIfExists rs, "language_code", Trim$(LanguageCode)
     SetFieldIfExists rs, "is_active", True
     SetFieldIfExists rs, "created_at", Now()
-    SetFieldIfExists rs, "created_by", CREATED_BY
+    SetFieldIfExists rs, "created_by", created_by
     rs.Update
 
     rs.Bookmark = rs.LastModified
@@ -276,7 +276,7 @@ Private Sub InsertContact( _
     ByVal ContactTypeCode As String, _
     ByVal ContactValue As String, _
     ByVal IsPrimary As Boolean, _
-    ByVal Remarks As String _
+    ByVal remarks As String _
 )
     Dim rs As DAO.Recordset
 
@@ -287,9 +287,9 @@ Private Sub InsertContact( _
     SetFieldIfExists rs, "contact_type_code", UCase$(Trim$(ContactTypeCode))
     SetFieldIfExists rs, "contact_value", Trim$(ContactValue)
     SetFieldIfExists rs, "is_primary", IsPrimary
-    SetFieldIfExists rs, "remarks", Trim$(Remarks)
+    SetFieldIfExists rs, "remarks", Trim$(remarks)
     SetFieldIfExists rs, "created_at", Now()
-    SetFieldIfExists rs, "created_by", CREATED_BY
+    SetFieldIfExists rs, "created_by", created_by
     rs.Update
 
     rs.Close
@@ -307,7 +307,7 @@ Private Function InsertDocument( _
     ByVal CurrencyCode As String, _
     ByVal VatMode As String, _
     ByVal VatRate As Double, _
-    ByVal Remarks As String, _
+    ByVal remarks As String, _
     Optional ByVal HeaderDiscountType As String = "", _
     Optional ByVal HeaderDiscountValue As Double = 0, _
     Optional ByVal LanguageCode As String = "", _
@@ -338,9 +338,9 @@ Private Function InsertDocument( _
     SetFieldIfExists rs, "total_net", CCur(0)
     SetFieldIfExists rs, "total_vat", CCur(0)
     SetFieldIfExists rs, "total_gross", CCur(0)
-    SetFieldIfExists rs, "remarks", Trim$(Remarks)
+    SetFieldIfExists rs, "remarks", Trim$(remarks)
     SetFieldIfExists rs, "created_at", Now()
-    SetFieldIfExists rs, "created_by", CREATED_BY
+    SetFieldIfExists rs, "created_by", created_by
     rs.Update
 
     rs.Bookmark = rs.LastModified
@@ -471,9 +471,9 @@ Private Sub UpsertTenantParameter(ByVal db As DAO.Database, ByVal ParamKey As St
     SetFieldIfExists rs, "param_value", Trim$(ParamValue)
     If hasTenantCodeField Then SetFieldIfExists rs, "tenant_code", "DEMO_CH"
     SetFieldIfExists rs, "created_at", Now()
-    SetFieldIfExists rs, "created_by", CREATED_BY
+    SetFieldIfExists rs, "created_by", created_by
     SetFieldIfExists rs, "updated_at", Now()
-    SetFieldIfExists rs, "updated_by", CREATED_BY
+    SetFieldIfExists rs, "updated_by", created_by
     rs.Update
 
     rs.Close

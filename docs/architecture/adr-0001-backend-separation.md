@@ -113,7 +113,7 @@ Current system-wide reference tables include:
 
 - `refCountries`
 - `refCountryTimezones`
-- `refPostalCodes_DACH`
+- `ref_postal_code`
 - `refCurrencies`
 
 ### 4. Log Backend

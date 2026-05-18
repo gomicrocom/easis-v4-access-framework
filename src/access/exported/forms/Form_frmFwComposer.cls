@@ -251,7 +251,7 @@ Private Sub ApplyTranslationFilter(Optional ByVal TranslationKey As String = vbN
     Dim filterExpression As String
 
     If LenB(Trim$(TranslationKey)) > 0 Then
-        filterExpression = "[TranslationKey] = " & SqlText(TranslationKey)
+        filterExpression = "[translation_key] = " & SqlText(TranslationKey)
     Else
         filterExpression = vbNullString
     End If
@@ -304,7 +304,7 @@ Private Function BuildCurrentContextFilter() As String
     TranslationKey = Trim$(Nz(Me!txtSuggestedTranslationKey.Value, vbNullString))
     If LenB(TranslationKey) > 0 Then
         If Left$(TranslationKey, 1) <> "(" Then
-            BuildCurrentContextFilter = "[TranslationKey] = " & SqlText(TranslationKey)
+            BuildCurrentContextFilter = "[translation_key] = " & SqlText(TranslationKey)
             Exit Function
         End If
     End If
@@ -315,13 +315,13 @@ Private Function BuildCurrentContextFilter() As String
     Select Case ObjectType
         Case modFwComposerService.OBJECT_TYPE_FORM
             If LenB(ObjectName) > 0 Then
-                BuildCurrentContextFilter = "[TranslationKey] Like " & SqlText("FORM." & ObjectName & ".*")
+                BuildCurrentContextFilter = "[translation_key] Like " & SqlText("FORM." & ObjectName & ".*")
             Else
-                BuildCurrentContextFilter = "[TranslationKey] Like " & SqlText("FORM.*")
+                BuildCurrentContextFilter = "[translation_key] Like " & SqlText("FORM.*")
             End If
 
         Case modFwComposerService.OBJECT_TYPE_REPORT
-            BuildCurrentContextFilter = "[TranslationKey] Like " & SqlText("REPORT.*")
+            BuildCurrentContextFilter = "[translation_key] Like " & SqlText("REPORT.*")
 
         Case Else
             BuildCurrentContextFilter = vbNullString
@@ -330,9 +330,9 @@ End Function
 
 Private Function BuildMissingTranslationFilter() As String
     BuildMissingTranslationFilter = _
-        "([TranslationValue] = " & SqlText(PLACEHOLDER_TRANSLATION_VALUE) & _
-        " OR [TranslationValue] Is Null" & _
-        " OR Trim(Nz([TranslationValue], '')) = '')"
+        "([translation_value] = " & SqlText(PLACEHOLDER_TRANSLATION_VALUE) & _
+        " OR [translation_value] Is Null" & _
+        " OR Trim(Nz([translation_value], '')) = '')"
 End Function
 
 Private Function ValidateCurrentTranslations(Optional ByVal ShowMessage As Boolean = True) As Boolean
@@ -384,5 +384,7 @@ End Sub
 Private Function SqlText(ByVal Value As String) As String
     SqlText = "'" & Replace(Nz(Value, vbNullString), "'", "''") & "'"
 End Function
+
+
 
 

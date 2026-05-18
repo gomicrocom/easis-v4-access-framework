@@ -254,21 +254,21 @@ Private Function BuildDeliveryAddressBlock() As String
 End Function
 
 Private Function BuildZipCityLine( _
-    ByVal ZipCode As String, _
+    ByVal zipCode As String, _
     ByVal City As String, _
-    ByVal CountryCode As String _
+    ByVal countryCode As String _
 ) As String
     Dim normalizedCountryCode As String
     Dim Prefix As String
     
-    normalizedCountryCode = UCase$(Trim$(Nz(CountryCode, "")))
+    normalizedCountryCode = UCase$(Trim$(Nz(countryCode, "")))
     
     If Len(normalizedCountryCode) > 0 _
        And normalizedCountryCode <> TenantCountryCode() Then
         Prefix = normalizedCountryCode & "-"
     End If
     
-    BuildZipCityLine = Trim$(Prefix & Trim$(Nz(ZipCode, "")) & " " & Trim$(Nz(City, "")))
+    BuildZipCityLine = Trim$(Prefix & Trim$(Nz(zipCode, "")) & " " & Trim$(Nz(City, "")))
 End Function
 
 Private Sub AppendLine(ByRef text As String, ByVal line As String)

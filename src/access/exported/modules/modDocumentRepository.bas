@@ -52,7 +52,7 @@ Public Function CreateDocumentHeader( _
     Optional ByVal totalNet As Currency = 0, _
     Optional ByVal totalVat As Currency = 0, _
     Optional ByVal totalGross As Currency = 0, _
-    Optional ByVal Remarks As String = "", _
+    Optional ByVal remarks As String = "", _
     Optional ByVal CustomerAddressId As Long = 0 _
 ) As Long
     On Error GoTo ErrorHandler
@@ -109,7 +109,7 @@ Public Function CreateDocumentHeader( _
     SetRecordsetValue rs, FIELD_TOTAL_NET, totalNet
     SetRecordsetValue rs, FIELD_TOTAL_VAT, totalVat
     SetRecordsetValue rs, FIELD_TOTAL_GROSS, totalGross
-    SetRecordsetValue rs, FIELD_REMARKS, Trim$(Remarks)
+    SetRecordsetValue rs, FIELD_REMARKS, Trim$(remarks)
     SetRecordsetValue rs, FIELD_CREATED_AT, Now()
     SetRecordsetValue rs, FIELD_CREATED_BY, ResolveCreatedBy()
     rs.Update

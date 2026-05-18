@@ -132,14 +132,14 @@ Private Function BuildActionRowSource() As String
 
     sqlStatement = ""
     sqlStatement = sqlStatement & "SELECT "
-    sqlStatement = sqlStatement & "ActionCode, "
-    sqlStatement = sqlStatement & "ActionLabel, "
-    sqlStatement = sqlStatement & "Nz(TargetForm, '') AS TargetFormValue, "
-    sqlStatement = sqlStatement & "RequiresSelection "
+    sqlStatement = sqlStatement & "action_code, "
+    sqlStatement = sqlStatement & "action_label, "
+    sqlStatement = sqlStatement & "Nz(target_form, '') AS target_form_value, "
+    sqlStatement = sqlStatement & "requires_selection "
     sqlStatement = sqlStatement & "FROM fw_list_action "
-    sqlStatement = sqlStatement & "WHERE ListCode = " & SqlText(LIST_CODE) & " "
-    sqlStatement = sqlStatement & "AND IsActive = True "
-    sqlStatement = sqlStatement & "ORDER BY SortOrder, ActionLabel;"
+    sqlStatement = sqlStatement & "WHERE list_code = " & SqlText(LIST_CODE) & " "
+    sqlStatement = sqlStatement & "AND is_active = True "
+    sqlStatement = sqlStatement & "ORDER BY sort_order, action_label;"
 
     BuildActionRowSource = sqlStatement
 End Function
@@ -222,7 +222,7 @@ Public Sub ExecuteSelectedAction()
                 ShowPlaceholderActionMessage ActionCode, FORM_ADDRESS_DETAIL, currentAddressId
                 Exit Sub
             End If
-            DoCmd.OpenForm FORM_ADDRESS_DETAIL, acNormal, , "[AddressId]=" & CStr(currentAddressId)
+            DoCmd.OpenForm FORM_ADDRESS_DETAIL, acNormal, , "[address_id]=" & CStr(currentAddressId)
 
         Case ACTION_ORDERS
             If LenB(TargetForm) = 0 Then TargetForm = FORM_ORDER_LIST
@@ -266,7 +266,7 @@ Public Sub ExecuteSelectedAction()
     End Select
 
     modLoggingHandler.LogInfo MODULE_NAME & ".ExecuteSelectedAction", _
-        "Executed action '" & ActionCode & "' for AddressId=" & CStr(currentAddressId) & "."
+        "Executed action '" & ActionCode & "' for address_id=" & CStr(currentAddressId) & "."
     Exit Sub
 
 ErrorHandler:
@@ -444,6 +444,8 @@ Private Sub ClearSearchFilter()
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ClearSearchFilter", Err
 End Sub
+
+
 
 
 

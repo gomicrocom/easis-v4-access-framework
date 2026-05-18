@@ -219,7 +219,7 @@ Dynamic navigation from list forms should be driven through:
 
 This means:
 
-- `fw_list_action` stores `TargetForm` values
+- `fw_list_action` stores `target_form` values
 - naming consistency is important for generic navigation handlers
 - future runtime handlers may dynamically open target forms based on naming conventions and action metadata
 

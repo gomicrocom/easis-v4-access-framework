@@ -13,13 +13,13 @@ Option Explicit
 Private Const MODULE_NAME As String = "modMigrationTranslations"
 
 Private Const TABLE_FW_TRANSLATIONS As String = "fw_translation"
-Private Const FIELD_TRANSLATION_KEY As String = "TranslationKey"
-Private Const FIELD_LANGUAGE_CODE As String = "LanguageCode"
-Private Const FIELD_TRANSLATION_VALUE As String = "TranslationValue"
-Private Const FIELD_IS_ACTIVE As String = "IsActive"
-Private Const FIELD_MODULE_CODE As String = "ModuleCode"
-Private Const FIELD_SORT_ORDER As String = "SortOrder"
-Private Const FIELD_UPDATED_AT As String = "UpdatedAt"
+Private Const FIELD_TRANSLATION_KEY As String = "translation_key"
+Private Const FIELD_LANGUAGE_CODE As String = "language_code"
+Private Const FIELD_TRANSLATION_VALUE As String = "translation_value"
+Private Const FIELD_IS_ACTIVE As String = "is_active"
+Private Const FIELD_MODULE_CODE As String = "module_code"
+Private Const FIELD_SORT_ORDER As String = "sort_order"
+Private Const FIELD_UPDATED_AT As String = "updated_at"
 
 Private mInsertedCount As Long
 Private mSkippedCount As Long
@@ -242,14 +242,14 @@ Private Function TranslationExists( _
     On Error GoTo ErrorHandler
 
     Dim rs As DAO.Recordset
-    Dim sql As String
+    Dim sqlStatement As String
 
-    sql = "SELECT [" & FIELD_TRANSLATION_KEY & "] " & _
-          "FROM [" & TABLE_FW_TRANSLATIONS & "] " & _
-          "WHERE [" & FIELD_TRANSLATION_KEY & "] = " & SqlText(TranslationKey) & _
-          " AND [" & FIELD_LANGUAGE_CODE & "] = " & SqlText(LanguageCode) & ";"
+    sqlStatement = "SELECT [" & FIELD_TRANSLATION_KEY & "] " & _
+                   "FROM [" & TABLE_FW_TRANSLATIONS & "] " & _
+                   "WHERE [" & FIELD_TRANSLATION_KEY & "] = " & SqlText(TranslationKey) & _
+                   " AND [" & FIELD_LANGUAGE_CODE & "] = " & SqlText(LanguageCode) & ";"
 
-    Set rs = db.OpenRecordset(sql, dbOpenSnapshot)
+    Set rs = db.OpenRecordset(sqlStatement, dbOpenSnapshot)
     TranslationExists = Not (rs.BOF And rs.EOF)
 
 CleanExit:

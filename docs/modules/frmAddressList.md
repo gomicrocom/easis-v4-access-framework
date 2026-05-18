@@ -161,20 +161,27 @@ Fields:
 
 | Field | Type | Purpose |
 |---|---|---|
-| `ActionId` | `AUTOINCREMENT` | technical primary key |
-| `ActionCode` | `TEXT(50)` | stable action identifier |
-| `ActionLabel` | `TEXT(100)` | UI label shown in the menu |
-| `TargetForm` | `TEXT(100)` | navigation target |
-| `RequiresAddress` | `YESNO` | indicates whether a selected address is required |
-| `SortOrder` | `LONG` | display order |
-| `IsActive` | `YESNO` | activation flag |
+| `action_id` | `AUTOINCREMENT` | technical primary key |
+| `list_code` | `TEXT(50)` | list runtime scope such as `ADDRESS` |
+| `action_code` | `TEXT(50)` | stable action identifier |
+| `action_label` | `TEXT(100)` | UI label shown in the menu |
+| `target_form` | `TEXT(100)` | navigation target |
+| `requires_selection` | `YESNO` | indicates whether a selected address is required |
+| `module_code` | `TEXT(50)` | optional module scoping |
+| `role_code` | `TEXT(50)` | optional role scoping |
+| `sort_order` | `LONG` | display order |
+| `is_active` | `YESNO` | activation flag |
+| `created_at` | `DATETIME` | creation timestamp |
+| `created_by` | `TEXT(100)` | creator identity |
+| `updated_at` | `DATETIME` | last update timestamp |
+| `updated_by` | `TEXT(100)` | last updater identity |
 
 Usage notes:
 
-- `ActionCode` should remain stable
-- `ActionLabel` may later become translation-driven
-- `TargetForm` may remain empty for placeholder or service-driven actions
-- `RequiresAddress = False` can later support generic actions such as global reports or address creation
+- `action_code` should remain stable
+- `action_label` may later become translation-driven
+- `target_form` may remain empty for placeholder or service-driven actions
+- `requires_selection = False` can later support generic actions such as global reports or address creation
 
 ## Preferred Runtime Flow
 
@@ -207,7 +214,7 @@ Until all target forms exist, the concept explicitly allows placeholder behavior
 
 Expected placeholder pattern:
 
-- if `TargetForm` is empty or does not exist
+- if `target_form` is empty or does not exist
 - show `MsgBox` indicating the selected action and target are not implemented yet
 
 This allows the action architecture to be built before all downstream forms are ready.
@@ -238,4 +245,3 @@ The action menu approach is preferred because it:
 - build `frmAddressList` as a continuous form
 - add a lightweight action execution service
 - route missing forms to placeholder handling
-

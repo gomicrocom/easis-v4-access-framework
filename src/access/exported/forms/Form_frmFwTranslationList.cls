@@ -19,6 +19,9 @@ Option Explicit
 
 Private Const MODULE_NAME As String = "Form_frmFwTranslationList"
 Private Const TABLE_FW_TRANSLATIONS As String = "fw_translation"
+Private Const FIELD_TRANSLATION_KEY As String = "translation_key"
+Private Const FIELD_LANGUAGE_CODE As String = "language_code"
+Private Const FIELD_TRANSLATION_VALUE As String = "translation_value"
 
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
@@ -92,8 +95,8 @@ Private Sub Form_BeforeUpdate(Cancel As Integer)
     duplicateCount = DCount( _
         "*", _
         TABLE_FW_TRANSLATIONS, _
-        "[TranslationKey] = " & SqlText(TranslationKey) & _
-        " AND [LanguageCode] = " & SqlText(LanguageCode))
+        "[" & FIELD_TRANSLATION_KEY & "] = " & SqlText(TranslationKey) & _
+        " AND [" & FIELD_LANGUAGE_CODE & "] = " & SqlText(LanguageCode))
 
     If Me.NewRecord Then
         If duplicateCount > 0 Then
@@ -139,7 +142,5 @@ End Sub
 Private Function SqlText(ByVal Value As String) As String
     SqlText = "'" & Replace(Nz(Value, vbNullString), "'", "''") & "'"
 End Function
-
-
 
 

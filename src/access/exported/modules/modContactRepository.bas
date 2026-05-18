@@ -26,7 +26,7 @@ Public Function CreateContact( _
     ByVal ContactTypeCode As String, _
     ByVal ContactValue As String, _
     Optional ByVal IsPrimary As Boolean = False, _
-    Optional ByVal Remarks As String = "" _
+    Optional ByVal remarks As String = "" _
 ) As Long
     On Error GoTo ErrorHandler
 
@@ -49,7 +49,7 @@ Public Function CreateContact( _
     SetRecordsetValue rs, FIELD_CONTACT_TYPE_CODE, UCase$(Trim$(ContactTypeCode))
     SetRecordsetValue rs, FIELD_CONTACT_VALUE, Trim$(ContactValue)
     SetRecordsetValue rs, FIELD_IS_PRIMARY, IsPrimary
-    SetRecordsetValue rs, FIELD_REMARKS, Trim$(Remarks)
+    SetRecordsetValue rs, FIELD_REMARKS, Trim$(remarks)
     SetRecordsetValue rs, FIELD_CREATED_AT, Now()
     SetRecordsetValue rs, FIELD_CREATED_BY, ResolveCreatedBy()
     rs.Update

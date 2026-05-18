@@ -102,7 +102,7 @@ Current reference tables:
 
 - `refCountries`
 - `refCountryTimezones`
-- `refPostalCodes_DACH`
+- `ref_postal_code`
 - `refCurrencies`
 
 ### Log Backend
@@ -191,30 +191,36 @@ Key fields:
 | `UTC Offset DST` | daylight-saving UTC offset |
 | `DST Detail` | daylight-saving detail |
 
-### `refPostalCodes_DACH`
+### `ref_postal_code`
 
 Purpose:
 
-- structured postal-code data pool for DACH address handling
+- structured postal-code data pool for CH, DE, and AT address handling
 
 Key fields:
 
 | Field | Meaning |
 |---|---|
-| `CountryCodeISO2` | foreign key to `refCountries` |
-| `PostalCode` | postal code |
-| `PlaceName` | place or locality |
-| `Admin1Name` | region, canton, or state |
-| `MunicipalityID` | municipality identifier |
-| `Language` | language of the place name |
-| `IsPrimary` | preferred row indicator |
+| `country_code` | foreign key to `ref_country` |
+| `postal_code` | postal code |
+| `place_name` | place or locality |
+| `state_name` | state, canton, or Bundesland name |
+| `state_code` | state, canton, or Bundesland code |
+| `province_name` | province or secondary region name |
+| `province_code` | province or secondary region code |
+| `community_name` | municipality or community name |
+| `community_code` | municipality or community code |
+| `is_active` | active row indicator |
 
 Additional fields:
 
-- `Latitude`
-- `Longitude`
-- `SourceFile`
-- `SourceQuality`
+- `postal_code_id`
+- `latitude`
+- `longitude`
+- `created_at`
+- `created_by`
+- `updated_at`
+- `updated_by`
 
 ### `refCurrencies`
 
@@ -265,7 +271,7 @@ The intended shared reference relationships are:
 | Parent | Child | Relation |
 |---|---|---|
 | `refCountries.ALPHA-2` | `refCountryTimezones.ALPHA-2` | country to timezone |
-| `refCountries.ALPHA-2` | `refPostalCodes_DACH.CountryCodeISO2` | country to postal-code pool |
+| `ref_country.country_code` | `ref_postal_code.country_code` | country to postal-code pool |
 
 These relations should be documented and enforced where practical in the system backend.
 
