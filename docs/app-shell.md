@@ -91,9 +91,43 @@ Preferred pattern:
 Current public entry points:
 
 - `OpenWorkspaceForm()`
+- `PushWorkspaceState()`
+- `GoBack()`
+- `CanGoBack()`
 - `PreviewWorkspaceReport()`
 - `LoadDashboard()`
 - `ClearWorkspace()`
+
+### Workspace History
+
+The shell now supports an in-memory workspace history stack.
+
+Each history item can capture:
+
+- `form_name`
+- `where_condition`
+- `filter`
+- `order_by`
+- `current_record_id`
+- `workspace_state`
+- `open_args`
+
+History is not persisted to a table in this phase.
+
+### Form State Contract
+
+Workspace-aware forms may optionally expose:
+
+- `Public Function GetWorkspaceState() As String`
+- `Public Sub RestoreWorkspaceState(ByVal stateText As String)`
+
+If these members are available, the workspace service will use them during back navigation.
+
+If they are not available:
+
+- navigation still works
+- basic reopen and generic filter/order restore still work where possible
+- no hard failure should occur
 
 ## Status Bar Fields
 
@@ -180,6 +214,39 @@ For this phase, navigation display is intentionally based on `fallback_caption` 
 - forms are loaded into `subWorkspaceHost` through `SourceObject`
 - reports open in preview mode
 
+### Workspace-Safe Form Navigation
+
+Shell-aware workspace forms should prefer `modAppWorkspaceService.OpenWorkspaceForm()` instead of direct `DoCmd.OpenForm` calls when navigating to another form.
+
+Recommended pattern:
+
+- keep search, validation, and business actions inside the form or service modules
+- route form-to-form navigation through the workspace service
+- pass a `where_condition` when opening an existing record
+- use add mode only when a genuine new-record workflow is intended
+- rely on workspace history instead of reopening previous lists manually
+
+This helps preserve a single-shell workflow:
+
+- no unnecessary floating forms
+- no stacked list/detail windows
+- reusable workspace host behavior across modules
+
+### Back Navigation Flow
+
+- before a workspace form is replaced, the current workspace state is captured
+- opening a detail form from a list form pushes the list state onto the history stack
+- `GoBack()` restores the previous form into `subWorkspaceHost`
+- if the previous form supports `RestoreWorkspaceState(...)`, its own search and selection context can be restored
+
+Example:
+
+- `frmAddressList`
+- search for `meier`
+- open `frmAddressDetail`
+- execute `GoBack()`
+- return to `frmAddressList` with restored list context when supported by the form
+
 ## Manual Layout Notes
 
 ### frmAppNavigation
@@ -230,3 +297,10 @@ Current recommendation:
 - set `frmAppShell` as startup form when the layout is created and verified
 
 This avoids changing production startup behavior prematurely.
+
+### Optional Shell Back Button
+
+If shell layout includes a command button named `cmdBack`:
+
+- it can call `modAppWorkspaceService.GoBack(Me)`
+- it should be enabled only when `modAppWorkspaceService.CanGoBack()` returns `True`

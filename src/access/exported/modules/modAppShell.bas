@@ -5,7 +5,7 @@ Option Explicit
 ' Module    : modAppShell
 ' Purpose   : Main application shell orchestration.
 ' Author    : Codex
-' Version   : 0.1.0
+' Version   : 0.2.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modAppShell"
@@ -17,6 +17,7 @@ Private Const STATUS_CURRENT_ROLE As String = "txtStatusCurrentRole"
 Private Const STATUS_BACKEND As String = "txtStatusBackend"
 Private Const STATUS_ENVIRONMENT As String = "txtStatusEnvironment"
 Private Const HEADER_TITLE As String = "lblAppTitle"
+Private Const COMMAND_BACK As String = "cmdBack"
 
 Public Function InitializeAppShell(ByVal shellForm As Access.Form) As Boolean
     On Error GoTo ErrorHandler
@@ -71,6 +72,7 @@ Public Function RefreshShellStatus(ByVal shellForm As Access.Form) As Boolean
     SetDisplayValueIfPresent shellForm, STATUS_CURRENT_ROLE, ResolveCurrentRoleText()
     SetDisplayValueIfPresent shellForm, STATUS_BACKEND, ResolveBackendStatusText()
     SetDisplayValueIfPresent shellForm, STATUS_ENVIRONMENT, ResolveEnvironmentText()
+    SetControlEnabledIfPresent shellForm, COMMAND_BACK, modAppWorkspaceService.CanGoBack()
 
     RefreshShellStatus = True
     Exit Function
@@ -179,6 +181,25 @@ Private Sub SetDisplayValueIfPresent( _
         Case Else
             ctl.Value = displayValue
     End Select
+
+SafeExit:
+End Sub
+
+Private Sub SetControlEnabledIfPresent( _
+    ByVal formInstance As Access.Form, _
+    ByVal controlName As String, _
+    ByVal isEnabled As Boolean)
+    On Error GoTo SafeExit
+
+    If formInstance Is Nothing Then
+        Exit Sub
+    End If
+
+    If Not HasControl(formInstance, controlName) Then
+        Exit Sub
+    End If
+
+    formInstance.Controls(controlName).Enabled = isEnabled
 
 SafeExit:
 End Sub

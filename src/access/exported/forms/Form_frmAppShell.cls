@@ -5,7 +5,7 @@ Option Explicit
 ' Module    : Form_frmAppShell
 ' Purpose   : Main application shell host form.
 ' Author    : Codex
-' Version   : 0.1.0
+' Version   : 0.2.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "Form_frmAppShell"
@@ -56,10 +56,23 @@ Private Sub cmdHome_Click()
     On Error GoTo ErrorHandler
 
     modAppShell.LoadDefaultWorkspace Me
+    modAppShell.RefreshShellStatus Me
     Exit Sub
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "cmdHome_Click", Err
+End Sub
+
+Private Sub cmdBack_Click()
+    On Error GoTo ErrorHandler
+
+    If modAppWorkspaceService.GoBack(Me) Then
+        modAppShell.RefreshShellStatus Me
+    End If
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdBack_Click", Err
 End Sub
 
 Private Sub Form_Unload(Cancel As Integer)
