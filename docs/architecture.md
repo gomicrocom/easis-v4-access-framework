@@ -114,12 +114,12 @@ BasicModule v1 currently centers around the following tenant-backend tables:
   - order header data including customer, status, dates, totals, and downstream document context
 - `ord_order_line`
   - transactional line items belonging to an order
-- `ref_payment_term`
-  - tenant-side payment-term reference data used by orders and document generation
+- `ten_payment_term`
+  - tenant-side payment-term master data used by orders and document generation
 - `ref_vat_code`
-  - VAT code definitions used for pricing, tax logic, and document totals
+  - translated VAT code definitions used for pricing, tax logic, and document totals
 - `ref_unit`
-  - allowed quantity and unit definitions for articles and order lines
+  - translated unit definitions for articles and order lines
 
 ### Order Workflow
 
@@ -211,6 +211,26 @@ The naming convention is not cosmetic only. It defines expected workflow roles:
 
 The framework is therefore designed around reusable workflow-oriented UI patterns instead of isolated one-off forms.
 
+### Application Shell
+
+The frontend now also includes a first application-shell pattern:
+
+- `frmAppShell`
+  - persistent host form
+- `frmAppNavigation`
+  - left-side navigation surface
+- `frmAppDashboard`
+  - default workspace landing view
+
+Shell behavior is service-driven rather than form-driven:
+
+- `modAppShell`
+- `modAppNavigationService`
+- `modAppWorkspaceService`
+- `modAppDashboardService`
+
+Detailed shell notes are documented in [app-shell.md](./app-shell.md).
+
 ### Relationship to `fw_list_action`
 
 Dynamic navigation from list forms should be driven through:
@@ -243,12 +263,12 @@ This keeps business navigation extensible without adding many hard-coded per-row
   - stores product or service grouping definitions
 - `art_article`
   - stores article master records including pricing and unit defaults
-- `ref_payment_term`
-  - stores reusable payment-term definitions for the business module
+- `ten_payment_term`
+  - stores tenant-level payment-term definitions for the business module
 - `ref_vat_code`
   - stores VAT code and VAT-rate related reference definitions
 - `ref_unit`
-  - stores reusable units for quantities and article definitions
+  - stores translated reusable units for quantities and article definitions
 
 ### Transaction Scope
 

@@ -1,13 +1,4 @@
-VERSION 1.0 CLASS
-BEGIN
-  MultiUse = -1  'True
-END
-Attribute VB_Name = "Report_rpt_document"
-Attribute VB_GlobalNameSpace = False
-Attribute VB_Creatable = True
-Attribute VB_PredeclaredId = True
-Attribute VB_Exposed = False
-Option Compare Database
+ï»¿Option Compare Database
 Option Explicit
 
 Private Function BuildTenantSenderLine() As String
@@ -126,7 +117,7 @@ Private Sub ApplyTranslations()
     SetCaptionIfPresent "lblDocumentDate", modTranslationService.T("REPORT.DATE", "Datum")
     SetCaptionIfPresent "lblDocumentType", modTranslationService.T("REPORT.DOCUMENT_TYPE", "Dokumenttyp")
     SetCaptionIfPresent "lblStatus", modTranslationService.T("REPORT.STATUS", "Status")
-    SetCaptionIfPresent "lblVatSummary", modTranslationService.T("REPORT.VAT_SUMMARY", "MwSt.-Aufschlüsselung")
+    SetCaptionIfPresent "lblVatSummary", modTranslationService.T("REPORT.VAT_SUMMARY", "MwSt.-AufschlÃ¼sselung")
 
     SetCaptionIfPresent "lblPos", modTranslationService.T("REPORT.POS", "Pos.")
     SetCaptionIfPresent "lblDescription", modTranslationService.T("REPORT.DESCRIPTION", "Beschreibung")
@@ -221,7 +212,7 @@ Private Sub grpDocument_Id_header_Format(Cancel As Integer, FormatCount As Integ
 End Sub
 
 Private Sub Report_NoData(Cancel As Integer)
-    MsgBox "Kein Dokument für den angegebenen Filter gefunden.", vbExclamation
+    MsgBox "Kein Dokument fÃ¼r den angegebenen Filter gefunden.", vbExclamation
     Cancel = True
 End Sub
 
@@ -342,6 +333,5 @@ Private Function GetControlValue(ByVal ControlName As String, Optional ByVal Def
 SafeExit:
     GetControlValue = DefaultValue
 End Function
-
 
 

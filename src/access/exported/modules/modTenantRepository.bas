@@ -1,5 +1,4 @@
-Attribute VB_Name = "modTenantRepository"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -99,7 +98,7 @@ Private Function CanReadTenantParameters() As Boolean
     CanReadTenantParameters = True
 End Function
 
-Private Function TableExists(ByVal TableName As String) As Boolean
+Private Function TableExists(ByVal tableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -108,7 +107,7 @@ Private Function TableExists(ByVal TableName As String) As Boolean
     Set db = modDb.GetCurrentDatabase()
 
     For Each tdf In db.TableDefs
-        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(TableName)) Then
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
             TableExists = True
             Exit For
         End If
@@ -197,4 +196,3 @@ ErrorHandler:
     ResolveTenantParameterValue = DefaultValue
     modErrorHandler.HandleError MODULE_NAME, "ResolveTenantParameterValue", Err
 End Function
-

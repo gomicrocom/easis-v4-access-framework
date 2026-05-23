@@ -1,5 +1,4 @@
-Attribute VB_Name = "modContactRepository"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -23,7 +22,7 @@ Private Const FIELD_CREATED_BY As String = "created_by"
 
 Public Function CreateContact( _
     ByVal AddressId As Long, _
-    ByVal ContactTypeCode As String, _
+    ByVal contactTypeCode As String, _
     ByVal ContactValue As String, _
     Optional ByVal IsPrimary As Boolean = False, _
     Optional ByVal remarks As String = "" _
@@ -46,7 +45,7 @@ Public Function CreateContact( _
 
     rs.AddNew
     SetRecordsetValue rs, FIELD_ADDRESS_ID, AddressId
-    SetRecordsetValue rs, FIELD_CONTACT_TYPE_CODE, UCase$(Trim$(ContactTypeCode))
+    SetRecordsetValue rs, FIELD_CONTACT_TYPE_CODE, UCase$(Trim$(contactTypeCode))
     SetRecordsetValue rs, FIELD_CONTACT_VALUE, Trim$(ContactValue)
     SetRecordsetValue rs, FIELD_IS_PRIMARY, IsPrimary
     SetRecordsetValue rs, FIELD_REMARKS, Trim$(remarks)
@@ -75,7 +74,7 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Public Function GetPrimaryContactValue(ByVal AddressId As Long, ByVal ContactTypeCode As String, Optional ByVal DefaultValue As String = "") As String
+Public Function GetPrimaryContactValue(ByVal AddressId As Long, ByVal contactTypeCode As String, Optional ByVal DefaultValue As String = "") As String
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -92,7 +91,7 @@ Public Function GetPrimaryContactValue(ByVal AddressId As Long, ByVal ContactTyp
         Exit Function
     End If
 
-    targetType = UCase$(Trim$(ContactTypeCode))
+    targetType = UCase$(Trim$(contactTypeCode))
     Set db = modDb.GetCurrentDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_CONTACT & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(AddressId) & ";", dbOpenSnapshot)
 
@@ -178,7 +177,7 @@ Private Function CanWriteContacts() As Boolean
     CanWriteContacts = CanReadContacts()
 End Function
 
-Private Function TableExists(ByVal TableName As String) As Boolean
+Private Function TableExists(ByVal tableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -186,7 +185,7 @@ Private Function TableExists(ByVal TableName As String) As Boolean
 
     Set db = modDb.GetCurrentDatabase()
     For Each tdf In db.TableDefs
-        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(TableName)) Then
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
             TableExists = True
             Exit For
         End If
@@ -203,15 +202,15 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal FieldName As String, ByVal FieldValue As Variant)
-    If modDaoHelper.RecordsetHasField(rs, FieldName) Then
-        rs.Fields(FieldName).Value = FieldValue
+Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal FieldValue As Variant)
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        rs.Fields(fieldName).Value = FieldValue
     End If
 End Sub
 
-Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal FieldName As String, ByVal DefaultValue As String) As String
-    If modDaoHelper.RecordsetHasField(rs, FieldName) Then
-        ResolveFieldValue = modDaoHelper.NzString(rs.Fields(FieldName).Value, DefaultValue)
+Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal DefaultValue As String) As String
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        ResolveFieldValue = modDaoHelper.NzString(rs.Fields(fieldName).Value, DefaultValue)
     Else
         ResolveFieldValue = DefaultValue
     End If

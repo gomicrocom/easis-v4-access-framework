@@ -67,8 +67,9 @@ BasicModule v1 database scope is now explicitly active in the tenant backend thr
 - `art_article`
 - `ord_order`
 - `ord_order_line`
-- `ref_payment_term`
+- `ten_payment_term`
 - `ref_vat_code`
+  - translated VAT code definitions with country and rate metadata
 - `ref_unit`
 
 At this stage, the technical framework and the first business entities already interact, but the end-to-end business UI is still being expanded.

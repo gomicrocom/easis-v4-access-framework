@@ -1,5 +1,4 @@
-Attribute VB_Name = "modOutputPathService"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -250,13 +249,13 @@ Private Function IsReservedWindowsDeviceName(ByVal Value As String) As Boolean
     End If
 End Function
 
-Private Function TableExists(ByVal TableName As String) As Boolean
+Private Function TableExists(ByVal tableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim tdf As DAO.tableDef
 
-    If LenB(Trim$(TableName)) = 0 Then
+    If LenB(Trim$(tableName)) = 0 Then
         Exit Function
     End If
 
@@ -266,7 +265,7 @@ Private Function TableExists(ByVal TableName As String) As Boolean
     End If
 
     For Each tdf In db.TableDefs
-        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(TableName)) Then
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
             TableExists = True
             Exit Function
         End If

@@ -1,5 +1,4 @@
-Attribute VB_Name = "modBackendLinker"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -17,7 +16,7 @@ Public Function RelinkBackendTables() As Boolean
 
     Dim db As DAO.Database
     Dim tdf As DAO.tableDef
-    Dim BackendPath As String
+    Dim backendPath As String
     Dim relinkedCount As Long
 
     If Not modDb.ValidateBackendConfiguration() Then
@@ -26,7 +25,7 @@ Public Function RelinkBackendTables() As Boolean
         Exit Function
     End If
 
-    BackendPath = GetBackendPath()
+    backendPath = GetBackendPath()
     Set db = GetCurrentDatabase()
 
     For Each tdf In db.TableDefs
@@ -35,7 +34,7 @@ Public Function RelinkBackendTables() As Boolean
         End If
 
         If IsLinkedAccessTable(tdf) Then
-            If RelinkTable(tdf, BackendPath) Then
+            If RelinkTable(tdf, backendPath) Then
                 relinkedCount = relinkedCount + 1
             End If
         End If
@@ -88,14 +87,14 @@ Private Function IsLinkedAccessTable(ByVal tableDef As DAO.tableDef) As Boolean
     IsLinkedAccessTable = (InStr(1, connectText, ACCESS_CONNECT_PREFIX, vbTextCompare) > 0)
 End Function
 
-Private Function RelinkTable(ByVal tableDef As DAO.tableDef, ByVal BackendPath As String) As Boolean
+Private Function RelinkTable(ByVal tableDef As DAO.tableDef, ByVal backendPath As String) As Boolean
     On Error GoTo ErrorHandler
 
-    tableDef.Connect = ACCESS_CONNECT_PREFIX & BackendPath
+    tableDef.Connect = ACCESS_CONNECT_PREFIX & backendPath
     tableDef.RefreshLink
 
     modLoggingHandler.LogInfo MODULE_NAME & ".RelinkTable", _
-        "Relinked table '" & tableDef.Name & "' to '" & BackendPath & "'."
+        "Relinked table '" & tableDef.Name & "' to '" & backendPath & "'."
 
     RelinkTable = True
     Exit Function
@@ -103,13 +102,13 @@ Private Function RelinkTable(ByVal tableDef As DAO.tableDef, ByVal BackendPath A
 ErrorHandler:
     RelinkTable = False
     modLoggingHandler.LogError MODULE_NAME & ".RelinkTable", _
-        "Failed to relink table '" & tableDef.Name & "' to '" & BackendPath & "'.", Err.Number
+        "Failed to relink table '" & tableDef.Name & "' to '" & backendPath & "'.", Err.Number
 End Function
 
-Private Function ShouldSkipTable(ByVal TableName As String) As Boolean
+Private Function ShouldSkipTable(ByVal tableName As String) As Boolean
     Dim normalizedName As String
 
-    normalizedName = UCase$(Trim$(TableName))
+    normalizedName = UCase$(Trim$(tableName))
 
     If LenB(normalizedName) = 0 Then
         ShouldSkipTable = True

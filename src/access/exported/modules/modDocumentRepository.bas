@@ -1,5 +1,4 @@
-Attribute VB_Name = "modDocumentRepository"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -186,8 +185,8 @@ Public Function CreateDocumentPosition( _
     ByVal description As String, _
     ByVal quantity As Double, _
     ByVal UnitPrice As Currency, _
-    Optional ByVal UnitCode As String = "", _
-    Optional ByVal VatRate As Double = -1, _
+    Optional ByVal unitCode As String = "", _
+    Optional ByVal vatRate As Double = -1, _
     Optional ByVal VatMode As String = "" _
 ) As Boolean
     On Error GoTo ErrorHandler
@@ -218,10 +217,10 @@ Public Function CreateDocumentPosition( _
         Exit Function
     End If
 
-    If VatRate < 0 Then
+    If vatRate < 0 Then
         effectiveVatRate = modVatHandler.GetVatRate()
     Else
-        effectiveVatRate = VatRate
+        effectiveVatRate = vatRate
     End If
 
     If LenB(Trim$(VatMode)) = 0 Then
@@ -242,7 +241,7 @@ Public Function CreateDocumentPosition( _
     SetRecordsetValue rs, FIELD_LINE_NO, LineNo
     SetRecordsetValue rs, FIELD_DESCRIPTION, Trim$(description)
     SetRecordsetValue rs, FIELD_QUANTITY, quantity
-    SetRecordsetValue rs, FIELD_UNIT_CODE, Trim$(UnitCode)
+    SetRecordsetValue rs, FIELD_UNIT_CODE, Trim$(unitCode)
     SetRecordsetValue rs, FIELD_UNIT_PRICE, UnitPrice
     SetRecordsetValue rs, FIELD_VAT_RATE, effectiveVatRate
     SetRecordsetValue rs, FIELD_LINE_TOTAL_NET, lineNet
@@ -647,7 +646,7 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Function TableExists(ByVal TableName As String) As Boolean
+Private Function TableExists(ByVal tableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -656,7 +655,7 @@ Private Function TableExists(ByVal TableName As String) As Boolean
     Set db = modDb.GetCurrentDatabase()
 
     For Each tdf In db.TableDefs
-        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(TableName)) Then
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
             TableExists = True
             Exit For
         End If
@@ -673,9 +672,9 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal FieldName As String, ByVal FieldValue As Variant)
-    If modDaoHelper.RecordsetHasField(rs, FieldName) Then
-        rs.Fields(FieldName).Value = FieldValue
+Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal FieldValue As Variant)
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        rs.Fields(fieldName).Value = FieldValue
     End If
 End Sub
 
@@ -691,7 +690,7 @@ Private Function ResolveCreatedBy() As String
     End If
 End Function
 
-Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal FieldName As String, ByVal DefaultValue As String) As String
+Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal fieldName As String, ByVal DefaultValue As String) As String
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -720,8 +719,8 @@ Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal Field
         GoTo CleanExit
     End If
 
-    If modDaoHelper.RecordsetHasField(rsHeader, FieldName) Then
-        ResolveDocumentFieldValue = modDaoHelper.NzString(rsHeader.Fields(FieldName).Value, DefaultValue)
+    If modDaoHelper.RecordsetHasField(rsHeader, fieldName) Then
+        ResolveDocumentFieldValue = modDaoHelper.NzString(rsHeader.Fields(fieldName).Value, DefaultValue)
     End If
 
 CleanExit:
@@ -737,7 +736,7 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal FieldName As String, ByVal DefaultValue As Long) As Long
+Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal fieldName As String, ByVal DefaultValue As Long) As Long
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -766,8 +765,8 @@ Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal FieldN
         GoTo CleanExit
     End If
 
-    If modDaoHelper.RecordsetHasField(rsHeader, FieldName) Then
-        ResolveDocumentLongValue = modDaoHelper.NzLong(rsHeader.Fields(FieldName).Value, DefaultValue)
+    If modDaoHelper.RecordsetHasField(rsHeader, fieldName) Then
+        ResolveDocumentLongValue = modDaoHelper.NzLong(rsHeader.Fields(fieldName).Value, DefaultValue)
     End If
 
 CleanExit:

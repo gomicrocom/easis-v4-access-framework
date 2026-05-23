@@ -1,5 +1,4 @@
-Attribute VB_Name = "modFormLocalization"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -12,27 +11,27 @@ Option Explicit
 Private Const MODULE_NAME As String = "modFormLocalization"
 Private Const TAG_PREFIX_TRANSLATION As String = "TR:"
 
-Public Sub LocalizeForm(ByVal FormInstance As Access.Form)
+Public Sub LocalizeForm(ByVal formInstance As Access.Form)
     On Error GoTo ErrorHandler
 
-    Dim TranslationKey As String
+    Dim translationKey As String
     Dim localizedCount As Long
     Dim ctl As Control
 
-    If FormInstance Is Nothing Then
+    If formInstance Is Nothing Then
         Exit Sub
     End If
 
-    TranslationKey = ExtractTranslationKeyFromTag(FormInstance.Tag)
-    If LenB(TranslationKey) > 0 Then
-        SetFormCaption FormInstance, TranslationKey, NzString(FormInstance.Caption)
+    translationKey = ExtractTranslationKeyFromTag(formInstance.Tag)
+    If LenB(translationKey) > 0 Then
+        SetFormCaption formInstance, translationKey, NzString(formInstance.Caption)
         localizedCount = localizedCount + 1
     End If
 
-    For Each ctl In FormInstance.Controls
-        TranslationKey = ExtractTranslationKeyFromTag(ctl.Tag)
-        If LenB(TranslationKey) > 0 Then
-            LocalizeControl ctl, TranslationKey, GetControlFallbackCaption(ctl)
+    For Each ctl In formInstance.Controls
+        translationKey = ExtractTranslationKeyFromTag(ctl.Tag)
+        If LenB(translationKey) > 0 Then
+            LocalizeControl ctl, translationKey, GetControlFallbackCaption(ctl)
             localizedCount = localizedCount + 1
         End If
 
@@ -43,7 +42,7 @@ Public Sub LocalizeForm(ByVal FormInstance As Access.Form)
 
     If localizedCount > 0 Then
         modLoggingHandler.LogInfo MODULE_NAME & ".LocalizeForm", _
-            "Localized " & CStr(localizedCount) & " element(s) on form '" & FormInstance.Name & "'."
+            "Localized " & CStr(localizedCount) & " element(s) on form '" & formInstance.Name & "'."
     End If
     Exit Sub
 
@@ -51,32 +50,32 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "LocalizeForm", Err
 End Sub
 
-Public Sub SetFormCaption(ByVal FormInstance As Access.Form, ByVal TranslationKey As String, Optional ByVal Fallback As String = "")
+Public Sub SetFormCaption(ByVal formInstance As Access.Form, ByVal translationKey As String, Optional ByVal Fallback As String = "")
     On Error GoTo ErrorHandler
 
-    If FormInstance Is Nothing Then
+    If formInstance Is Nothing Then
         Exit Sub
     End If
 
-    If LenB(Trim$(TranslationKey)) = 0 Then
+    If LenB(Trim$(translationKey)) = 0 Then
         Exit Sub
     End If
 
-    FormInstance.Caption = modTranslationService.T(TranslationKey, Fallback)
+    formInstance.Caption = modTranslationService.T(translationKey, Fallback)
     Exit Sub
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "SetFormCaption", Err
 End Sub
 
-Public Sub LocalizeControl(ByVal ControlInstance As Control, ByVal TranslationKey As String, Optional ByVal Fallback As String = "")
+Public Sub LocalizeControl(ByVal ControlInstance As Control, ByVal translationKey As String, Optional ByVal Fallback As String = "")
     On Error GoTo ErrorHandler
 
     If ControlInstance Is Nothing Then
         Exit Sub
     End If
 
-    If LenB(Trim$(TranslationKey)) = 0 Then
+    If LenB(Trim$(translationKey)) = 0 Then
         Exit Sub
     End If
 
@@ -84,7 +83,7 @@ Public Sub LocalizeControl(ByVal ControlInstance As Control, ByVal TranslationKe
         Exit Sub
     End If
 
-    ApplyCaptionToControl ControlInstance, modTranslationService.T(TranslationKey, Fallback)
+    ApplyCaptionToControl ControlInstance, modTranslationService.T(translationKey, Fallback)
     Exit Sub
 
 ErrorHandler:
@@ -162,7 +161,7 @@ Private Function LocalizeTabPages(ByVal TabControlInstance As Control) As Long
     On Error GoTo ErrorHandler
 
     Dim Page As Access.Page
-    Dim TranslationKey As String
+    Dim translationKey As String
     Dim fallbackCaption As String
 
     If TabControlInstance Is Nothing Then
@@ -174,10 +173,10 @@ Private Function LocalizeTabPages(ByVal TabControlInstance As Control) As Long
     End If
 
     For Each Page In TabControlInstance.Pages
-        TranslationKey = ExtractTranslationKeyFromTag(NzString(Page.Tag))
-        If LenB(TranslationKey) > 0 Then
+        translationKey = ExtractTranslationKeyFromTag(NzString(Page.Tag))
+        If LenB(translationKey) > 0 Then
             fallbackCaption = NzString(Page.Caption)
-            Page.Caption = modTranslationService.T(TranslationKey, fallbackCaption)
+            Page.Caption = modTranslationService.T(translationKey, fallbackCaption)
             LocalizeTabPages = LocalizeTabPages + 1
         End If
     Next Page

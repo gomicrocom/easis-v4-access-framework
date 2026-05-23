@@ -1,5 +1,4 @@
-Attribute VB_Name = "modMigrationPaymentTerms"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -45,26 +44,26 @@ Public Sub ApplyPaymentTermsMigration()
 
     Dim frontendDb As DAO.Database
     Dim beDb As DAO.Database
-    Dim BackendPath As String
+    Dim backendPath As String
 
     Set frontendDb = CurrentDb
-    BackendPath = GetBackendPathForLinkedTable(frontendDb, TABLE_DOC_DOCUMENT)
-    Set beDb = DBEngine.OpenDatabase(BackendPath)
+    backendPath = GetBackendPathForLinkedTable(frontendDb, TABLE_DOC_DOCUMENT)
+    Set beDb = DBEngine.OpenDatabase(backendPath)
 
     EnsureDocDocumentFields beDb
     EnsureTenPaymentTermTable beDb
     EnsureTenPaymentTermIndexes beDb
     SeedDefaultPaymentTerms beDb
-    EnsureLinkedBackendTable frontendDb, BackendPath, TABLE_TEN_PAYMENT_TERM
+    EnsureLinkedBackendTable frontendDb, backendPath, TABLE_TEN_PAYMENT_TERM
 
-    MsgBox "Payment terms migration completed. Backend: " & BackendPath & _
+    MsgBox "Payment terms migration completed. Backend: " & backendPath & _
            ". Linked table: " & TABLE_TEN_PAYMENT_TERM, vbInformation, MODULE_NAME
     GoTo CleanExit
 
 ErrorHandler:
     MsgBox "Payment terms migration failed:" & vbCrLf & _
            Err.Number & " - " & Err.description & vbCrLf & vbCrLf & _
-           "Backend: " & BackendPath, vbCritical, MODULE_NAME
+           "Backend: " & backendPath, vbCritical, MODULE_NAME
 
 CleanExit:
     On Error Resume Next
@@ -228,8 +227,8 @@ Private Sub EnsurePaymentTerm( _
     ByVal DiscountDays As Variant, _
     ByVal DiscountPercent As Variant, _
     ByVal IsDefault As Boolean, _
-    ByVal IsActive As Boolean, _
-    ByVal SortOrder As Variant)
+    ByVal isActive As Boolean, _
+    ByVal sortOrder As Variant)
     On Error GoTo ErrorHandler
 
     Dim sql As String
@@ -261,8 +260,8 @@ Private Sub EnsurePaymentTerm( _
     sql = sql & SqlNumber(DiscountDays) & ", "
     sql = sql & SqlNumber(DiscountPercent) & ", "
     sql = sql & SqlBool(IsDefault) & ", "
-    sql = sql & SqlBool(IsActive) & ", "
-    sql = sql & SqlNumber(SortOrder) & ", "
+    sql = sql & SqlBool(isActive) & ", "
+    sql = sql & SqlNumber(sortOrder) & ", "
     sql = sql & SqlDate(Now()) & ", "
     sql = sql & SqlText(DEFAULT_CREATED_BY) & ", "
     sql = sql & SqlDate(Now()) & ", "
@@ -368,8 +367,8 @@ End Function
 
 Private Sub EnsureLinkedBackendTable( _
     ByVal frontendDb As DAO.Database, _
-    ByVal BackendPath As String, _
-    ByVal TableName As String)
+    ByVal backendPath As String, _
+    ByVal tableName As String)
     On Error GoTo ErrorHandler
 
     Dim tdf As DAO.tableDef
@@ -380,27 +379,27 @@ Private Sub EnsureLinkedBackendTable( _
         Exit Sub
     End If
 
-    If LenB(Trim$(BackendPath)) = 0 Then
+    If LenB(Trim$(backendPath)) = 0 Then
         Err.Raise vbObjectError + 2010, MODULE_NAME & ".EnsureLinkedBackendTable", _
-            "Backend path is empty for linked table '" & TableName & "'."
+            "Backend path is empty for linked table '" & tableName & "'."
     End If
 
-    If TableExists(frontendDb, TableName) Then
-        Set existingTdf = frontendDb.TableDefs(TableName)
+    If TableExists(frontendDb, tableName) Then
+        Set existingTdf = frontendDb.TableDefs(tableName)
         existingConnect = Trim$(Nz(existingTdf.Connect, vbNullString))
 
         If LenB(existingConnect) = 0 Then
             Err.Raise vbObjectError + 2011, MODULE_NAME & ".EnsureLinkedBackendTable", _
-                "Local table exists in frontend and cannot be replaced automatically: " & TableName
+                "Local table exists in frontend and cannot be replaced automatically: " & tableName
         End If
 
-        frontendDb.TableDefs.Delete TableName
+        frontendDb.TableDefs.Delete tableName
         frontendDb.TableDefs.Refresh
     End If
 
-    Set tdf = frontendDb.CreateTableDef(TableName)
-    tdf.Connect = ";DATABASE=" & BackendPath
-    tdf.SourceTableName = TableName
+    Set tdf = frontendDb.CreateTableDef(tableName)
+    tdf.Connect = ";DATABASE=" & backendPath
+    tdf.SourceTableName = tableName
     frontendDb.TableDefs.Append tdf
     frontendDb.TableDefs.Refresh
 
@@ -410,7 +409,7 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal TableName As String) As Boolean
+Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim tdf As DAO.tableDef
@@ -420,7 +419,7 @@ Private Function TableExists(ByVal db As DAO.Database, ByVal TableName As String
     End If
 
     For Each tdf In db.TableDefs
-        If StrComp(tdf.Name, TableName, vbTextCompare) = 0 Then
+        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
             TableExists = True
             Exit Function
         End If
@@ -432,7 +431,7 @@ ErrorHandler:
     TableExists = False
 End Function
 
-Private Function FieldExists(ByVal db As DAO.Database, ByVal TableName As String, ByVal FieldName As String) As Boolean
+Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim tdf As DAO.tableDef
@@ -442,14 +441,14 @@ Private Function FieldExists(ByVal db As DAO.Database, ByVal TableName As String
         Exit Function
     End If
 
-    If Not TableExists(db, TableName) Then
+    If Not TableExists(db, tableName) Then
         Exit Function
     End If
 
-    Set tdf = db.TableDefs(TableName)
+    Set tdf = db.TableDefs(tableName)
 
     For Each fld In tdf.Fields
-        If StrComp(fld.Name, FieldName, vbTextCompare) = 0 Then
+        If StrComp(fld.Name, fieldName, vbTextCompare) = 0 Then
             FieldExists = True
             Exit Function
         End If
@@ -461,7 +460,7 @@ ErrorHandler:
     FieldExists = False
 End Function
 
-Private Function IndexExists(ByVal db As DAO.Database, ByVal TableName As String, ByVal IndexName As String) As Boolean
+Private Function IndexExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal indexName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim tdf As DAO.tableDef
@@ -471,14 +470,14 @@ Private Function IndexExists(ByVal db As DAO.Database, ByVal TableName As String
         Exit Function
     End If
 
-    If Not TableExists(db, TableName) Then
+    If Not TableExists(db, tableName) Then
         Exit Function
     End If
 
-    Set tdf = db.TableDefs(TableName)
+    Set tdf = db.TableDefs(tableName)
 
     For Each idx In tdf.Indexes
-        If StrComp(idx.Name, IndexName, vbTextCompare) = 0 Then
+        If StrComp(idx.Name, indexName, vbTextCompare) = 0 Then
             IndexExists = True
             Exit Function
         End If

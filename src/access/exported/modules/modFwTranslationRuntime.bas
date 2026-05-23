@@ -1,5 +1,4 @@
-Attribute VB_Name = "modFwTranslationRuntime"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -22,7 +21,7 @@ Public Sub ApplyTranslations(ByVal TargetObject As Object)
     On Error GoTo ErrorHandler
 
     Dim LanguageCode As String
-    Dim ObjectName As String
+    Dim objectName As String
     Dim objectKind As String
     Dim resolvedCount As Long
     Dim missingCount As Long
@@ -35,7 +34,7 @@ Public Sub ApplyTranslations(ByVal TargetObject As Object)
     End If
 
     LanguageCode = GetCurrentLanguageCode()
-    ObjectName = GetTargetObjectName(TargetObject)
+    objectName = GetTargetObjectName(TargetObject)
     objectKind = GetTargetObjectKind(TargetObject)
 
     rawCaption = GetCaptionValue(TargetObject)
@@ -70,7 +69,7 @@ NextControl:
     Next ctl
 
     modLoggingHandler.LogInfo MODULE_NAME & ".ApplyTranslations", _
-        "Translated " & objectKind & " '" & ObjectName & "' with " & _
+        "Translated " & objectKind & " '" & objectName & "' with " & _
         CStr(resolvedCount) & " resolved caption(s) and " & _
         CStr(missingCount) & " missing translation(s)."
     Exit Sub
@@ -79,7 +78,7 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ApplyTranslations", Err
 End Sub
 
-Public Function ResolveTranslation(ByVal TranslationKey As String, Optional ByVal LanguageCode As String = "") As String
+Public Function ResolveTranslation(ByVal translationKey As String, Optional ByVal LanguageCode As String = "") As String
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -89,8 +88,8 @@ Public Function ResolveTranslation(ByVal TranslationKey As String, Optional ByVa
     Dim baseLanguageValue As String
     Dim translatedValue As String
 
-    originalValue = NzString(TranslationKey)
-    normalizedKey = NormalizeTranslationKey(TranslationKey)
+    originalValue = NzString(translationKey)
+    normalizedKey = NormalizeTranslationKey(translationKey)
     normalizedLanguageCode = NormalizeLanguageCode(LanguageCode)
 
     If LenB(normalizedKey) = 0 Then
@@ -141,7 +140,7 @@ Public Function ResolveTranslation(ByVal TranslationKey As String, Optional ByVa
     Exit Function
 
 ErrorHandler:
-    ResolveTranslation = NzString(TranslationKey)
+    ResolveTranslation = NzString(translationKey)
     modErrorHandler.HandleError MODULE_NAME, "ResolveTranslation", Err
 End Function
 
@@ -159,13 +158,13 @@ End Function
 Public Function BuildTranslatedReferenceRowSource( _
     ByVal referenceTableName As String, _
     ByVal codeFieldName As String, _
-    Optional ByVal languageCode As String = "") As String
+    Optional ByVal LanguageCode As String = "") As String
     On Error GoTo ErrorHandler
 
     Dim currentLanguageCode As String
     Dim sqlStatement As String
 
-    currentLanguageCode = NormalizeLanguageCode(languageCode)
+    currentLanguageCode = NormalizeLanguageCode(LanguageCode)
     If LenB(currentLanguageCode) = 0 Then
         currentLanguageCode = GetCurrentLanguageCode()
     End If
@@ -196,7 +195,7 @@ End Function
 
 Private Function LookupTranslation( _
     ByVal db As DAO.Database, _
-    ByVal TranslationKey As String, _
+    ByVal translationKey As String, _
     ByVal LanguageCode As String) As String
 
     On Error GoTo ErrorHandler
@@ -210,7 +209,7 @@ Private Function LookupTranslation( _
 
     sqlStatement = "SELECT TOP 1 [" & FIELD_TRANSLATION_VALUE & "] " & _
                    "FROM [" & TABLE_FW_TRANSLATIONS & "] " & _
-                   "WHERE [" & FIELD_TRANSLATION_KEY & "] = " & SqlText(TranslationKey) & " " & _
+                   "WHERE [" & FIELD_TRANSLATION_KEY & "] = " & SqlText(translationKey) & " " & _
                    "AND [" & FIELD_LANGUAGE_CODE & "] = " & SqlText(LanguageCode) & " " & _
                    "AND Trim(Nz([" & FIELD_TRANSLATION_VALUE & "], '')) <> ''"
 
@@ -230,17 +229,17 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "LookupTranslation", Err
     Resume CleanExit
 End Function
-Private Function NormalizeTranslationKey(ByVal TranslationKey As String) As String
-    TranslationKey = Trim$(NzString(TranslationKey))
+Private Function NormalizeTranslationKey(ByVal translationKey As String) As String
+    translationKey = Trim$(NzString(translationKey))
 
-    If LenB(TranslationKey) = 0 Then
+    If LenB(translationKey) = 0 Then
         Exit Function
     End If
 
-    If StrComp(Left$(TranslationKey, Len(TR_PREFIX)), TR_PREFIX, vbTextCompare) = 0 Then
-        NormalizeTranslationKey = Trim$(Mid$(TranslationKey, Len(TR_PREFIX) + 1))
+    If StrComp(Left$(translationKey, Len(TR_PREFIX)), TR_PREFIX, vbTextCompare) = 0 Then
+        NormalizeTranslationKey = Trim$(Mid$(translationKey, Len(TR_PREFIX) + 1))
     Else
-        NormalizeTranslationKey = TranslationKey
+        NormalizeTranslationKey = translationKey
     End If
 End Function
 
@@ -331,7 +330,7 @@ Private Function GetTargetObjectKind(ByVal TargetObject As Object) As String
     End Select
 End Function
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal TableName As String) As Boolean
+Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim tdf As DAO.tableDef
@@ -341,7 +340,7 @@ Private Function TableExists(ByVal db As DAO.Database, ByVal TableName As String
     End If
 
     For Each tdf In db.TableDefs
-        If StrComp(tdf.Name, TableName, vbTextCompare) = 0 Then
+        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
             TableExists = True
             Exit Function
         End If

@@ -1,5 +1,4 @@
-Attribute VB_Name = "modDocumentService"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -29,7 +28,7 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "CalculateDocumentLineNet", Err
 End Function
 
-Public Function CalculateDocumentLineGross(ByVal quantity As Double, ByVal UnitPrice As Currency, ByVal VatRate As Double, ByVal VatMode As String) As Currency
+Public Function CalculateDocumentLineGross(ByVal quantity As Double, ByVal UnitPrice As Currency, ByVal vatRate As Double, ByVal VatMode As String) As Currency
     On Error GoTo ErrorHandler
 
     Dim baseAmount As Currency
@@ -42,7 +41,7 @@ Public Function CalculateDocumentLineGross(ByVal quantity As Double, ByVal UnitP
         Case "INCLUSIVE"
             CalculateDocumentLineGross = baseAmount
         Case "EXCLUSIVE"
-            CalculateDocumentLineGross = modVatHandler.CalculateGrossFromNet(baseAmount, VatRate)
+            CalculateDocumentLineGross = modVatHandler.CalculateGrossFromNet(baseAmount, vatRate)
         Case Else
             CalculateDocumentLineGross = baseAmount
     End Select
@@ -53,13 +52,13 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "CalculateDocumentLineGross", Err
 End Function
 
-Public Function CalculateDocumentLineVat(ByVal quantity As Double, ByVal UnitPrice As Currency, ByVal VatRate As Double, ByVal VatMode As String) As Currency
+Public Function CalculateDocumentLineVat(ByVal quantity As Double, ByVal UnitPrice As Currency, ByVal vatRate As Double, ByVal VatMode As String) As Currency
     On Error GoTo ErrorHandler
 
     Dim baseAmount As Currency
 
     baseAmount = CalculateDocumentLineNet(quantity, UnitPrice)
-    CalculateDocumentLineVat = modVatHandler.CalculateVatAmount(baseAmount, VatRate, VatMode)
+    CalculateDocumentLineVat = modVatHandler.CalculateVatAmount(baseAmount, vatRate, VatMode)
     Exit Function
 
 ErrorHandler:
@@ -102,4 +101,3 @@ End Function
 Private Function RoundCurrency(ByVal Amount As Currency) As Currency
     RoundCurrency = CCur(Round(CDbl(Amount), 2))
 End Function
-

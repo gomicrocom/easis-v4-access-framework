@@ -1,5 +1,4 @@
-Attribute VB_Name = "modMigrationTranslations"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -160,7 +159,7 @@ Private Sub SeedReportTranslations(ByVal db As DAO.Database)
     EnsureTranslation db, "REPORT.PAYMENT_TERMS", "EN", "Payment terms", "REPORT", 2180
     EnsureTranslation db, "REPORT.PAYMENT_TERMS", "FR", "Conditions de paiement", "REPORT", 2180
 
-    EnsureTranslation db, "REPORT.VAT_SUMMARY", "DE", "MwSt.-Aufschlüsselung", "REPORT", 2190
+    EnsureTranslation db, "REPORT.VAT_SUMMARY", "DE", "MwSt.-AufschlÃ¼sselung", "REPORT", 2190
     EnsureTranslation db, "REPORT.VAT_SUMMARY", "EN", "VAT summary", "REPORT", 2190
     EnsureTranslation db, "REPORT.VAT_SUMMARY", "FR", "R" & ChrW$(233) & "capitulatif TVA", "REPORT", 2190
 
@@ -187,35 +186,35 @@ End Sub
 
 Private Sub EnsureTranslation( _
     ByVal db As DAO.Database, _
-    ByVal TranslationKey As String, _
+    ByVal translationKey As String, _
     ByVal LanguageCode As String, _
     ByVal TranslationValue As String, _
     Optional ByVal ModuleCode As String = "REPORT", _
-    Optional ByVal SortOrder As Long = 0)
+    Optional ByVal sortOrder As Long = 0)
     On Error GoTo ErrorHandler
 
     Dim rs As DAO.Recordset
 
-    If TranslationExists(db, TranslationKey, LanguageCode) Then
+    If TranslationExists(db, translationKey, LanguageCode) Then
         mSkippedCount = mSkippedCount + 1
-        Debug.Print MODULE_NAME & ".EnsureTranslation: skipped " & LanguageCode & "|" & TranslationKey
+        Debug.Print MODULE_NAME & ".EnsureTranslation: skipped " & LanguageCode & "|" & translationKey
         Exit Sub
     End If
 
     Set rs = db.OpenRecordset(TABLE_FW_TRANSLATIONS, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
-    rs.Fields(FIELD_TRANSLATION_KEY).Value = TranslationKey
+    rs.Fields(FIELD_TRANSLATION_KEY).Value = translationKey
     rs.Fields(FIELD_LANGUAGE_CODE).Value = LanguageCode
     rs.Fields(FIELD_TRANSLATION_VALUE).Value = TranslationValue
     SetFieldIfExists rs, FIELD_IS_ACTIVE, True
     SetFieldIfExists rs, FIELD_MODULE_CODE, ModuleCode
-    SetFieldIfExists rs, FIELD_SORT_ORDER, SortOrder
+    SetFieldIfExists rs, FIELD_SORT_ORDER, sortOrder
     SetFieldIfExists rs, FIELD_UPDATED_AT, Now()
     rs.Update
 
     mInsertedCount = mInsertedCount + 1
-    Debug.Print MODULE_NAME & ".EnsureTranslation: inserted " & LanguageCode & "|" & TranslationKey
+    Debug.Print MODULE_NAME & ".EnsureTranslation: inserted " & LanguageCode & "|" & translationKey
 
 CleanExit:
     On Error Resume Next
@@ -236,7 +235,7 @@ End Sub
 
 Private Function TranslationExists( _
     ByVal db As DAO.Database, _
-    ByVal TranslationKey As String, _
+    ByVal translationKey As String, _
     ByVal LanguageCode As String _
 ) As Boolean
     On Error GoTo ErrorHandler
@@ -246,7 +245,7 @@ Private Function TranslationExists( _
 
     sqlStatement = "SELECT [" & FIELD_TRANSLATION_KEY & "] " & _
                    "FROM [" & TABLE_FW_TRANSLATIONS & "] " & _
-                   "WHERE [" & FIELD_TRANSLATION_KEY & "] = " & SqlText(TranslationKey) & _
+                   "WHERE [" & FIELD_TRANSLATION_KEY & "] = " & SqlText(translationKey) & _
                    " AND [" & FIELD_LANGUAGE_CODE & "] = " & SqlText(LanguageCode) & ";"
 
     Set rs = db.OpenRecordset(sqlStatement, dbOpenSnapshot)
@@ -263,7 +262,7 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal TableName As String) As Boolean
+Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim tdf As DAO.tableDef
@@ -273,7 +272,7 @@ Private Function TableExists(ByVal db As DAO.Database, ByVal TableName As String
     End If
 
     For Each tdf In db.TableDefs
-        If StrComp(tdf.Name, TableName, vbTextCompare) = 0 Then
+        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
             TableExists = True
             Exit Function
         End If
@@ -285,7 +284,7 @@ ErrorHandler:
     TableExists = False
 End Function
 
-Private Function FieldExists(ByVal db As DAO.Database, ByVal TableName As String, ByVal FieldName As String) As Boolean
+Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim tdf As DAO.tableDef
@@ -295,14 +294,14 @@ Private Function FieldExists(ByVal db As DAO.Database, ByVal TableName As String
         Exit Function
     End If
 
-    If Not TableExists(db, TableName) Then
+    If Not TableExists(db, tableName) Then
         Exit Function
     End If
 
-    Set tdf = db.TableDefs(TableName)
+    Set tdf = db.TableDefs(tableName)
 
     For Each fld In tdf.Fields
-        If StrComp(fld.Name, FieldName, vbTextCompare) = 0 Then
+        If StrComp(fld.Name, fieldName, vbTextCompare) = 0 Then
             FieldExists = True
             Exit Function
         End If
@@ -314,9 +313,9 @@ ErrorHandler:
     FieldExists = False
 End Function
 
-Private Sub SetFieldIfExists(ByVal rs As DAO.Recordset, ByVal FieldName As String, ByVal Value As Variant)
-    If modDaoHelper.RecordsetHasField(rs, FieldName) Then
-        rs.Fields(FieldName).Value = Value
+Private Sub SetFieldIfExists(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal Value As Variant)
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        rs.Fields(fieldName).Value = Value
     End If
 End Sub
 

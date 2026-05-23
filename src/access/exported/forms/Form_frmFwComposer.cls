@@ -1,13 +1,4 @@
-VERSION 1.0 CLASS
-BEGIN
-  MultiUse = -1  'True
-END
-Attribute VB_Name = "Form_frmFwComposer"
-Attribute VB_GlobalNameSpace = False
-Attribute VB_Creatable = True
-Attribute VB_PredeclaredId = True
-Attribute VB_Exposed = False
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -98,29 +89,29 @@ End Sub
 Private Sub cmdApplyTranslationTags_Click()
     On Error GoTo ErrorHandler
 
-    Dim ObjectType As String
-    Dim ObjectName As String
+    Dim objectType As String
+    Dim objectName As String
     Dim AppliedCount As Long
     Dim SkippedCount As Long
 
-    ObjectType = Nz(Me!cboObjectType.Value, vbNullString)
-    ObjectName = Nz(Me!lstObjects.Value, vbNullString)
+    objectType = Nz(Me!cboObjectType.Value, vbNullString)
+    objectName = Nz(Me!lstObjects.Value, vbNullString)
 
-    If LenB(Trim$(ObjectType)) = 0 Or LenB(Trim$(ObjectName)) = 0 Then
+    If LenB(Trim$(objectType)) = 0 Or LenB(Trim$(objectName)) = 0 Then
         MsgBox "Bitte zuerst ein Formular oder einen Report auswaehlen.", vbExclamation, MODULE_NAME
         Exit Sub
     End If
 
     If Not ValidateCurrentTranslations(True) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".cmdApplyTranslationTags_Click", _
-            "Translation validation failed for " & ObjectType & "." & ObjectName & "."
+            "Translation validation failed for " & objectType & "." & objectName & "."
         Exit Sub
     End If
 
-    modFwComposerService.ApplyTranslationTagsToObject ObjectType, ObjectName, AppliedCount, SkippedCount
+    modFwComposerService.ApplyTranslationTagsToObject objectType, objectName, AppliedCount, SkippedCount
 
     modLoggingHandler.LogInfo MODULE_NAME & ".cmdApplyTranslationTags_Click", _
-        "Applied TR captions for " & ObjectType & "." & ObjectName & _
+        "Applied TR captions for " & objectType & "." & objectName & _
         " | applied=" & CStr(AppliedCount) & _
         " | skipped=" & CStr(SkippedCount) & "."
 
@@ -159,11 +150,11 @@ Private Sub LoadControlList()
     On Error GoTo ErrorHandler
 
     Dim controlList As Collection
-    Dim ObjectType As String
-    Dim ObjectName As String
+    Dim objectType As String
+    Dim objectName As String
 
-    ObjectType = Nz(Me!cboObjectType.Value, vbNullString)
-    ObjectName = Nz(Me!lstObjects.Value, vbNullString)
+    objectType = Nz(Me!cboObjectType.Value, vbNullString)
+    objectName = Nz(Me!lstObjects.Value, vbNullString)
 
     Me!lstControls.RowSourceType = "Value List"
     Me!lstControls.RowSource = vbNullString
@@ -171,11 +162,11 @@ Private Sub LoadControlList()
     Me!txtCaptionPreview = Null
     ApplyTranslationFilter vbNullString
 
-    If LenB(Trim$(ObjectType)) = 0 Or LenB(Trim$(ObjectName)) = 0 Then
+    If LenB(Trim$(objectType)) = 0 Or LenB(Trim$(objectName)) = 0 Then
         Exit Sub
     End If
 
-    Set controlList = modFwComposerService.GetComposerControlList(ObjectType, ObjectName, "lbl")
+    Set controlList = modFwComposerService.GetComposerControlList(objectType, objectName, "lbl")
 
     If controlList Is Nothing Or controlList.count = 0 Then
         Me!txtSuggestedTranslationKey = "(keine lbl*-Controls gefunden)"
@@ -193,17 +184,17 @@ End Sub
 Private Sub RefreshTranslationPreview()
     On Error GoTo ErrorHandler
 
-    Dim ObjectType As String
-    Dim ObjectName As String
+    Dim objectType As String
+    Dim objectName As String
     Dim ControlName As String
-    Dim TranslationKey As String
+    Dim translationKey As String
 
-    ObjectType = Nz(Me!cboObjectType, vbNullString)
-    ObjectName = Nz(Me!lstObjects, vbNullString)
+    objectType = Nz(Me!cboObjectType, vbNullString)
+    objectName = Nz(Me!lstObjects, vbNullString)
     ControlName = Nz(Me!lstControls, vbNullString)
 
-    If LenB(Trim$(ObjectType)) = 0 _
-       Or LenB(Trim$(ObjectName)) = 0 _
+    If LenB(Trim$(objectType)) = 0 _
+       Or LenB(Trim$(objectName)) = 0 _
        Or LenB(Trim$(ControlName)) = 0 Then
 
         Me!txtSuggestedTranslationKey = Null
@@ -212,19 +203,19 @@ Private Sub RefreshTranslationPreview()
         Exit Sub
     End If
 
-    TranslationKey = modFwComposerService.SuggestTranslationKey( _
-        ObjectType, _
-        ObjectName, _
+    translationKey = modFwComposerService.SuggestTranslationKey( _
+        objectType, _
+        objectName, _
         ControlName)
 
-    Me!txtSuggestedTranslationKey = TranslationKey
+    Me!txtSuggestedTranslationKey = translationKey
     Me!txtCaptionPreview = modFwComposerService.GetControlCaptionValue( _
-        ObjectType, _
-        ObjectName, _
+        objectType, _
+        objectName, _
         ControlName)
 
-    modFwComposerService.EnsureTranslationPlaceholders TranslationKey
-    ApplyTranslationFilter TranslationKey
+    modFwComposerService.EnsureTranslationPlaceholders translationKey
+    ApplyTranslationFilter translationKey
     Exit Sub
 
 ErrorHandler:
@@ -247,11 +238,11 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
-Private Sub ApplyTranslationFilter(Optional ByVal TranslationKey As String = vbNullString)
+Private Sub ApplyTranslationFilter(Optional ByVal translationKey As String = vbNullString)
     Dim filterExpression As String
 
-    If LenB(Trim$(TranslationKey)) > 0 Then
-        filterExpression = "[translation_key] = " & SqlText(TranslationKey)
+    If LenB(Trim$(translationKey)) > 0 Then
+        filterExpression = "[translation_key] = " & SqlText(translationKey)
     Else
         filterExpression = vbNullString
     End If
@@ -297,25 +288,25 @@ ErrorHandler:
 End Sub
 
 Private Function BuildCurrentContextFilter() As String
-    Dim TranslationKey As String
-    Dim ObjectType As String
-    Dim ObjectName As String
+    Dim translationKey As String
+    Dim objectType As String
+    Dim objectName As String
 
-    TranslationKey = Trim$(Nz(Me!txtSuggestedTranslationKey.Value, vbNullString))
-    If LenB(TranslationKey) > 0 Then
-        If Left$(TranslationKey, 1) <> "(" Then
-            BuildCurrentContextFilter = "[translation_key] = " & SqlText(TranslationKey)
+    translationKey = Trim$(Nz(Me!txtSuggestedTranslationKey.Value, vbNullString))
+    If LenB(translationKey) > 0 Then
+        If Left$(translationKey, 1) <> "(" Then
+            BuildCurrentContextFilter = "[translation_key] = " & SqlText(translationKey)
             Exit Function
         End If
     End If
 
-    ObjectType = UCase$(Trim$(Nz(Me!cboObjectType.Value, vbNullString)))
-    ObjectName = UCase$(Trim$(Nz(Me!lstObjects.Value, vbNullString)))
+    objectType = UCase$(Trim$(Nz(Me!cboObjectType.Value, vbNullString)))
+    objectName = UCase$(Trim$(Nz(Me!lstObjects.Value, vbNullString)))
 
-    Select Case ObjectType
+    Select Case objectType
         Case modFwComposerService.OBJECT_TYPE_FORM
-            If LenB(ObjectName) > 0 Then
-                BuildCurrentContextFilter = "[translation_key] Like " & SqlText("FORM." & ObjectName & ".*")
+            If LenB(objectName) > 0 Then
+                BuildCurrentContextFilter = "[translation_key] Like " & SqlText("FORM." & objectName & ".*")
             Else
                 BuildCurrentContextFilter = "[translation_key] Like " & SqlText("FORM.*")
             End If
@@ -336,19 +327,19 @@ Private Function BuildMissingTranslationFilter() As String
 End Function
 
 Private Function ValidateCurrentTranslations(Optional ByVal ShowMessage As Boolean = True) As Boolean
-    Dim ObjectType As String
-    Dim ObjectName As String
+    Dim objectType As String
+    Dim objectName As String
     Dim isValid As Boolean
 
-    ObjectType = vbNullString
-    ObjectName = vbNullString
+    objectType = vbNullString
+    objectName = vbNullString
 
     If LenB(Trim$(Nz(Me!lstObjects.Value, vbNullString))) > 0 Then
-        ObjectType = Nz(Me!cboObjectType.Value, vbNullString)
-        ObjectName = Nz(Me!lstObjects.Value, vbNullString)
+        objectType = Nz(Me!cboObjectType.Value, vbNullString)
+        objectName = Nz(Me!lstObjects.Value, vbNullString)
     End If
 
-    isValid = modFwComposerService.ValidateTranslationsReady(ObjectType, ObjectName)
+    isValid = modFwComposerService.ValidateTranslationsReady(objectType, objectName)
 
     If Not isValid Then
         If ShowMessage Then
@@ -384,7 +375,6 @@ End Sub
 Private Function SqlText(ByVal Value As String) As String
     SqlText = "'" & Replace(Nz(Value, vbNullString), "'", "''") & "'"
 End Function
-
 
 
 

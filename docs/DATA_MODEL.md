@@ -21,12 +21,12 @@ This document focuses on the tenant backend structures now actively used by Basi
 
 Reference tables provide controlled reusable business values for the tenant application layer.
 
-- `ref_payment_term`
-  - payment term definitions used by orders and documents
+- `ten_payment_term`
+  - tenant-level payment term definitions used by orders and documents
 - `ref_vat_code`
-  - VAT code and VAT-rate definitions
+  - translated VAT code and VAT-rate definitions
 - `ref_unit`
-  - quantity and unit definitions
+  - translated quantity and unit definitions
 - `fw_list_action`
   - configurable list navigation and action source for business UI flows
 
@@ -61,9 +61,9 @@ The exact physical field names may evolve by implementation detail, but the inte
 | `art_article` | `ArticleID` |
 | `ord_order` | `OrderID` |
 | `ord_order_line` | `OrderLineID` |
-| `ref_payment_term` | `PaymentTermID` or stable business code |
-| `ref_vat_code` | `VatCodeID` or stable VAT code |
-| `ref_unit` | `UnitID` or stable unit code |
+| `ten_payment_term` | `payment_term_id` with unique `payment_term_code` + `language_code` |
+| `ref_vat_code` | `vat_code` |
+| `ref_unit` | `unit_code` |
 | `fw_list_action` | `action_id` |
 
 If a table uses a business code as a technical primary identifier, that code must remain stable and unique within the tenant backend.
@@ -78,9 +78,9 @@ The following business relationships are expected to be central:
 | `tblAddresses` | `ord_order` | customer / invoice / delivery linkage |
 | `ord_order` | `ord_order_line` | order header to line items |
 | `art_article` | `ord_order_line` | line-level article reference |
-| `ref_unit` | `art_article` / `ord_order_line` | unit standardization |
-| `ref_vat_code` | `art_article` / `ord_order_line` | VAT assignment |
-| `ref_payment_term` | `ord_order` | commercial payment handling |
+| `ref_unit` | `art_article.unit_code` / `ord_order_line.unit_code` | unit standardization |
+| `ref_vat_code` | `art_product_group.vat_code` / `art_article.vat_code` / `ord_order_line.vat_code` | VAT assignment |
+| `ten_payment_term` | `ord_order` | commercial payment handling via `payment_term_code` |
 | `fw_list_action` | `frm<Entity>List` | configurable navigation/action menu |
 
 Typical tenant-business relationships include:
@@ -161,17 +161,43 @@ Stores the commercial order header, customer linkage, status, date information, 
 
 Stores quantity, article, pricing, and VAT-relevant transactional detail for each order position.
 
-### `ref_payment_term`
+### `ten_payment_term`
 
-Stores reusable payment-term definitions used for order and document communication.
+Stores tenant-level payment-term definitions used for order and document communication.
 
 ### `ref_vat_code`
 
 Stores VAT reference definitions used in calculations and document presentation.
 
+The current intended structure includes:
+
+- `vat_code`
+- `translation_key`
+- `vat_rate`
+- `country_code`
+- `valid_from`
+- `valid_to`
+- `sort_order`
+- `is_active`
+- `created_at`
+- `created_by`
+- `updated_at`
+- `updated_by`
+
 ### `ref_unit`
 
-Stores standardized unit definitions used by articles and order lines.
+Stores translated standardized unit definitions used by articles and order lines.
+
+The current intended structure includes:
+
+- `unit_code`
+- `translation_key`
+- `sort_order`
+- `is_active`
+- `created_at`
+- `created_by`
+- `updated_at`
+- `updated_by`
 
 ### `fw_list_action`
 

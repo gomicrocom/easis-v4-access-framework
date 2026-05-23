@@ -1,5 +1,4 @@
-Attribute VB_Name = "modCurrencyFormatService"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -218,4 +217,3 @@ ErrorHandler:
         "Failed to apply thousand separator.", Err.Number
     modErrorHandler.HandleError MODULE_NAME, "AddThousands", Err
 End Function
-

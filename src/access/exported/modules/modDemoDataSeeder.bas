@@ -1,5 +1,4 @@
-Attribute VB_Name = "modDemoDataSeeder"
-Option Compare Database
+ï»¿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -140,7 +139,7 @@ Private Sub UpsertTenantParameters(ByVal db As DAO.Database, ByVal TenantCode As
     UpsertTenantParameter db, "SENDER_STREET", "Bahnhofstrasse"
     UpsertTenantParameter db, "SENDER_HOUSE_NO", "10"
     UpsertTenantParameter db, "SENDER_ZIP_CODE", "8001"
-    UpsertTenantParameter db, "SENDER_CITY", "Zürich"
+    UpsertTenantParameter db, "SENDER_CITY", "ZÃ¼rich"
     UpsertTenantParameter db, "SENDER_COUNTRY_CODE", "CH"
     UpsertTenantParameter db, "SENDER_PHONE", "+41 44 123 45 67"
     UpsertTenantParameter db, "SENDER_EMAIL", "demo@easis.ch"
@@ -149,8 +148,8 @@ End Sub
 
 Private Sub InsertAddresses(ByVal db As DAO.Database)
     mAddressBillingCh = InsertAddress(db, "BILLING", "Muster Handel AG", "Anna", "Keller", "Industriestrasse", "15", "6300", "Zug", "CH", "de-CH")
-    mAddressShippingCh = InsertAddress(db, "SHIPPING", "Muster Handel AG - Lager Genf", "Marc", "Dubois", "Route de Meyrin", "88", "1203", "Genève", "CH", "fr-CH")
-    mAddressBillingDe = InsertAddress(db, "BILLING", "Beispiel GmbH", "Thomas", "Schneider", "Hauptstrasse", "22", "80331", "München", "DE", "de-DE")
+    mAddressShippingCh = InsertAddress(db, "SHIPPING", "Muster Handel AG - Lager Genf", "Marc", "Dubois", "Route de Meyrin", "88", "1203", "GenÃ¨ve", "CH", "fr-CH")
+    mAddressBillingDe = InsertAddress(db, "BILLING", "Beispiel GmbH", "Thomas", "Schneider", "Hauptstrasse", "22", "80331", "MÃ¼nchen", "DE", "de-DE")
     mAddressShippingFr = InsertAddress(db, "SHIPPING", "Beispiel GmbH - Site Paris", "Claire", "Martin", "Rue Lafayette", "12", "75009", "Paris", "FR", "fr-FR")
     mAddressBillingUs = InsertAddress(db, "BILLING", "Global Components Inc.", "John", "Miller", "Market Street", "500", "94105", "San Francisco", "US", "en-US")
 End Sub
@@ -171,19 +170,19 @@ Private Sub InsertDocuments(ByVal db As DAO.Database)
     
     mDocInvoiceEu = InsertDocument(db, "INVOICE", "FINAL", "RE-2026-0002", DateSerial(2026, 5, 2), mAddressBillingDe, "Beispiel GmbH", "EUR", "NET", 19, "EU-Rechnung mit Positionsrabatt und Kopfrabatt. Separate Lieferadresse: Beispiel GmbH - Site Paris, 12 Rue Lafayette, 75009 Paris, FR", "PERCENT", 5, "de-DE", "CASH_DISCOUNT_10_2_NET_30", "2% Skonto bei Zahlung innert 10 Tagen, ansonsten zahlbar innert 30 Tagen netto.")
     
-    mDocDeliveryNote = InsertDocument(db, "DELIVERY_NOTE", "FINAL", "LS-2026-0001", DateSerial(2026, 5, 2), mAddressShippingCh, "Muster Handel AG - Lager Genf", "CHF", "NET", 7.7, "Lieferschein-Sonderfall: Lieferadresse im Fenster, Rechnungsadresse gegenüber: Muster Handel AG, Industriestrasse 15, 6300 Zug", "", 0, "de-CH", "", "")
+    mDocDeliveryNote = InsertDocument(db, "DELIVERY_NOTE", "FINAL", "LS-2026-0001", DateSerial(2026, 5, 2), mAddressShippingCh, "Muster Handel AG - Lager Genf", "CHF", "NET", 7.7, "Lieferschein-Sonderfall: Lieferadresse im Fenster, Rechnungsadresse gegenÃ¼ber: Muster Handel AG, Industriestrasse 15, 6300 Zug", "", 0, "de-CH", "", "")
     
     mDocCreditNote = InsertDocument(db, "CREDIT_NOTE", "FINAL", "GS-2026-0001", DateSerial(2026, 5, 2), mAddressBillingDe, "Beispiel GmbH", "EUR", "NET", 19, "Gutschrift mit negativer Position", "", 0, "de-DE", "NET_30", "Zahlbar innert 30 Tagen netto.")
     
-    mDocInvoiceUsd = InsertDocument(db, "INVOICE", "FINAL", "RE-2026-0003", DateSerial(2026, 5, 2), mAddressBillingUs, "Global Components Inc.", "USD", "EXPORT", 0, "Exportrechnung mit 0% VAT, Positionsrabatt, großen Zahlen und Rundungstest", "", 0, "en-US", "PREPAYMENT", "Payable in advance.")
+    mDocInvoiceUsd = InsertDocument(db, "INVOICE", "FINAL", "RE-2026-0003", DateSerial(2026, 5, 2), mAddressBillingUs, "Global Components Inc.", "USD", "EXPORT", 0, "Exportrechnung mit 0% VAT, Positionsrabatt, groÃŸen Zahlen und Rundungstest", "", 0, "en-US", "PREPAYMENT", "Payable in advance.")
     
-    mDocLongInvoice = InsertDocument(db, "INVOICE", "FINAL", "RE-2026-0099", DateSerial(2026, 5, 3), mAddressBillingCh, "Muster Handel AG", "CHF", "NET", 7.7, "Langdokument für Report- und Seitenumbruchtests", "", 0, "de-CH", "NET_30", "Zahlbar innert 30 Tagen netto.")
+    mDocLongInvoice = InsertDocument(db, "INVOICE", "FINAL", "RE-2026-0099", DateSerial(2026, 5, 3), mAddressBillingCh, "Muster Handel AG", "CHF", "NET", 7.7, "Langdokument fÃ¼r Report- und Seitenumbruchtests", "", 0, "de-CH", "NET_30", "Zahlbar innert 30 Tagen netto.")
 
 End Sub
 
 Private Sub InsertPositions(ByVal db As DAO.Database)
     Dim i As Long
-    Dim VatRate As Double
+    Dim vatRate As Double
     Dim UnitPrice As Currency
     Dim quantity As Double
     Dim description As String
@@ -205,11 +204,11 @@ Private Sub InsertPositions(ByVal db As DAO.Database)
 
     For i = 1 To 50
         If i Mod 10 = 0 Then
-            VatRate = 2.5
+            vatRate = 2.5
         ElseIf i Mod 15 = 0 Then
-            VatRate = 0
+            vatRate = 0
         Else
-            VatRate = 7.7
+            vatRate = 7.7
         End If
 
         UnitPrice = CCur(45 + (i * 4.25))
@@ -217,7 +216,7 @@ Private Sub InsertPositions(ByVal db As DAO.Database)
 
         description = _
             "Testposition " & Format$(i, "00") & _
-            " - Automatisch generierte Langbeschreibung für Seitenumbruch-, PDF- und VAT-Tests"
+            " - Automatisch generierte Langbeschreibung fÃ¼r Seitenumbruch-, PDF- und VAT-Tests"
 
         InsertPosition _
             db, _
@@ -227,7 +226,7 @@ Private Sub InsertPositions(ByVal db As DAO.Database)
             quantity, _
             "Stk", _
             UnitPrice, _
-            VatRate
+            vatRate
     Next i
 End Sub
 Private Function InsertAddress( _
@@ -273,7 +272,7 @@ End Function
 Private Sub InsertContact( _
     ByVal db As DAO.Database, _
     ByVal AddressId As Long, _
-    ByVal ContactTypeCode As String, _
+    ByVal contactTypeCode As String, _
     ByVal ContactValue As String, _
     ByVal IsPrimary As Boolean, _
     ByVal remarks As String _
@@ -284,7 +283,7 @@ Private Sub InsertContact( _
 
     rs.AddNew
     SetFieldIfExists rs, "address_id", AddressId
-    SetFieldIfExists rs, "contact_type_code", UCase$(Trim$(ContactTypeCode))
+    SetFieldIfExists rs, "contact_type_code", UCase$(Trim$(contactTypeCode))
     SetFieldIfExists rs, "contact_value", Trim$(ContactValue)
     SetFieldIfExists rs, "is_primary", IsPrimary
     SetFieldIfExists rs, "remarks", Trim$(remarks)
@@ -306,7 +305,7 @@ Private Function InsertDocument( _
     ByVal CustomerName As String, _
     ByVal CurrencyCode As String, _
     ByVal VatMode As String, _
-    ByVal VatRate As Double, _
+    ByVal vatRate As Double, _
     ByVal remarks As String, _
     Optional ByVal HeaderDiscountType As String = "", _
     Optional ByVal HeaderDiscountValue As Double = 0, _
@@ -334,7 +333,7 @@ Private Function InsertDocument( _
     SetFieldIfExists rs, "language_code", NullIfEmpty(LanguageCode)
     SetFieldIfExists rs, "payment_term_code", NullIfEmpty(PaymentTermCode)
     SetFieldIfExists rs, "payment_terms_text", NullIfEmpty(PaymentTermsText)
-    SetFieldIfExists rs, "vat_rate", VatRate
+    SetFieldIfExists rs, "vat_rate", vatRate
     SetFieldIfExists rs, "total_net", CCur(0)
     SetFieldIfExists rs, "total_vat", CCur(0)
     SetFieldIfExists rs, "total_gross", CCur(0)
@@ -356,9 +355,9 @@ Private Sub InsertPosition( _
     ByVal LineNo As Long, _
     ByVal description As String, _
     ByVal quantity As Double, _
-    ByVal UnitCode As String, _
+    ByVal unitCode As String, _
     ByVal UnitPrice As Currency, _
-    ByVal VatRate As Double, _
+    ByVal vatRate As Double, _
     Optional ByVal DiscountType As String = "", _
     Optional ByVal DiscountValue As Double = 0 _
 )
@@ -378,7 +377,7 @@ Private Sub InsertPosition( _
     End If
 
     lineNet = CCur(Round(CDbl(lineBase) - CDbl(lineDiscount), 2))
-    lineVat = CCur(Round(CDbl(lineNet) * CDbl(VatRate) / 100#, 2))
+    lineVat = CCur(Round(CDbl(lineNet) * CDbl(vatRate) / 100#, 2))
     lineGross = CCur(Round(CDbl(lineNet) + CDbl(lineVat), 2))
 
     Set rs = db.OpenRecordset(TBL_DOC_POSITION, dbOpenDynaset, dbAppendOnly)
@@ -388,9 +387,9 @@ Private Sub InsertPosition( _
     SetFieldIfExists rs, "line_no", LineNo
     SetFieldIfExists rs, "description", Trim$(description)
     SetFieldIfExists rs, "quantity", quantity
-    SetFieldIfExists rs, "unit_code", Trim$(UnitCode)
+    SetFieldIfExists rs, "unit_code", Trim$(unitCode)
     SetFieldIfExists rs, "unit_price", UnitPrice
-    SetFieldIfExists rs, "vat_rate", VatRate
+    SetFieldIfExists rs, "vat_rate", vatRate
 
     SetFieldIfExists rs, "discount_type", NullIfEmpty(DiscountType)
     SetFieldIfExists rs, "discount_value", DiscountValue
@@ -480,17 +479,17 @@ Private Sub UpsertTenantParameter(ByVal db As DAO.Database, ByVal ParamKey As St
     Set rs = Nothing
 End Sub
 
-Private Sub SetFieldIfExists(ByVal rs As DAO.Recordset, ByVal FieldName As String, ByVal Value As Variant)
-    If RecordsetHasField(rs, FieldName) Then
-        rs.Fields(FieldName).Value = Value
+Private Sub SetFieldIfExists(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal Value As Variant)
+    If RecordsetHasField(rs, fieldName) Then
+        rs.Fields(fieldName).Value = Value
     End If
 End Sub
 
-Private Function RecordsetHasField(ByVal rs As DAO.Recordset, ByVal FieldName As String) As Boolean
+Private Function RecordsetHasField(ByVal rs As DAO.Recordset, ByVal fieldName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim tmp As Variant
-    tmp = rs.Fields(FieldName).Name
+    tmp = rs.Fields(fieldName).Name
     RecordsetHasField = True
     Exit Function
 
@@ -498,25 +497,25 @@ ErrorHandler:
     RecordsetHasField = False
 End Function
 
-Private Sub RequireTable(ByVal db As DAO.Database, ByVal TableName As String)
-    If Not TableExists(db, TableName) Then
-        Err.Raise vbObjectError + 701, MODULE_NAME, "Required table missing: " & TableName
+Private Sub RequireTable(ByVal db As DAO.Database, ByVal tableName As String)
+    If Not TableExists(db, tableName) Then
+        Err.Raise vbObjectError + 701, MODULE_NAME, "Required table missing: " & tableName
     End If
 End Sub
 
-Private Sub RequireField(ByVal db As DAO.Database, ByVal TableName As String, ByVal FieldName As String)
-    If Not FieldExists(db, TableName, FieldName) Then
-        Err.Raise vbObjectError + 702, MODULE_NAME, "Required field missing: " & TableName & "." & FieldName
+Private Sub RequireField(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String)
+    If Not FieldExists(db, tableName, fieldName) Then
+        Err.Raise vbObjectError + 702, MODULE_NAME, "Required field missing: " & tableName & "." & fieldName
     End If
 End Sub
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal TableName As String) As Boolean
+Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim tdf As DAO.tableDef
 
     For Each tdf In db.TableDefs
-        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(TableName)) Then
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
             TableExists = True
             Exit Function
         End If
@@ -528,11 +527,11 @@ ErrorHandler:
     TableExists = False
 End Function
 
-Private Function FieldExists(ByVal db As DAO.Database, ByVal TableName As String, ByVal FieldName As String) As Boolean
+Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim tmp As String
-    tmp = db.TableDefs(TableName).Fields(FieldName).Name
+    tmp = db.TableDefs(tableName).Fields(fieldName).Name
     FieldExists = True
     Exit Function
 
@@ -576,7 +575,6 @@ Private Function NullIfEmpty(ByVal Value As String) As Variant
         NullIfEmpty = Trim$(Value)
     End If
 End Function
-
 
 
 

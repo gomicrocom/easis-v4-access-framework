@@ -1,13 +1,4 @@
-VERSION 1.0 CLASS
-BEGIN
-  MultiUse = -1  'True
-END
-Attribute VB_Name = "Form_frmTagHelp"
-Attribute VB_GlobalNameSpace = False
-Attribute VB_Creatable = True
-Attribute VB_PredeclaredId = True
-Attribute VB_Exposed = False
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 Private Const TABLE_TAG_HELP As String = "fw_tag_help"
@@ -44,8 +35,11 @@ Private Sub LoadHelpList(Optional ByVal FilterText As String = vbNullString)
     Me.lstHelpTokens.Requery
 End Sub
 
+
 Private Sub lstHelpTokens_AfterUpdate()
+
     LoadHelpDetail Nz(Me.lstHelpTokens.Column(0), vbNullString)
+
 End Sub
 
 Private Sub LoadHelpDetail(ByVal TokenKey As String)
@@ -94,12 +88,21 @@ Private Sub ClearDetailFields()
 End Sub
 
 Private Sub txtFilter_AfterUpdate()
+
     LoadHelpList Nz(Me.txtFilter, vbNullString)
+
 End Sub
 
 Private Sub cmdClose_Click()
+
     DoCmd.Close acForm, Me.Name
+
 End Sub
+
+
+
+
+
 
 
 

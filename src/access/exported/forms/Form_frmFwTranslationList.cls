@@ -1,13 +1,4 @@
-VERSION 1.0 CLASS
-BEGIN
-  MultiUse = -1  'True
-END
-Attribute VB_Name = "Form_frmFwTranslationList"
-Attribute VB_GlobalNameSpace = False
-Attribute VB_Creatable = True
-Attribute VB_PredeclaredId = True
-Attribute VB_Exposed = False
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -65,16 +56,16 @@ End Sub
 Private Sub Form_BeforeUpdate(Cancel As Integer)
     On Error GoTo ErrorHandler
 
-    Dim TranslationKey As String
+    Dim translationKey As String
     Dim LanguageCode As String
     Dim TranslationValue As String
     Dim duplicateCount As Long
 
-    TranslationKey = Trim$(Nz(Me!txtTranslationKey.Value, vbNullString))
+    translationKey = Trim$(Nz(Me!txtTranslationKey.Value, vbNullString))
     LanguageCode = Trim$(Nz(Me!cboLanguageCode.Value, vbNullString))
     TranslationValue = Trim$(Nz(Me!txtTranslationValue.Value, vbNullString))
 
-    If LenB(TranslationKey) = 0 Then
+    If LenB(translationKey) = 0 Then
         MsgBox "TranslationKey fehlt.", vbExclamation, MODULE_NAME
         Cancel = True
         Exit Sub
@@ -95,7 +86,7 @@ Private Sub Form_BeforeUpdate(Cancel As Integer)
     duplicateCount = DCount( _
         "*", _
         TABLE_FW_TRANSLATIONS, _
-        "[" & FIELD_TRANSLATION_KEY & "] = " & SqlText(TranslationKey) & _
+        "[" & FIELD_TRANSLATION_KEY & "] = " & SqlText(translationKey) & _
         " AND [" & FIELD_LANGUAGE_CODE & "] = " & SqlText(LanguageCode))
 
     If Me.NewRecord Then
@@ -129,12 +120,12 @@ SafeExit:
 End Function
 
 Private Sub EnsureCurrentTranslationKeyDefault()
-    Dim TranslationKey As String
+    Dim translationKey As String
 
     If Me.NewRecord Then
-        TranslationKey = CurrentTranslationKeyFromParent()
-        If LenB(TranslationKey) > 0 Then
-            Me!txtTranslationKey = TranslationKey
+        translationKey = CurrentTranslationKeyFromParent()
+        If LenB(translationKey) > 0 Then
+            Me!txtTranslationKey = translationKey
         End If
     End If
 End Sub
@@ -142,5 +133,4 @@ End Sub
 Private Function SqlText(ByVal Value As String) As String
     SqlText = "'" & Replace(Nz(Value, vbNullString), "'", "''") & "'"
 End Function
-
 

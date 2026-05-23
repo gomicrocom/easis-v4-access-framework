@@ -1,13 +1,4 @@
-VERSION 1.0 CLASS
-BEGIN
-  MultiUse = -1  'True
-END
-Attribute VB_Name = "Form_sfrmAddressContacts"
-Attribute VB_GlobalNameSpace = False
-Attribute VB_Creatable = True
-Attribute VB_PredeclaredId = True
-Attribute VB_Exposed = False
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -24,7 +15,7 @@ Private Sub Form_Load()
 
     ConfigureContactTypeCombo
     modFwTranslationRuntime.ApplyTranslations Me
-    
+
     modLoggingHandler.LogInfo MODULE_NAME & ".Form_Load", _
         "Address Contacts loaded."
     Exit Sub
@@ -59,6 +50,8 @@ Private Sub ConfigureContactTypeCombo()
         .ColumnWidths = "0cm;4cm"
         .LimitToList = True
         .Requery
+        Debug.Print "cboContactType RowSource = " & Me!cboContactType.RowSource
+        Debug.Print "cboContactType ListCount = " & Me!cboContactType.ListCount
     End With
     Exit Sub
 
@@ -81,6 +74,12 @@ Private Function HasControl(ByVal ControlName As String) As Boolean
 
 SafeExit:
 End Function
+
+
+
+
+
+
 
 
 

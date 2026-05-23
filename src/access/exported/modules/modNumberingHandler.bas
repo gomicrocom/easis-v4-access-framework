@@ -1,5 +1,4 @@
-Attribute VB_Name = "modNumberingHandler"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -171,7 +170,7 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Function ResolveTextField(ByVal rs As DAO.Recordset, ByVal DocumentTypeCode As String, ByVal FiscalYear As Long, ByVal FieldName As String, ByVal DefaultValue As String) As String
+Private Function ResolveTextField(ByVal rs As DAO.Recordset, ByVal DocumentTypeCode As String, ByVal FiscalYear As Long, ByVal fieldName As String, ByVal DefaultValue As String) As String
     On Error GoTo ErrorHandler
 
     Dim targetType As String
@@ -185,7 +184,7 @@ Private Function ResolveTextField(ByVal rs As DAO.Recordset, ByVal DocumentTypeC
 
     If Not modDaoHelper.RecordsetHasField(rs, FIELD_DOCUMENT_TYPE_CODE) _
         Or Not modDaoHelper.RecordsetHasField(rs, FIELD_FISCAL_YEAR) _
-        Or Not modDaoHelper.RecordsetHasField(rs, FieldName) Then
+        Or Not modDaoHelper.RecordsetHasField(rs, fieldName) Then
         Exit Function
     End If
 
@@ -201,7 +200,7 @@ Private Function ResolveTextField(ByVal rs As DAO.Recordset, ByVal DocumentTypeC
                 End If
             End If
 
-            ResolveTextField = modDaoHelper.NzString(rs.Fields(FieldName).Value, DefaultValue)
+            ResolveTextField = modDaoHelper.NzString(rs.Fields(fieldName).Value, DefaultValue)
             Exit Function
         End If
 

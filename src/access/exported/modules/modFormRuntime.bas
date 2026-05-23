@@ -1,5 +1,4 @@
-Attribute VB_Name = "modFormRuntime"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -30,7 +29,7 @@ Private Const VALIDATION_COLORSTORE_PREFIX As String = "__VALORIG__:"
 
 Private mValidationOriginalColors As Object
 
-Public Sub InitializeForm(ByVal FormInstance As Access.Form)
+Public Sub InitializeForm(ByVal formInstance As Access.Form)
     On Error GoTo ErrorHandler
 
     Dim FormName As String
@@ -39,14 +38,14 @@ Public Sub InitializeForm(ByVal FormInstance As Access.Form)
     Dim formTokens As Object
     Dim CurrentUserRoles As Collection
 
-    If FormInstance Is Nothing Then
+    If formInstance Is Nothing Then
         Exit Sub
     End If
     
-    ClearStoredValidationColorsForForm FormInstance
+    ClearStoredValidationColorsForForm formInstance
     
-    FormName = GetFormName(FormInstance)
-    Set formTokens = ParseTagTokens(FormInstance.Tag)
+    FormName = GetFormName(formInstance)
+    Set formTokens = ParseTagTokens(formInstance.Tag)
     Set CurrentUserRoles = modSessionContext.GetCurrentUserRoles()
 
     modLoggingHandler.LogInfo MODULE_NAME & ".InitializeForm", _
@@ -76,16 +75,16 @@ Public Sub InitializeForm(ByVal FormInstance As Access.Form)
         End If
     End If
 
-    modFormLocalization.LocalizeForm FormInstance
+    modFormLocalization.LocalizeForm formInstance
 
     If formTokens.Exists(TAG_TOKEN_READONLY) Then
-        ApplyReadOnlyPolicy FormInstance
+        ApplyReadOnlyPolicy formInstance
         modLoggingHandler.LogInfo MODULE_NAME & ".InitializeForm", _
             "Read-only policy applied to form '" & FormName & "'."
     End If
 
-    ApplyInitialFocusPolicy FormInstance
-    ApplyControlPolicies FormInstance
+    ApplyInitialFocusPolicy formInstance
+    ApplyControlPolicies formInstance
 
     modLoggingHandler.LogInfo MODULE_NAME & ".InitializeForm", _
         "Form '" & FormName & "' initialized successfully."
@@ -106,7 +105,7 @@ ErrorHandler:
     Err.Raise savedErrNumber, savedErrSource, savedErrDescription
 End Sub
 
-Public Function ValidateRequiredFields(ByVal FormInstance As Access.Form) As Boolean
+Public Function ValidateRequiredFields(ByVal formInstance As Access.Form) As Boolean
     On Error GoTo ErrorHandler
 
     Dim ctl As Control
@@ -117,16 +116,16 @@ Public Function ValidateRequiredFields(ByVal FormInstance As Access.Form) As Boo
 
     ValidateRequiredFields = True
 
-    If FormInstance Is Nothing Then
+    If formInstance Is Nothing Then
         Exit Function
     End If
 
-    ClearValidationHighlights FormInstance
+    ClearValidationHighlights formInstance
     
     Set missingControls = New Collection
     Set MissingFieldNames = New Collection
 
-    For Each ctl In FormInstance.Controls
+    For Each ctl In formInstance.Controls
         If Not ShouldValidateControl(ctl) Then
             GoTo NextControl
         End If
@@ -136,7 +135,7 @@ Public Function ValidateRequiredFields(ByVal FormInstance As Access.Form) As Boo
         If IsControlRequired(controlTokens) Then
             If IsControlValueMissing(ctl) Then
                 missingControls.Add ctl
-                MissingFieldNames.Add GetDisplayNameForRequiredControl(FormInstance, ctl)
+                MissingFieldNames.Add GetDisplayNameForRequiredControl(formInstance, ctl)
                 HighlightInvalidControl ctl
             End If
         End If
@@ -149,13 +148,13 @@ NextControl:
     End If
 
     ValidateRequiredFields = False
-    TryShowRequiredFieldsMessage MissingFieldNames, GetFormName(FormInstance)
+    TryShowRequiredFieldsMessage MissingFieldNames, GetFormName(formInstance)
 
     Set firstMissingControl = missingControls.item(1)
     Call TryFocusControl(firstMissingControl)
 
     modLoggingHandler.LogWarning MODULE_NAME & ".ValidateRequiredFields", _
-        "Required-field validation failed on form '" & GetFormName(FormInstance) & "' for " & _
+        "Required-field validation failed on form '" & GetFormName(formInstance) & "' for " & _
         CStr(missingControls.count) & " control(s)."
     Exit Function
 
@@ -174,7 +173,7 @@ ErrorHandler:
     Err.Raise savedErrNumber, savedErrSource, savedErrDescription
 End Function
 
-Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boolean
+Public Function ValidateFormPolicies(ByVal formInstance As Access.Form) As Boolean
     On Error GoTo ErrorHandler
 
     Dim ctl As Control
@@ -189,18 +188,18 @@ Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boole
         
     ValidateFormPolicies = True
 
-    If FormInstance Is Nothing Then
+    If formInstance Is Nothing Then
         Exit Function
     End If
     
-    ClearValidationHighlights FormInstance
+    ClearValidationHighlights formInstance
 
     Set missingRequiredControls = New Collection
     Set missingRequiredFieldNames = New Collection
     Set invalidFormatControls = New Collection
     Set invalidFormatFieldNames = New Collection
 
-    For Each ctl In FormInstance.Controls
+    For Each ctl In formInstance.Controls
         If Not ShouldValidateControl(ctl) Then
             GoTo NextControl
         End If
@@ -211,7 +210,7 @@ Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boole
 
         If IsControlRequired(controlTokens) And isValueMissing Then
             missingRequiredControls.Add ctl
-            missingRequiredFieldNames.Add GetDisplayNameForRequiredControl(FormInstance, ctl)
+            missingRequiredFieldNames.Add GetDisplayNameForRequiredControl(formInstance, ctl)
             HighlightInvalidControl ctl
         ElseIf IsControlValueInvalidForPolicies(ctl, controlTokens) Then
             invalidFormatControls.Add ctl
@@ -220,7 +219,7 @@ Public Function ValidateFormPolicies(ByVal FormInstance As Access.Form) As Boole
             
             If LenB(errorMessage) > 0 Then
                 invalidFormatFieldNames.Add _
-                    GetDisplayNameForRequiredControl(FormInstance, ctl) & ": " & errorMessage
+                    GetDisplayNameForRequiredControl(formInstance, ctl) & ": " & errorMessage
             End If
         End If
 NextControl:
@@ -231,7 +230,7 @@ NextControl:
     End If
 
     ValidateFormPolicies = False
-    TryShowValidationSummaryMessage missingRequiredFieldNames, invalidFormatFieldNames, GetFormName(FormInstance)
+    TryShowValidationSummaryMessage missingRequiredFieldNames, invalidFormatFieldNames, GetFormName(formInstance)
 
     If missingRequiredControls.count > 0 Then
         Set firstInvalidControl = missingRequiredControls.item(1)
@@ -242,7 +241,7 @@ NextControl:
     Call TryFocusControl(firstInvalidControl)
 
     modLoggingHandler.LogWarning MODULE_NAME & ".ValidateFormPolicies", _
-        "Form policy validation failed on form '" & GetFormName(FormInstance) & "' for " & _
+        "Form policy validation failed on form '" & GetFormName(formInstance) & "' for " & _
         CStr(missingRequiredControls.count + invalidFormatControls.count) & " control(s)."
     Exit Function
 
@@ -291,13 +290,13 @@ Private Function ShouldValidateControl(ByVal ControlInstance As Control) As Bool
 SafeExit:
 End Function
 
-Private Function GetFormName(ByVal FormInstance As Access.Form) As String
+Private Function GetFormName(ByVal formInstance As Access.Form) As String
     On Error GoTo ErrorHandler
 
-    If FormInstance Is Nothing Then
+    If formInstance Is Nothing Then
         GetFormName = "<unknown>"
     Else
-        GetFormName = FormInstance.Name
+        GetFormName = formInstance.Name
     End If
     Exit Function
 
@@ -360,25 +359,25 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ParseTagTokens", Err
 End Function
 
-Private Sub ApplyInitialFocusPolicy(ByVal FormInstance As Access.Form)
+Private Sub ApplyInitialFocusPolicy(ByVal formInstance As Access.Form)
     On Error GoTo ErrorHandler
 
     Dim ctl As Control
     Dim controlTokens As Object
 
-    If FormInstance Is Nothing Then
+    If formInstance Is Nothing Then
         Exit Sub
     End If
 
-    For Each ctl In FormInstance.Controls
+    For Each ctl In formInstance.Controls
         Set controlTokens = ParseTagTokens(ctl.Tag)
         If controlTokens.Exists(TAG_TOKEN_SETFOCUS) Then
             If TrySetInitialFocus(ctl) Then
                 modLoggingHandler.LogInfo MODULE_NAME & ".ApplyInitialFocusPolicy", _
-                    "Initial focus set to control '" & GetControlName(ctl) & "' on form '" & GetFormName(FormInstance) & "'."
+                    "Initial focus set to control '" & GetControlName(ctl) & "' on form '" & GetFormName(formInstance) & "'."
             Else
                 modLoggingHandler.LogWarning MODULE_NAME & ".ApplyInitialFocusPolicy", _
-                    "Initial focus could not be set to control '" & GetControlName(ctl) & "' on form '" & GetFormName(FormInstance) & "'."
+                    "Initial focus could not be set to control '" & GetControlName(ctl) & "' on form '" & GetFormName(formInstance) & "'."
             End If
             Exit Sub
         End If
@@ -460,7 +459,7 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "IsControlIntegerTag", Err
 End Function
 
-Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
+Private Sub ApplyControlPolicies(ByVal formInstance As Access.Form)
     On Error GoTo ErrorHandler
 
     Dim ctl As Control
@@ -472,13 +471,13 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
     Dim hiddenCount As Long
     Dim requiredCount As Long
 
-    If FormInstance Is Nothing Then
+    If formInstance Is Nothing Then
         Exit Sub
     End If
 
     Set CurrentUserRoles = modSessionContext.GetCurrentUserRoles()
 
-    For Each ctl In FormInstance.Controls
+    For Each ctl In formInstance.Controls
         Set controlTokens = ParseTagTokens(ctl.Tag)
 
         If controlTokens.Exists(TAG_TOKEN_LOCKED) Then
@@ -506,7 +505,7 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
         End If
 
         If controlTokens.Exists(TAG_TOKEN_REQUIRED) Then
-            If TryApplyRequiredPolicy(FormInstance, ctl) Then
+            If TryApplyRequiredPolicy(formInstance, ctl) Then
                 requiredCount = requiredCount + 1
             End If
         End If
@@ -514,7 +513,7 @@ Private Sub ApplyControlPolicies(ByVal FormInstance As Access.Form)
 
     If lockedCount > 0 Or disabledCount > 0 Or roleHiddenCount > 0 Or hiddenCount > 0 Or requiredCount > 0 Then
         modLoggingHandler.LogInfo MODULE_NAME & ".ApplyControlPolicies", _
-            "Control policies applied on form '" & GetFormName(FormInstance) & "': " & _
+            "Control policies applied on form '" & GetFormName(formInstance) & "': " & _
             "LOCKED=" & CStr(lockedCount) & ", DISABLED=" & CStr(disabledCount) & _
             ", ROLE_HIDDEN=" & CStr(roleHiddenCount) & ", HIDDEN=" & CStr(hiddenCount) & _
             ", REQUIRED=" & CStr(requiredCount) & "."
@@ -651,13 +650,13 @@ Private Function TryApplyHiddenPolicy(ByVal ControlInstance As Control) As Boole
 SafeExit:
 End Function
 
-Private Function TryApplyRequiredPolicy(ByVal FormInstance As Access.Form, ByVal ControlInstance As Control) As Boolean
+Private Function TryApplyRequiredPolicy(ByVal formInstance As Access.Form, ByVal ControlInstance As Control) As Boolean
     On Error GoTo SafeExit
 
     Dim associatedLabel As Control
     Dim labelCaption As String
 
-    If FormInstance Is Nothing Then
+    If formInstance Is Nothing Then
         Exit Function
     End If
 
@@ -665,7 +664,7 @@ Private Function TryApplyRequiredPolicy(ByVal FormInstance As Access.Form, ByVal
         Exit Function
     End If
 
-    Set associatedLabel = GetAssociatedLabel(FormInstance, ControlInstance)
+    Set associatedLabel = GetAssociatedLabel(formInstance, ControlInstance)
     If associatedLabel Is Nothing Then
         Exit Function
     End If
@@ -1002,14 +1001,14 @@ Private Function IsControlValueDateValid(ByVal ControlInstance As Control) As Bo
 SafeExit:
 End Function
 
-Private Function GetAssociatedLabel(ByVal FormInstance As Access.Form, ByVal ControlInstance As Control) As Control
+Private Function GetAssociatedLabel(ByVal formInstance As Access.Form, ByVal ControlInstance As Control) As Control
     On Error GoTo SafeExit
 
     Dim ctl As Control
     Dim childControl As Control
     Dim labelControlName As String
 
-    If FormInstance Is Nothing Then Exit Function
+    If formInstance Is Nothing Then Exit Function
     If ControlInstance Is Nothing Then Exit Function
 
     On Error Resume Next
@@ -1027,7 +1026,7 @@ Private Function GetAssociatedLabel(ByVal FormInstance As Access.Form, ByVal Con
     Next childControl
     On Error GoTo SafeExit
 
-    For Each ctl In FormInstance.Controls
+    For Each ctl In formInstance.Controls
         If ctl.ControlType = acLabel Then
             labelControlName = vbNullString
 
@@ -1068,7 +1067,7 @@ Private Function TryFocusControl(ByVal ControlInstance As Control) As Boolean
 SafeExit:
 End Function
 
-Private Function GetDisplayNameForRequiredControl(ByVal FormInstance As Access.Form, ByVal ControlInstance As Control) As String
+Private Function GetDisplayNameForRequiredControl(ByVal formInstance As Access.Form, ByVal ControlInstance As Control) As String
     On Error GoTo SafeExit
 
     Dim associatedLabel As Control
@@ -1079,7 +1078,7 @@ Private Function GetDisplayNameForRequiredControl(ByVal FormInstance As Access.F
         Exit Function
     End If
 
-    Set associatedLabel = GetAssociatedLabel(FormInstance, ControlInstance)
+    Set associatedLabel = GetAssociatedLabel(formInstance, ControlInstance)
     If Not associatedLabel Is Nothing Then
         displayName = Trim$(CStr(associatedLabel.Caption))
         If Right$(displayName, 1) = "*" Then
@@ -1114,16 +1113,16 @@ SafeExit:
     GetControlName = "<unknown>"
 End Function
 
-Private Sub ApplyReadOnlyPolicy(ByVal FormInstance As Access.Form)
+Private Sub ApplyReadOnlyPolicy(ByVal formInstance As Access.Form)
     On Error GoTo ErrorHandler
 
-    If FormInstance Is Nothing Then
+    If formInstance Is Nothing Then
         Exit Sub
     End If
 
-    FormInstance.AllowEdits = False
-    FormInstance.AllowAdditions = False
-    FormInstance.AllowDeletions = False
+    formInstance.AllowEdits = False
+    formInstance.AllowAdditions = False
+    formInstance.AllowDeletions = False
     Exit Sub
 
 ErrorHandler:
@@ -1186,7 +1185,7 @@ Private Sub TryShowRequiredFieldsMessage(ByVal MissingFieldNames As Collection, 
 
     Dim messageText As String
     Dim baseMessage As String
-    Dim FieldName As Variant
+    Dim fieldName As Variant
     Dim fieldList As String
     Dim fieldCount As Long
 
@@ -1197,15 +1196,15 @@ Private Sub TryShowRequiredFieldsMessage(ByVal MissingFieldNames As Collection, 
     End If
 
     If Not MissingFieldNames Is Nothing Then
-        For Each FieldName In MissingFieldNames
+        For Each fieldName In MissingFieldNames
             fieldCount = fieldCount + 1
 
             If fieldCount > 5 Then
                 Exit For
             End If
 
-            fieldList = fieldList & vbCrLf & "- " & CStr(FieldName)
-        Next FieldName
+            fieldList = fieldList & vbCrLf & "- " & CStr(fieldName)
+        Next fieldName
     End If
 
     If LenB(fieldList) > 0 Then
@@ -1224,7 +1223,7 @@ Private Sub TryShowInvalidFieldsMessage(ByVal InvalidFieldNames As Collection, B
 
     Dim messageText As String
     Dim baseMessage As String
-    Dim FieldName As Variant
+    Dim fieldName As Variant
     Dim fieldList As String
     Dim fieldCount As Long
 
@@ -1235,15 +1234,15 @@ Private Sub TryShowInvalidFieldsMessage(ByVal InvalidFieldNames As Collection, B
     End If
 
     If Not InvalidFieldNames Is Nothing Then
-        For Each FieldName In InvalidFieldNames
+        For Each fieldName In InvalidFieldNames
             fieldCount = fieldCount + 1
 
             If fieldCount > 5 Then
                 Exit For
             End If
 
-            fieldList = fieldList & vbCrLf & "- " & CStr(FieldName)
-        Next FieldName
+            fieldList = fieldList & vbCrLf & "- " & CStr(fieldName)
+        Next fieldName
     End If
 
     If LenB(fieldList) > 0 Then
@@ -1302,22 +1301,22 @@ End Sub
 Private Function BuildValidationFieldList(ByVal FieldNames As Collection) As String
     On Error GoTo SafeExit
 
-    Dim FieldName As Variant
+    Dim fieldName As Variant
     Dim fieldCount As Long
 
     If FieldNames Is Nothing Then
         Exit Function
     End If
 
-    For Each FieldName In FieldNames
+    For Each fieldName In FieldNames
         fieldCount = fieldCount + 1
 
         If fieldCount > 5 Then
             Exit For
         End If
 
-        BuildValidationFieldList = BuildValidationFieldList & "- " & CStr(FieldName) & vbCrLf
-    Next FieldName
+        BuildValidationFieldList = BuildValidationFieldList & "- " & CStr(fieldName) & vbCrLf
+    Next fieldName
 
     If LenB(BuildValidationFieldList) > 0 Then
         BuildValidationFieldList = Left$(BuildValidationFieldList, Len(BuildValidationFieldList) - Len(vbCrLf))
@@ -1520,19 +1519,19 @@ Private Sub HighlightInvalidControl(ByVal ControlInstance As Control)
 SafeExit:
 End Sub
 
-Private Sub ClearValidationHighlights(ByVal FormInstance As Access.Form)
+Private Sub ClearValidationHighlights(ByVal formInstance As Access.Form)
     On Error GoTo SafeExit
 
     Dim ctl As Control
     Dim colorKey As String
 
-    If FormInstance Is Nothing Then
+    If formInstance Is Nothing Then
         Exit Sub
     End If
 
     EnsureValidationColorStore
 
-    For Each ctl In FormInstance.Controls
+    For Each ctl In formInstance.Controls
         If CanHighlightControl(ctl) Then
             colorKey = GetValidationColorKey(ctl)
 
@@ -1599,7 +1598,7 @@ Private Function GetParentFormName(ByVal ControlInstance As Control) As String
 SafeExit:
     GetParentFormName = "<unknown>"
 End Function
-Private Sub ClearStoredValidationColorsForForm(ByVal FormInstance As Access.Form)
+Private Sub ClearStoredValidationColorsForForm(ByVal formInstance As Access.Form)
     On Error GoTo SafeExit
 
     Dim dictKey As Variant
@@ -1607,14 +1606,14 @@ Private Sub ClearStoredValidationColorsForForm(ByVal FormInstance As Access.Form
     Dim keyItem As Variant
     Dim formPrefix As String
 
-    If FormInstance Is Nothing Then
+    If formInstance Is Nothing Then
         Exit Sub
     End If
 
     EnsureValidationColorStore
     Set keysToRemove = New Collection
 
-    formPrefix = FormInstance.Name & "|"
+    formPrefix = formInstance.Name & "|"
 
     For Each dictKey In mValidationOriginalColors.Keys
         If Left$(CStr(dictKey), Len(formPrefix)) = formPrefix Then

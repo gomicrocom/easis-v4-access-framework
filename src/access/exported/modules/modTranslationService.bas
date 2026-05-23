@@ -1,5 +1,4 @@
-Attribute VB_Name = "modTranslationService"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -509,14 +508,14 @@ Private Function NormalizeTextKey(ByVal TextKey As String) As String
     NormalizeTextKey = UCase$(Trim$(TextKey))
 End Function
 
-Private Function TranslationTableExists(ByVal TableName As String) As Boolean
+Private Function TranslationTableExists(ByVal tableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim tableDef As DAO.tableDef
     Dim normalizedTableName As String
 
-    normalizedTableName = UCase$(Trim$(TableName))
+    normalizedTableName = UCase$(Trim$(tableName))
     If LenB(normalizedTableName) = 0 Then
         Exit Function
     End If

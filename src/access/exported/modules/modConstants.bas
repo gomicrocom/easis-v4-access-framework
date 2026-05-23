@@ -1,5 +1,4 @@
-Attribute VB_Name = "modConstants"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================

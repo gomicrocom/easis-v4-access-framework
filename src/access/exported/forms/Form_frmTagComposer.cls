@@ -1,13 +1,4 @@
-VERSION 1.0 CLASS
-BEGIN
-  MultiUse = -1  'True
-END
-Attribute VB_Name = "Form_frmTagComposer"
-Attribute VB_GlobalNameSpace = False
-Attribute VB_Creatable = True
-Attribute VB_PredeclaredId = True
-Attribute VB_Exposed = False
-Option Compare Database
+ï»¿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -91,12 +82,12 @@ End Sub
 
 Private Sub cmdApply_Click()
     If LenB(m_CurrentControl) = 0 Then
-        MsgBox "Bitte zuerst ein Control in der Liste auswählen.", vbExclamation
+        MsgBox "Bitte zuerst ein Control in der Liste auswÃ¤hlen.", vbExclamation
         Exit Sub
     End If
 
     SaveCurrentControlTagToTemp True
-    MsgBox "Tag für '" & m_CurrentControl & "' übernommen.", vbInformation
+    MsgBox "Tag fÃ¼r '" & m_CurrentControl & "' Ã¼bernommen.", vbInformation
 End Sub
 
 Private Sub cmdSave_Click()
@@ -109,7 +100,7 @@ Private Sub cmdSave_Click()
     Dim OpenedForSave As Boolean
 
     If LenB(m_TargetObjectType) = 0 Or LenB(m_TargetObjectName) = 0 Then
-        MsgBox "Bitte zuerst ein Formular oder einen Report auswählen.", vbExclamation, MODULE_NAME
+        MsgBox "Bitte zuerst ein Formular oder einen Report auswÃ¤hlen.", vbExclamation, MODULE_NAME
         Exit Sub
     End If
 
@@ -190,12 +181,12 @@ Private Sub LoadObjectList()
 
     Dim values As Collection
     Dim accessObject As Access.accessObject
-    Dim ObjectType As String
+    Dim objectType As String
 
-    ObjectType = NormalizeObjectType(Nz(Me!cboObjectType.Value, OBJECT_TYPE_FORM))
+    objectType = NormalizeObjectType(Nz(Me!cboObjectType.Value, OBJECT_TYPE_FORM))
     Set values = New Collection
 
-    Select Case ObjectType
+    Select Case objectType
         Case OBJECT_TYPE_FORM
             For Each accessObject In CurrentProject.AllForms
                 If Left$(accessObject.Name, 1) <> "~" Then
@@ -243,7 +234,7 @@ Private Sub LoadSelectedObject()
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "LoadSelectedObject", Err
-    MsgBox "Fehler beim Initialisieren des ausgewählten Objekts: " & Err.description, vbExclamation, MODULE_NAME
+    MsgBox "Fehler beim Initialisieren des ausgewÃ¤hlten Objekts: " & Err.description, vbExclamation, MODULE_NAME
 End Sub
 
 Private Sub ResetComposerState(Optional ByVal ClearObjectSelection As Boolean = True)
@@ -417,12 +408,12 @@ Private Function NormalizeObjectType(ByVal Value As String) As String
             NormalizeObjectType = Value
         Case Else
             Err.Raise vbObjectError + 5100, MODULE_NAME & ".NormalizeObjectType", _
-                "Nicht unterstützter Objekttyp: " & Value
+                "Nicht unterstÃ¼tzter Objekttyp: " & Value
     End Select
 End Function
 
-Private Function IsComposerInternalObject(ByVal ObjectName As String) As Boolean
-    Select Case UCase$(Trim$(ObjectName))
+Private Function IsComposerInternalObject(ByVal objectName As String) As Boolean
+    Select Case UCase$(Trim$(objectName))
         Case "FRMTAGCOMPOSER", "FRMTAGHELP", "SFRMTMPTAGCOMPOSER", "FRMFWCOMPOSER", "FRMFWTRANSLATIONLIST"
             IsComposerInternalObject = True
         Case Else
@@ -430,15 +421,15 @@ Private Function IsComposerInternalObject(ByVal ObjectName As String) As Boolean
     End Select
 End Function
 
-Private Function AccessObjectExists(ByVal ObjectType As String, ByVal ObjectName As String) As Boolean
+Private Function AccessObjectExists(ByVal objectType As String, ByVal objectName As String) As Boolean
     On Error GoTo SafeExit
 
     Dim accessObject As Access.accessObject
 
-    Select Case NormalizeObjectType(ObjectType)
+    Select Case NormalizeObjectType(objectType)
         Case OBJECT_TYPE_FORM
             For Each accessObject In CurrentProject.AllForms
-                If StrComp(accessObject.Name, ObjectName, vbTextCompare) = 0 Then
+                If StrComp(accessObject.Name, objectName, vbTextCompare) = 0 Then
                     AccessObjectExists = True
                     Exit Function
                 End If
@@ -446,7 +437,7 @@ Private Function AccessObjectExists(ByVal ObjectType As String, ByVal ObjectName
 
         Case OBJECT_TYPE_REPORT
             For Each accessObject In CurrentProject.AllReports
-                If StrComp(accessObject.Name, ObjectName, vbTextCompare) = 0 Then
+                If StrComp(accessObject.Name, objectName, vbTextCompare) = 0 Then
                     AccessObjectExists = True
                     Exit Function
                 End If
@@ -456,46 +447,46 @@ Private Function AccessObjectExists(ByVal ObjectType As String, ByVal ObjectName
 SafeExit:
 End Function
 
-Private Function IsTargetObjectLoaded(ByVal ObjectType As String, ByVal ObjectName As String) As Boolean
+Private Function IsTargetObjectLoaded(ByVal objectType As String, ByVal objectName As String) As Boolean
     On Error GoTo SafeExit
 
-    Select Case NormalizeObjectType(ObjectType)
+    Select Case NormalizeObjectType(objectType)
         Case OBJECT_TYPE_FORM
-            IsTargetObjectLoaded = CurrentProject.AllForms(ObjectName).IsLoaded
+            IsTargetObjectLoaded = CurrentProject.AllForms(objectName).IsLoaded
         Case OBJECT_TYPE_REPORT
-            IsTargetObjectLoaded = CurrentProject.AllReports(ObjectName).IsLoaded
+            IsTargetObjectLoaded = CurrentProject.AllReports(objectName).IsLoaded
     End Select
 
 SafeExit:
 End Function
 
-Private Function GetTargetObjectVisible(ByVal ObjectType As String, ByVal ObjectName As String) As Boolean
+Private Function GetTargetObjectVisible(ByVal objectType As String, ByVal objectName As String) As Boolean
     On Error GoTo SafeExit
 
-    If NormalizeObjectType(ObjectType) = OBJECT_TYPE_FORM Then
-        If CurrentProject.AllForms(ObjectName).IsLoaded Then
-            GetTargetObjectVisible = Forms(ObjectName).Visible
+    If NormalizeObjectType(objectType) = OBJECT_TYPE_FORM Then
+        If CurrentProject.AllForms(objectName).IsLoaded Then
+            GetTargetObjectVisible = Forms(objectName).Visible
         End If
     End If
 
 SafeExit:
 End Function
 
-Private Sub OpenTargetObjectForRead(ByVal ObjectType As String, ByVal ObjectName As String, ByRef OpenedByComposer As Boolean)
+Private Sub OpenTargetObjectForRead(ByVal objectType As String, ByVal objectName As String, ByRef OpenedByComposer As Boolean)
     On Error GoTo ErrorHandler
 
     OpenedByComposer = False
 
-    Select Case NormalizeObjectType(ObjectType)
+    Select Case NormalizeObjectType(objectType)
         Case OBJECT_TYPE_FORM
-            If Not CurrentProject.AllForms(ObjectName).IsLoaded Then
-                DoCmd.OpenForm ObjectName, acDesign, , , , acHidden
+            If Not CurrentProject.AllForms(objectName).IsLoaded Then
+                DoCmd.OpenForm objectName, acDesign, , , , acHidden
                 OpenedByComposer = True
             End If
 
         Case OBJECT_TYPE_REPORT
-            If Not CurrentProject.AllReports(ObjectName).IsLoaded Then
-                DoCmd.OpenReport ObjectName, acViewDesign, , , acHidden
+            If Not CurrentProject.AllReports(objectName).IsLoaded Then
+                DoCmd.OpenReport objectName, acViewDesign, , , acHidden
                 OpenedByComposer = True
             End If
     End Select
@@ -506,24 +497,24 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
-Private Sub PrepareTargetObjectForSave(ByVal ObjectType As String, ByVal ObjectName As String, ByRef OpenedForSave As Boolean)
+Private Sub PrepareTargetObjectForSave(ByVal objectType As String, ByVal objectName As String, ByRef OpenedForSave As Boolean)
     On Error GoTo ErrorHandler
 
     OpenedForSave = False
 
-    Select Case NormalizeObjectType(ObjectType)
+    Select Case NormalizeObjectType(objectType)
         Case OBJECT_TYPE_FORM
-            If CurrentProject.AllForms(ObjectName).IsLoaded Then
-                DoCmd.Close acForm, ObjectName, acSaveYes
+            If CurrentProject.AllForms(objectName).IsLoaded Then
+                DoCmd.Close acForm, objectName, acSaveYes
             End If
-            DoCmd.OpenForm ObjectName, acDesign, , , , acHidden
+            DoCmd.OpenForm objectName, acDesign, , , , acHidden
             OpenedForSave = True
 
         Case OBJECT_TYPE_REPORT
-            If CurrentProject.AllReports(ObjectName).IsLoaded Then
-                DoCmd.Close acReport, ObjectName, acSaveYes
+            If CurrentProject.AllReports(objectName).IsLoaded Then
+                DoCmd.Close acReport, objectName, acSaveYes
             End If
-            DoCmd.OpenReport ObjectName, acViewDesign, , , acHidden
+            DoCmd.OpenReport objectName, acViewDesign, , , acHidden
             OpenedForSave = True
     End Select
     Exit Sub
@@ -533,17 +524,17 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
-Private Sub SaveAndCloseTargetObject(ByVal ObjectType As String, ByVal ObjectName As String)
+Private Sub SaveAndCloseTargetObject(ByVal objectType As String, ByVal objectName As String)
     On Error GoTo ErrorHandler
 
-    Select Case NormalizeObjectType(ObjectType)
+    Select Case NormalizeObjectType(objectType)
         Case OBJECT_TYPE_FORM
-            DoCmd.Save acForm, ObjectName
-            DoCmd.Close acForm, ObjectName, acSaveYes
+            DoCmd.Save acForm, objectName
+            DoCmd.Close acForm, objectName, acSaveYes
 
         Case OBJECT_TYPE_REPORT
-            DoCmd.Save acReport, ObjectName
-            DoCmd.Close acReport, ObjectName, acSaveYes
+            DoCmd.Save acReport, objectName
+            DoCmd.Close acReport, objectName, acSaveYes
     End Select
     Exit Sub
 
@@ -553,8 +544,8 @@ ErrorHandler:
 End Sub
 
 Private Sub RestoreTargetObjectState( _
-    ByVal ObjectType As String, _
-    ByVal ObjectName As String, _
+    ByVal objectType As String, _
+    ByVal objectName As String, _
     ByVal WasLoaded As Boolean, _
     ByVal WasVisible As Boolean)
     On Error GoTo SafeExit
@@ -563,67 +554,67 @@ Private Sub RestoreTargetObjectState( _
         Exit Sub
     End If
 
-    Select Case NormalizeObjectType(ObjectType)
+    Select Case NormalizeObjectType(objectType)
         Case OBJECT_TYPE_FORM
-            If Not CurrentProject.AllForms(ObjectName).IsLoaded Then
-                DoCmd.OpenForm ObjectName, acNormal
+            If Not CurrentProject.AllForms(objectName).IsLoaded Then
+                DoCmd.OpenForm objectName, acNormal
             End If
             If Not WasVisible Then
-                Forms(ObjectName).Visible = False
+                Forms(objectName).Visible = False
             End If
 
         Case OBJECT_TYPE_REPORT
-            If Not CurrentProject.AllReports(ObjectName).IsLoaded Then
-                DoCmd.OpenReport ObjectName, acViewPreview
+            If Not CurrentProject.AllReports(objectName).IsLoaded Then
+                DoCmd.OpenReport objectName, acViewPreview
             End If
     End Select
 
 SafeExit:
 End Sub
 
-Private Sub CloseObjectNoSave(ByVal ObjectType As String, ByVal ObjectName As String)
+Private Sub CloseObjectNoSave(ByVal objectType As String, ByVal objectName As String)
     On Error Resume Next
 
-    Select Case NormalizeObjectType(ObjectType)
+    Select Case NormalizeObjectType(objectType)
         Case OBJECT_TYPE_FORM
-            If CurrentProject.AllForms(ObjectName).IsLoaded Then
-                DoCmd.Close acForm, ObjectName, acSaveNo
+            If CurrentProject.AllForms(objectName).IsLoaded Then
+                DoCmd.Close acForm, objectName, acSaveNo
             End If
 
         Case OBJECT_TYPE_REPORT
-            If CurrentProject.AllReports(ObjectName).IsLoaded Then
-                DoCmd.Close acReport, ObjectName, acSaveNo
+            If CurrentProject.AllReports(objectName).IsLoaded Then
+                DoCmd.Close acReport, objectName, acSaveNo
             End If
     End Select
 End Sub
 
-Private Function GetTargetControls(ByVal ObjectType As String, ByVal ObjectName As String) As Controls
-    Select Case NormalizeObjectType(ObjectType)
+Private Function GetTargetControls(ByVal objectType As String, ByVal objectName As String) As Controls
+    Select Case NormalizeObjectType(objectType)
         Case OBJECT_TYPE_FORM
-            Set GetTargetControls = Forms(ObjectName).Controls
+            Set GetTargetControls = Forms(objectName).Controls
         Case OBJECT_TYPE_REPORT
-            Set GetTargetControls = Reports(ObjectName).Controls
+            Set GetTargetControls = Reports(objectName).Controls
     End Select
 End Function
 
 Private Sub WriteTagToTargetControl( _
-    ByVal ObjectType As String, _
-    ByVal ObjectName As String, _
+    ByVal objectType As String, _
+    ByVal objectName As String, _
     ByVal ControlName As String, _
     ByVal TagValue As String)
     On Error GoTo ErrorHandler
 
-    Select Case NormalizeObjectType(ObjectType)
+    Select Case NormalizeObjectType(objectType)
         Case OBJECT_TYPE_FORM
-            Forms(ObjectName).Controls(ControlName).Tag = TagValue
+            Forms(objectName).Controls(ControlName).Tag = TagValue
         Case OBJECT_TYPE_REPORT
-            Reports(ObjectName).Controls(ControlName).Tag = TagValue
+            Reports(objectName).Controls(ControlName).Tag = TagValue
     End Select
     Exit Sub
 
 ErrorHandler:
     modLoggingHandler.LogWarning MODULE_NAME & ".WriteTagToTargetControl", _
-        "Tag write failed for " & ObjectType & "." & ObjectName & "." & ControlName & ": " & Err.description
+        "Tag write failed for " & objectType & "." & objectName & "." & ControlName & ": " & Err.description
     Err.Clear
 End Sub
 
@@ -949,8 +940,8 @@ Private Function IsActiveTagHelpToken(ByVal TokenKey As String) As Boolean
         Exit Function
     End If
 
-    sqlStatement = "SELECT token_key FROM " & TAG_HELP_TABLE_NAME & " " & _
-              "WHERE is_active = True AND token_key = '" & Replace(TokenKey, "'", "''") & "';"
+    sqlStatement = "SELECT TokenKey FROM " & TAG_HELP_TABLE_NAME & " " & _
+              "WHERE IsActive = True AND TokenKey = '" & Replace(TokenKey, "'", "''") & "';"
 
     Set rs = CurrentDb.OpenRecordset(sqlStatement, dbOpenSnapshot)
     If Not (rs.BOF And rs.EOF) Then
@@ -1095,13 +1086,13 @@ ErrorHandler:
     target.Add itemValue
 End Sub
 
-Private Function TableExists(ByVal TableName As String) As Boolean
+Private Function TableExists(ByVal tableName As String) As Boolean
     On Error GoTo SafeExit
 
     Dim tdf As DAO.tableDef
 
     For Each tdf In CurrentDb.TableDefs
-        If StrComp(tdf.Name, TableName, vbTextCompare) = 0 Then
+        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
             TableExists = True
             Exit Function
         End If
@@ -1109,7 +1100,5 @@ Private Function TableExists(ByVal TableName As String) As Boolean
 
 SafeExit:
 End Function
-
-
 
 

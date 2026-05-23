@@ -1,5 +1,4 @@
-Attribute VB_Name = "modDb"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -46,15 +45,15 @@ End Function
 Public Function BackendExists() As Boolean
     On Error GoTo ErrorHandler
 
-    Dim BackendPath As String
+    Dim backendPath As String
 
-    BackendPath = GetBackendPath()
-    If LenB(BackendPath) = 0 Then
+    backendPath = GetBackendPath()
+    If LenB(backendPath) = 0 Then
         modLoggingHandler.LogWarning MODULE_NAME & ".BackendExists", "Backend path is not configured."
         Exit Function
     End If
 
-    BackendExists = (LenB(Dir$(BackendPath, vbNormal)) > 0)
+    BackendExists = (LenB(Dir$(backendPath, vbNormal)) > 0)
     Exit Function
 
 ErrorHandler:
@@ -65,13 +64,13 @@ End Function
 Public Function ValidateBackendConfiguration() As Boolean
     On Error GoTo ErrorHandler
 
-    Dim BackendPath As String
+    Dim backendPath As String
     Dim logContext As String
 
-    BackendPath = GetBackendPath()
+    backendPath = GetBackendPath()
     logContext = BuildValidationContext()
 
-    If LenB(BackendPath) = 0 Then
+    If LenB(backendPath) = 0 Then
         ResetBackendValidationLogGuard
         modLoggingHandler.LogError MODULE_NAME & ".ValidateBackendConfiguration", _
             "Backend validation failed: no backend path configured. " & logContext
@@ -81,13 +80,13 @@ Public Function ValidateBackendConfiguration() As Boolean
     If Not BackendExists() Then
         ResetBackendValidationLogGuard
         modLoggingHandler.LogError MODULE_NAME & ".ValidateBackendConfiguration", _
-            "Backend validation failed: file not found at '" & BackendPath & "'. " & logContext
+            "Backend validation failed: file not found at '" & backendPath & "'. " & logContext
         Exit Function
     End If
 
-    If ShouldLogSuccessfulValidation(BackendPath, logContext) Then
+    If ShouldLogSuccessfulValidation(backendPath, logContext) Then
         modLoggingHandler.LogInfo MODULE_NAME & ".ValidateBackendConfiguration", _
-            "Backend configuration validated successfully for path '" & BackendPath & "'. " & logContext
+            "Backend configuration validated successfully for path '" & backendPath & "'. " & logContext
     End If
 
     ValidateBackendConfiguration = True
@@ -117,11 +116,11 @@ Private Function BuildValidationContext() As String
     BuildValidationContext = contextParts
 End Function
 
-Private Function ShouldLogSuccessfulValidation(ByVal BackendPath As String, ByVal ValidationContext As String) As Boolean
+Private Function ShouldLogSuccessfulValidation(ByVal backendPath As String, ByVal ValidationContext As String) As Boolean
     Dim normalizedPath As String
     Dim normalizedContext As String
 
-    normalizedPath = Trim$(BackendPath)
+    normalizedPath = Trim$(backendPath)
     normalizedContext = Trim$(ValidationContext)
 
     If mLastValidationSucceeded Then

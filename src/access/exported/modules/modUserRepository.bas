@@ -1,5 +1,4 @@
-Attribute VB_Name = "modUserRepository"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -132,7 +131,7 @@ Private Function CanReadUsers() As Boolean
     CanReadUsers = True
 End Function
 
-Private Function TableExists(ByVal TableName As String) As Boolean
+Private Function TableExists(ByVal tableName As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -141,7 +140,7 @@ Private Function TableExists(ByVal TableName As String) As Boolean
     Set db = modDb.GetCurrentDatabase()
 
     For Each tdf In db.TableDefs
-        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(TableName)) Then
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
             TableExists = True
             Exit For
         End If

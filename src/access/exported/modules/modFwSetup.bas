@@ -1,5 +1,4 @@
-Attribute VB_Name = "modFwSetup"
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -7,7 +6,7 @@ Option Explicit
 ' Purpose   : Provides initialization and seeding routines for framework data
 '             such as translations, tag help definitions, and demo content.
 ' Author    : Codex
-' Version   : 1.3.0
+' Version   : 1.5.0
 ' Notes     : Safe to re-run. Existing data will be replaced.
 '===============================================================================
 
@@ -67,12 +66,62 @@ Public Sub SeedTranslations()
     InsertSalutationTranslations db
     InsertAddressingModeTranslations db
     InsertContactTypeTranslations db
+    InsertUnitTranslations db
+    InsertVatCodeTranslations db
 
     MsgBox "fw_translation wurde erfolgreich initialisiert.", vbInformation
     Exit Sub
 
 ErrorHandler:
     MsgBox "Fehler beim Initialisieren von fw_translation: " & Err.description, vbExclamation
+End Sub
+
+Public Sub SeedVatCodeReference()
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Set db = CurrentDb
+
+    db.Execute "DELETE FROM ref_vat_code", dbFailOnError
+    db.Execute "DELETE FROM fw_translation WHERE translation_key Like 'VAT.CH.*'", dbFailOnError
+
+    InsertVatCode db, "CH_STANDARD", "VAT.CH.STANDARD", 7.7, "CH", #1/1/2018#, Null, 10, True
+    InsertVatCode db, "CH_REDUCED", "VAT.CH.REDUCED", 2.5, "CH", #1/1/2018#, Null, 20, True
+    InsertVatCode db, "CH_SPECIAL", "VAT.CH.SPECIAL", 3.7, "CH", #1/1/2018#, Null, 30, True
+    InsertVatCode db, "CH_ZERO", "VAT.CH.ZERO", 0, "CH", #1/1/2018#, Null, 40, True
+
+    InsertVatCodeTranslations db
+
+    MsgBox "ref_vat_code und VAT-Uebersetzungen wurden erfolgreich initialisiert.", vbInformation, MODULE_NAME
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Fehler beim Initialisieren von ref_vat_code: " & Err.description, vbExclamation, MODULE_NAME
+End Sub
+
+Public Sub SeedUnitReference()
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Set db = CurrentDb
+
+    db.Execute "DELETE FROM ref_unit", dbFailOnError
+    db.Execute "DELETE FROM fw_translation WHERE translation_key Like 'UNIT.*'", dbFailOnError
+
+    InsertUnit db, "PCS", "UNIT.PCS", 10, True
+    InsertUnit db, "H", "UNIT.HOUR", 20, True
+    InsertUnit db, "KG", "UNIT.KG", 30, True
+    InsertUnit db, "M", "UNIT.METER", 40, True
+    InsertUnit db, "L", "UNIT.LITER", 50, True
+    InsertUnit db, "PK", "UNIT.PACKAGE", 60, True
+
+    InsertUnitTranslations db
+
+    MsgBox "ref_unit und UNIT-Uebersetzungen wurden erfolgreich initialisiert.", vbInformation, MODULE_NAME
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Fehler beim Initialisieren von ref_unit: " & Err.description, vbExclamation, MODULE_NAME
 End Sub
 
 Public Sub SeedAddressTypeReference()
@@ -158,29 +207,29 @@ End Sub
 Private Sub InsertTranslation( _
     ByVal db As DAO.Database, _
     ByVal LanguageCode As String, _
-    ByVal TranslationKey As String, _
+    ByVal translationKey As String, _
     ByVal TranslationValue As String, _
-    ByVal IsActive As Boolean)
+    ByVal isActive As Boolean)
 
-    Dim sqlStmt As String
+    Dim sqlStatement As String
 
-    sqlStmt = "INSERT INTO fw_translation " & _
-              "(language_code, translation_key, translation_value, is_active) " & _
-              "VALUES (" & _
-              "'" & EscapeSqlText(LanguageCode) & "', " & _
-              "'" & EscapeSqlText(TranslationKey) & "', " & _
-              "'" & EscapeSqlText(TranslationValue) & "', " & _
-              IIf(IsActive, "True", "False") & ")"
+    sqlStatement = "INSERT INTO fw_translation " & _
+                   "(language_code, translation_key, translation_value, is_active) " & _
+                   "VALUES (" & _
+                   "'" & EscapeSqlText(LanguageCode) & "', " & _
+                   "'" & EscapeSqlText(translationKey) & "', " & _
+                   "'" & EscapeSqlText(TranslationValue) & "', " & _
+                   IIf(isActive, "True", "False") & ")"
 
-    db.Execute sqlStmt, dbFailOnError
+    db.Execute sqlStatement, dbFailOnError
 End Sub
 
 Private Sub InsertAddressType( _
     ByVal db As DAO.Database, _
     ByVal addressTypeCode As String, _
-    ByVal TranslationKey As String, _
-    ByVal SortOrder As Long, _
-    ByVal IsActive As Boolean)
+    ByVal translationKey As String, _
+    ByVal sortOrder As Long, _
+    ByVal isActive As Boolean)
 
     Dim sqlStatement As String
 
@@ -188,9 +237,9 @@ Private Sub InsertAddressType( _
                    "(address_type_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
                    "'" & EscapeSqlText(addressTypeCode) & "', " & _
-                   "'" & EscapeSqlText(TranslationKey) & "', " & _
-                   CStr(SortOrder) & ", " & _
-                   IIf(IsActive, "True", "False") & ", " & _
+                   "'" & EscapeSqlText(translationKey) & "', " & _
+                   CStr(sortOrder) & ", " & _
+                   IIf(isActive, "True", "False") & ", " & _
                    "Now(), 'SYSTEM', Now(), 'SYSTEM')"
 
     db.Execute sqlStatement, dbFailOnError
@@ -199,9 +248,9 @@ End Sub
 Private Sub InsertSalutation( _
     ByVal db As DAO.Database, _
     ByVal salutationCode As String, _
-    ByVal TranslationKey As String, _
-    ByVal SortOrder As Long, _
-    ByVal IsActive As Boolean)
+    ByVal translationKey As String, _
+    ByVal sortOrder As Long, _
+    ByVal isActive As Boolean)
 
     Dim sqlStatement As String
 
@@ -209,9 +258,9 @@ Private Sub InsertSalutation( _
                    "(salutation_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
                    "'" & EscapeSqlText(salutationCode) & "', " & _
-                   "'" & EscapeSqlText(TranslationKey) & "', " & _
-                   CStr(SortOrder) & ", " & _
-                   IIf(IsActive, "True", "False") & ", " & _
+                   "'" & EscapeSqlText(translationKey) & "', " & _
+                   CStr(sortOrder) & ", " & _
+                   IIf(isActive, "True", "False") & ", " & _
                    "Now(), 'SYSTEM', Now(), 'SYSTEM')"
 
     db.Execute sqlStatement, dbFailOnError
@@ -220,9 +269,9 @@ End Sub
 Private Sub InsertAddressingMode( _
     ByVal db As DAO.Database, _
     ByVal addressingModeCode As String, _
-    ByVal TranslationKey As String, _
-    ByVal SortOrder As Long, _
-    ByVal IsActive As Boolean)
+    ByVal translationKey As String, _
+    ByVal sortOrder As Long, _
+    ByVal isActive As Boolean)
 
     Dim sqlStatement As String
 
@@ -230,9 +279,9 @@ Private Sub InsertAddressingMode( _
                    "(addressing_mode_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
                    "'" & EscapeSqlText(addressingModeCode) & "', " & _
-                   "'" & EscapeSqlText(TranslationKey) & "', " & _
-                   CStr(SortOrder) & ", " & _
-                   IIf(IsActive, "True", "False") & ", " & _
+                   "'" & EscapeSqlText(translationKey) & "', " & _
+                   CStr(sortOrder) & ", " & _
+                   IIf(isActive, "True", "False") & ", " & _
                    "Now(), 'SYSTEM', Now(), 'SYSTEM')"
 
     db.Execute sqlStatement, dbFailOnError
@@ -241,9 +290,9 @@ End Sub
 Private Sub InsertContactType( _
     ByVal db As DAO.Database, _
     ByVal contactTypeCode As String, _
-    ByVal TranslationKey As String, _
-    ByVal SortOrder As Long, _
-    ByVal IsActive As Boolean)
+    ByVal translationKey As String, _
+    ByVal sortOrder As Long, _
+    ByVal isActive As Boolean)
 
     Dim sqlStatement As String
 
@@ -251,9 +300,59 @@ Private Sub InsertContactType( _
                    "(contact_type_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
                    "'" & EscapeSqlText(contactTypeCode) & "', " & _
-                   "'" & EscapeSqlText(TranslationKey) & "', " & _
-                   CStr(SortOrder) & ", " & _
-                   IIf(IsActive, "True", "False") & ", " & _
+                   "'" & EscapeSqlText(translationKey) & "', " & _
+                   CStr(sortOrder) & ", " & _
+                   IIf(isActive, "True", "False") & ", " & _
+                   "Now(), 'SYSTEM', Now(), 'SYSTEM')"
+
+    db.Execute sqlStatement, dbFailOnError
+End Sub
+
+Private Sub InsertUnit( _
+    ByVal db As DAO.Database, _
+    ByVal unitCode As String, _
+    ByVal translationKey As String, _
+    ByVal sortOrder As Long, _
+    ByVal isActive As Boolean)
+
+    Dim sqlStatement As String
+
+    sqlStatement = "INSERT INTO ref_unit " & _
+                   "(unit_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
+                   "VALUES (" & _
+                   "'" & EscapeSqlText(unitCode) & "', " & _
+                   "'" & EscapeSqlText(translationKey) & "', " & _
+                   CStr(sortOrder) & ", " & _
+                   IIf(isActive, "True", "False") & ", " & _
+                   "Now(), 'SYSTEM', Now(), 'SYSTEM')"
+
+    db.Execute sqlStatement, dbFailOnError
+End Sub
+
+Private Sub InsertVatCode( _
+    ByVal db As DAO.Database, _
+    ByVal vatCode As String, _
+    ByVal translationKey As String, _
+    ByVal vatRate As Double, _
+    ByVal countryCode As String, _
+    ByVal validFrom As Date, _
+    ByVal validTo As Variant, _
+    ByVal sortOrder As Long, _
+    ByVal isActive As Boolean)
+
+    Dim sqlStatement As String
+
+    sqlStatement = "INSERT INTO ref_vat_code " & _
+                   "(vat_code, translation_key, vat_rate, country_code, valid_from, valid_to, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
+                   "VALUES (" & _
+                   "'" & EscapeSqlText(vatCode) & "', " & _
+                   "'" & EscapeSqlText(translationKey) & "', " & _
+                   Replace(CStr(vatRate), ",", ".") & ", " & _
+                   "'" & EscapeSqlText(countryCode) & "', " & _
+                   "#" & Format$(validFrom, "yyyy-mm-dd") & "#, " & _
+                   SqlDateOrNull(validTo) & ", " & _
+                   CStr(sortOrder) & ", " & _
+                   IIf(isActive, "True", "False") & ", " & _
                    "Now(), 'SYSTEM', Now(), 'SYSTEM')"
 
     db.Execute sqlStatement, dbFailOnError
@@ -381,6 +480,70 @@ Private Sub InsertContactTypeTranslations(ByVal db As DAO.Database)
     InsertTranslation db, "EN-US", "CONTACT_TYPE.OTHER", "Other", True
 End Sub
 
+Private Sub InsertUnitTranslations(ByVal db As DAO.Database)
+    InsertTranslation db, "DE-CH", "UNIT.PCS", "Stk", True
+    InsertTranslation db, "DE-DE", "UNIT.PCS", "Stk", True
+    InsertTranslation db, "FR-FR", "UNIT.PCS", "pcs", True
+    InsertTranslation db, "IT-CH", "UNIT.PCS", "pz", True
+    InsertTranslation db, "EN-US", "UNIT.PCS", "pcs", True
+
+    InsertTranslation db, "DE-CH", "UNIT.HOUR", "Stunde", True
+    InsertTranslation db, "DE-DE", "UNIT.HOUR", "Stunde", True
+    InsertTranslation db, "FR-FR", "UNIT.HOUR", "Heure", True
+    InsertTranslation db, "IT-CH", "UNIT.HOUR", "Ora", True
+    InsertTranslation db, "EN-US", "UNIT.HOUR", "Hour", True
+
+    InsertTranslation db, "DE-CH", "UNIT.KG", "Kilogramm", True
+    InsertTranslation db, "DE-DE", "UNIT.KG", "Kilogramm", True
+    InsertTranslation db, "FR-FR", "UNIT.KG", "Kilogramme", True
+    InsertTranslation db, "IT-CH", "UNIT.KG", "Chilogrammo", True
+    InsertTranslation db, "EN-US", "UNIT.KG", "Kilogram", True
+
+    InsertTranslation db, "DE-CH", "UNIT.METER", "Meter", True
+    InsertTranslation db, "DE-DE", "UNIT.METER", "Meter", True
+    InsertTranslation db, "FR-FR", "UNIT.METER", "Metre", True
+    InsertTranslation db, "IT-CH", "UNIT.METER", "Metro", True
+    InsertTranslation db, "EN-US", "UNIT.METER", "Meter", True
+
+    InsertTranslation db, "DE-CH", "UNIT.LITER", "Liter", True
+    InsertTranslation db, "DE-DE", "UNIT.LITER", "Liter", True
+    InsertTranslation db, "FR-FR", "UNIT.LITER", "Litre", True
+    InsertTranslation db, "IT-CH", "UNIT.LITER", "Litro", True
+    InsertTranslation db, "EN-US", "UNIT.LITER", "Liter", True
+
+    InsertTranslation db, "DE-CH", "UNIT.PACKAGE", "Paket", True
+    InsertTranslation db, "DE-DE", "UNIT.PACKAGE", "Paket", True
+    InsertTranslation db, "FR-FR", "UNIT.PACKAGE", "Colis", True
+    InsertTranslation db, "IT-CH", "UNIT.PACKAGE", "Pacco", True
+    InsertTranslation db, "EN-US", "UNIT.PACKAGE", "Package", True
+End Sub
+
+Private Sub InsertVatCodeTranslations(ByVal db As DAO.Database)
+    InsertTranslation db, "DE-CH", "VAT.CH.STANDARD", "Normalsatz", True
+    InsertTranslation db, "DE-DE", "VAT.CH.STANDARD", "Standardsatz", True
+    InsertTranslation db, "FR-FR", "VAT.CH.STANDARD", "Taux normal", True
+    InsertTranslation db, "IT-CH", "VAT.CH.STANDARD", "Aliquota normale", True
+    InsertTranslation db, "EN-US", "VAT.CH.STANDARD", "Standard rate", True
+
+    InsertTranslation db, "DE-CH", "VAT.CH.REDUCED", "Reduzierter Satz", True
+    InsertTranslation db, "DE-DE", "VAT.CH.REDUCED", "Ermaessigter Satz", True
+    InsertTranslation db, "FR-FR", "VAT.CH.REDUCED", "Taux reduit", True
+    InsertTranslation db, "IT-CH", "VAT.CH.REDUCED", "Aliquota ridotta", True
+    InsertTranslation db, "EN-US", "VAT.CH.REDUCED", "Reduced rate", True
+
+    InsertTranslation db, "DE-CH", "VAT.CH.SPECIAL", "Sondersatz", True
+    InsertTranslation db, "DE-DE", "VAT.CH.SPECIAL", "Sondersatz", True
+    InsertTranslation db, "FR-FR", "VAT.CH.SPECIAL", "Taux special", True
+    InsertTranslation db, "IT-CH", "VAT.CH.SPECIAL", "Aliquota speciale", True
+    InsertTranslation db, "EN-US", "VAT.CH.SPECIAL", "Special rate", True
+
+    InsertTranslation db, "DE-CH", "VAT.CH.ZERO", "Nullsatz", True
+    InsertTranslation db, "DE-DE", "VAT.CH.ZERO", "Nullsatz", True
+    InsertTranslation db, "FR-FR", "VAT.CH.ZERO", "Taux zero", True
+    InsertTranslation db, "IT-CH", "VAT.CH.ZERO", "Aliquota zero", True
+    InsertTranslation db, "EN-US", "VAT.CH.ZERO", "Zero rate", True
+End Sub
+
 Public Sub SeedTagHelp()
     On Error GoTo ErrorHandler
 
@@ -500,8 +663,8 @@ Private Sub InsertTagHelp( _
     ByVal DescriptionText As String, _
     ByVal ExampleText As String, _
     ByVal NotesText As String, _
-    ByVal SortOrder As Long, _
-    ByVal IsActive As Boolean)
+    ByVal sortOrder As Long, _
+    ByVal isActive As Boolean)
 
     Dim sqlStatement As String
 
@@ -514,8 +677,8 @@ Private Sub InsertTagHelp( _
                    "'" & EscapeSqlText(DescriptionText) & "', " & _
                    "'" & EscapeSqlText(ExampleText) & "', " & _
                    "'" & EscapeSqlText(NotesText) & "', " & _
-                   CStr(SortOrder) & ", " & _
-                   IIf(IsActive, "True", "False") & ", " & _
+                   CStr(sortOrder) & ", " & _
+                   IIf(isActive, "True", "False") & ", " & _
                    "Now(), 'SYSTEM', Now(), 'SYSTEM')"
 
     db.Execute sqlStatement, dbFailOnError
@@ -523,4 +686,12 @@ End Sub
 
 Private Function EscapeSqlText(ByVal Value As String) As String
     EscapeSqlText = Replace(Nz(Value, vbNullString), "'", "''")
+End Function
+
+Private Function SqlDateOrNull(ByVal Value As Variant) As String
+    If IsNull(Value) Or IsEmpty(Value) Then
+        SqlDateOrNull = "Null"
+    Else
+        SqlDateOrNull = "#" & Format$(CDate(Value), "yyyy-mm-dd") & "#"
+    End If
 End Function
