@@ -431,17 +431,17 @@ End Function
 Public Function GetDocumentCustomerDisplayName(ByVal DocumentId As Long, Optional ByVal DefaultValue As String = "") As String
     On Error GoTo ErrorHandler
 
-    Dim AddressId As Long
+    Dim addressId As Long
     Dim storedCustomerName As String
     Dim addressDisplayName As String
 
     GetDocumentCustomerDisplayName = DefaultValue
 
     storedCustomerName = ResolveDocumentFieldValue(DocumentId, FIELD_CUSTOMER_NAME, DefaultValue)
-    AddressId = ResolveDocumentLongValue(DocumentId, FIELD_CUSTOMER_ADDRESS_ID, 0)
+    addressId = ResolveDocumentLongValue(DocumentId, FIELD_CUSTOMER_ADDRESS_ID, 0)
 
-    If AddressId > 0 Then
-        addressDisplayName = modAddressRepository.GetAddressDisplayName(AddressId, vbNullString)
+    If addressId > 0 Then
+        addressDisplayName = modAddressRepository.GetAddressDisplayName(addressId, vbNullString)
         If LenB(Trim$(addressDisplayName)) > 0 Then
             GetDocumentCustomerDisplayName = addressDisplayName
             Exit Function

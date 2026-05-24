@@ -21,7 +21,7 @@ Private Const FIELD_CREATED_AT As String = "created_at"
 Private Const FIELD_CREATED_BY As String = "created_by"
 
 Public Function CreateContact( _
-    ByVal AddressId As Long, _
+    ByVal addressId As Long, _
     ByVal contactTypeCode As String, _
     ByVal ContactValue As String, _
     Optional ByVal IsPrimary As Boolean = False, _
@@ -32,7 +32,7 @@ Public Function CreateContact( _
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
 
-    If AddressId <= 0 Then
+    If addressId <= 0 Then
         Exit Function
     End If
 
@@ -44,7 +44,7 @@ Public Function CreateContact( _
     Set rs = db.OpenRecordset(TABLE_ADR_CONTACT, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
-    SetRecordsetValue rs, FIELD_ADDRESS_ID, AddressId
+    SetRecordsetValue rs, FIELD_ADDRESS_ID, addressId
     SetRecordsetValue rs, FIELD_CONTACT_TYPE_CODE, UCase$(Trim$(contactTypeCode))
     SetRecordsetValue rs, FIELD_CONTACT_VALUE, Trim$(ContactValue)
     SetRecordsetValue rs, FIELD_IS_PRIMARY, IsPrimary
@@ -59,7 +59,7 @@ Public Function CreateContact( _
     End If
 
     modLoggingHandler.LogInfo MODULE_NAME & ".CreateContact", _
-        "Contact created. ContactId=" & CStr(CreateContact) & ", AddressId=" & CStr(AddressId) & "."
+        "Contact created. ContactId=" & CStr(CreateContact) & ", AddressId=" & CStr(addressId) & "."
 
 CleanExit:
     On Error Resume Next
@@ -74,7 +74,7 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Public Function GetPrimaryContactValue(ByVal AddressId As Long, ByVal contactTypeCode As String, Optional ByVal DefaultValue As String = "") As String
+Public Function GetPrimaryContactValue(ByVal addressId As Long, ByVal contactTypeCode As String, Optional ByVal DefaultValue As String = "") As String
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -83,7 +83,7 @@ Public Function GetPrimaryContactValue(ByVal AddressId As Long, ByVal contactTyp
 
     GetPrimaryContactValue = DefaultValue
 
-    If AddressId <= 0 Then
+    If addressId <= 0 Then
         Exit Function
     End If
 
@@ -93,7 +93,7 @@ Public Function GetPrimaryContactValue(ByVal AddressId As Long, ByVal contactTyp
 
     targetType = UCase$(Trim$(contactTypeCode))
     Set db = modDb.GetCurrentDatabase()
-    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_CONTACT & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(AddressId) & ";", dbOpenSnapshot)
+    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_CONTACT & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", dbOpenSnapshot)
 
     If rs.BOF And rs.EOF Then
         Exit Function

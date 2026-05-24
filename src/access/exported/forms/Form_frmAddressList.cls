@@ -1,4 +1,4 @@
-Option Compare Database
+﻿Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -119,7 +119,7 @@ Private Sub txtSearch_Change()
 
     ApplySearchFilter
     Me!txtSearch.SetFocus
-    Me!txtSearch.SelStart = Len(Nz(Me!txtSearch.Text, vbNullString))
+    Me!txtSearch.SelStart = Len(Nz(Me!txtSearch.text, vbNullString))
     Exit Sub
 
 ErrorHandler:
@@ -155,10 +155,16 @@ Private Sub ApplySearchFilter()
         Exit Sub
     End If
 
-    searchText = Trim$(Nz(Me!txtSearch.Text, vbNullString))
+    searchText = Trim$(Nz(Me!txtSearch.Value, vbNullString))
+
+    ' Fokus von txtSearch wegnehmen, bevor Filter/Formulareigenschaften geändert werden.
+    If HasControl("txtFocusSink") Then
+        Me!txtFocusSink.SetFocus
+    End If
+
+    Me.FilterOn = False
 
     If LenB(searchText) = 0 Then
-        Me.FilterOn = False
         Me.Filter = vbNullString
     Else
         filterExpression = BuildSearchFilter(searchText)
@@ -168,12 +174,12 @@ Private Sub ApplySearchFilter()
 
     modLoggingHandler.LogInfo MODULE_NAME & ".ApplySearchFilter", _
         "Search filter updated."
+
     Exit Sub
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ApplySearchFilter", Err
 End Sub
-
 Private Function BuildActionRowSource() As String
     Dim sqlStatement As String
 
@@ -380,7 +386,7 @@ Private Function GetCurrentAddressId() As Long
     If HasControl("txtAddressId") Then
         GetCurrentAddressId = NzLong(Me!txtAddressId.Value, 0)
     ElseIf HasControl("AddressId") Then
-        GetCurrentAddressId = NzLong(Me!AddressId.Value, 0)
+        GetCurrentAddressId = NzLong(Me!addressId.Value, 0)
     End If
 
 SafeExit:
@@ -532,7 +538,7 @@ End Function
 Private Function FormExists(ByVal FormName As String) As Boolean
     On Error GoTo SafeExit
 
-    Dim accessObject As Access.AccessObject
+    Dim accessObject As Access.accessObject
 
     For Each accessObject In CurrentProject.AllForms
         If StrComp(accessObject.Name, FormName, vbTextCompare) = 0 Then
@@ -655,3 +661,4 @@ Private Function UnescapeWorkspaceStateValue(ByVal Value As String) As String
     Value = Replace(Value, "%25", "%")
     UnescapeWorkspaceStateValue = Value
 End Function
+

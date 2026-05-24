@@ -15,18 +15,18 @@ Private Sub Form_Load()
     LoadHelpList
 End Sub
 
-Private Sub LoadHelpList(Optional ByVal FilterText As String = vbNullString)
+Private Sub LoadHelpList(Optional ByVal filterText As String = vbNullString)
     Dim sqlStatement As String
 
     sqlStatement = "SELECT " & FIELD_TOKEN_KEY & ", " & FIELD_SYNTAX_TEXT & " " & _
                    "FROM " & TABLE_TAG_HELP & " " & _
                    "WHERE " & FIELD_IS_ACTIVE & " = True "
 
-    If Len(Trim$(FilterText)) > 0 Then
+    If Len(Trim$(filterText)) > 0 Then
         sqlStatement = sqlStatement & _
-                       "AND (" & FIELD_TOKEN_KEY & " LIKE '*" & Replace(FilterText, "'", "''") & "*' " & _
-                       "OR " & FIELD_SYNTAX_TEXT & " LIKE '*" & Replace(FilterText, "'", "''") & "*' " & _
-                       "OR " & FIELD_CATEGORY & " LIKE '*" & Replace(FilterText, "'", "''") & "*') "
+                       "AND (" & FIELD_TOKEN_KEY & " LIKE '*" & Replace(filterText, "'", "''") & "*' " & _
+                       "OR " & FIELD_SYNTAX_TEXT & " LIKE '*" & Replace(filterText, "'", "''") & "*' " & _
+                       "OR " & FIELD_CATEGORY & " LIKE '*" & Replace(filterText, "'", "''") & "*') "
     End If
 
     sqlStatement = sqlStatement & "ORDER BY " & FIELD_SORT_ORDER & ", " & FIELD_TOKEN_KEY & ";"

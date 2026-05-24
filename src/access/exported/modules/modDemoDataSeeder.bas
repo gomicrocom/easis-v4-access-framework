@@ -271,7 +271,7 @@ End Function
 
 Private Sub InsertContact( _
     ByVal db As DAO.Database, _
-    ByVal AddressId As Long, _
+    ByVal addressId As Long, _
     ByVal contactTypeCode As String, _
     ByVal ContactValue As String, _
     ByVal IsPrimary As Boolean, _
@@ -282,7 +282,7 @@ Private Sub InsertContact( _
     Set rs = db.OpenRecordset(TBL_ADR_CONTACT, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
-    SetFieldIfExists rs, "address_id", AddressId
+    SetFieldIfExists rs, "address_id", addressId
     SetFieldIfExists rs, "contact_type_code", UCase$(Trim$(contactTypeCode))
     SetFieldIfExists rs, "contact_value", Trim$(ContactValue)
     SetFieldIfExists rs, "is_primary", IsPrimary

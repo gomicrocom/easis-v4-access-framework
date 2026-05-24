@@ -74,7 +74,7 @@ Public Function ResolveConfigPath(Optional ByVal IniPath As String = vbNullStrin
     End If
 End Function
 
-Public Function GetIniString(ByVal SectionName As String, ByVal KeyName As String, Optional ByVal DefaultValue As String = vbNullString, Optional ByVal IniPath As String = vbNullString) As String
+Public Function GetIniString(ByVal SectionName As String, ByVal keyName As String, Optional ByVal DefaultValue As String = vbNullString, Optional ByVal IniPath As String = vbNullString) As String
     On Error GoTo ErrorHandler
 
     Dim buffer As String
@@ -88,7 +88,7 @@ Public Function GetIniString(ByVal SectionName As String, ByVal KeyName As Strin
     End If
 
     buffer = String$(INI_BUFFER_SIZE, vbNullChar)
-    charsRead = GetPrivateProfileString(SectionName, ByVal KeyName, DefaultValue, buffer, Len(buffer), effectivePath)
+    charsRead = GetPrivateProfileString(SectionName, ByVal keyName, DefaultValue, buffer, Len(buffer), effectivePath)
 
     If charsRead > 0 Then
         GetIniString = Left$(buffer, charsRead)
@@ -102,14 +102,14 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "GetIniString", Err
 End Function
 
-Public Function GetConfigValue(ByVal SectionName As String, ByVal KeyName As String, Optional ByVal DefaultValue As String = vbNullString, Optional ByVal IniPath As String = vbNullString) As String
-    GetConfigValue = GetIniString(SectionName, KeyName, DefaultValue, IniPath)
+Public Function GetConfigValue(ByVal SectionName As String, ByVal keyName As String, Optional ByVal DefaultValue As String = vbNullString, Optional ByVal IniPath As String = vbNullString) As String
+    GetConfigValue = GetIniString(SectionName, keyName, DefaultValue, IniPath)
 End Function
 
-Public Function GetIniBoolean(ByVal SectionName As String, ByVal KeyName As String, Optional ByVal DefaultValue As Boolean = False, Optional ByVal IniPath As String = vbNullString) As Boolean
+Public Function GetIniBoolean(ByVal SectionName As String, ByVal keyName As String, Optional ByVal DefaultValue As Boolean = False, Optional ByVal IniPath As String = vbNullString) As Boolean
     Dim rawValue As String
 
-    rawValue = NormalizeToken(GetIniString(SectionName, KeyName, BoolToIni(DefaultValue), IniPath))
+    rawValue = NormalizeToken(GetIniString(SectionName, keyName, BoolToIni(DefaultValue), IniPath))
 
     Select Case rawValue
         Case "1", "TRUE", "YES", "Y", "ON"
@@ -121,10 +121,10 @@ Public Function GetIniBoolean(ByVal SectionName As String, ByVal KeyName As Stri
     End Select
 End Function
 
-Public Function GetIniLong(ByVal SectionName As String, ByVal KeyName As String, Optional ByVal DefaultValue As Long = 0, Optional ByVal IniPath As String = vbNullString) As Long
+Public Function GetIniLong(ByVal SectionName As String, ByVal keyName As String, Optional ByVal DefaultValue As Long = 0, Optional ByVal IniPath As String = vbNullString) As Long
     Dim rawValue As String
 
-    rawValue = Trim$(GetIniString(SectionName, KeyName, CStr(DefaultValue), IniPath))
+    rawValue = Trim$(GetIniString(SectionName, keyName, CStr(DefaultValue), IniPath))
     If IsNumeric(rawValue) Then
         GetIniLong = CLng(rawValue)
     Else

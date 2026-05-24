@@ -161,7 +161,7 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "CancelSelection", Err
 End Sub
 
-Private Function GetOpenArgValue(ByVal KeyName As String) As String
+Private Function GetOpenArgValue(ByVal keyName As String) As String
     Dim parts() As String
     Dim pairText As Variant
     Dim separatorPosition As Long
@@ -176,7 +176,7 @@ Private Function GetOpenArgValue(ByVal KeyName As String) As String
         separatorPosition = InStr(1, CStr(pairText), "=", vbTextCompare)
         If separatorPosition > 0 Then
             currentKey = Trim$(Left$(CStr(pairText), separatorPosition - 1))
-            If StrComp(currentKey, KeyName, vbTextCompare) = 0 Then
+            If StrComp(currentKey, keyName, vbTextCompare) = 0 Then
                 GetOpenArgValue = Trim$(Mid$(CStr(pairText), separatorPosition + 1))
                 Exit Function
             End If

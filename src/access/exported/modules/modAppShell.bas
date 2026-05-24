@@ -187,7 +187,7 @@ End Sub
 
 Private Sub SetControlEnabledIfPresent( _
     ByVal formInstance As Access.Form, _
-    ByVal controlName As String, _
+    ByVal ControlName As String, _
     ByVal isEnabled As Boolean)
     On Error GoTo SafeExit
 
@@ -195,11 +195,11 @@ Private Sub SetControlEnabledIfPresent( _
         Exit Sub
     End If
 
-    If Not HasControl(formInstance, controlName) Then
+    If Not HasControl(formInstance, ControlName) Then
         Exit Sub
     End If
 
-    formInstance.Controls(controlName).Enabled = isEnabled
+    formInstance.Controls(ControlName).Enabled = isEnabled
 
 SafeExit:
 End Sub

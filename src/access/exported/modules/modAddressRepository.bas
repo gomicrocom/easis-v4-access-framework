@@ -96,13 +96,13 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Public Function AddressExists(ByVal AddressId As Long) As Boolean
+Public Function AddressExists(ByVal addressId As Long) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
 
-    If AddressId <= 0 Then
+    If addressId <= 0 Then
         Exit Function
     End If
 
@@ -111,7 +111,7 @@ Public Function AddressExists(ByVal AddressId As Long) As Boolean
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(AddressId) & ";", dbOpenSnapshot)
+    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", dbOpenSnapshot)
 
     AddressExists = Not (rs.BOF And rs.EOF)
 
@@ -128,7 +128,7 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Public Function GetAddressDisplayName(ByVal AddressId As Long, Optional ByVal DefaultValue As String = "") As String
+Public Function GetAddressDisplayName(ByVal addressId As Long, Optional ByVal DefaultValue As String = "") As String
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -139,7 +139,7 @@ Public Function GetAddressDisplayName(ByVal AddressId As Long, Optional ByVal De
 
     GetAddressDisplayName = DefaultValue
 
-    If AddressId <= 0 Then
+    If addressId <= 0 Then
         Exit Function
     End If
 
@@ -148,7 +148,7 @@ Public Function GetAddressDisplayName(ByVal AddressId As Long, Optional ByVal De
     End If
 
     Set db = modDb.GetCurrentDatabase()
-    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(AddressId) & ";", dbOpenSnapshot)
+    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", dbOpenSnapshot)
 
     If rs.BOF And rs.EOF Then
         Exit Function
