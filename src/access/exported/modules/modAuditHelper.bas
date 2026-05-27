@@ -25,45 +25,41 @@ Public Sub ApplyAuditFields(ByVal targetForm As Access.Form)
         Exit Sub
     End If
 
-    If Not HasEditableRecordset(targetForm) Then
-        Exit Sub
-    End If
-
     currentTimestamp = Now()
     currentUserName = ResolveAuditUserName()
 
     If targetForm.NewRecord Then
-        If HasRecordsetField(targetForm, FIELD_CREATED_AT) Then
-            If IsValueEmpty(GetRecordsetFieldValue(targetForm, FIELD_CREATED_AT)) Then
-                SetRecordsetFieldValue targetForm, FIELD_CREATED_AT, currentTimestamp
+        If HasBoundControl(targetForm, "created_at") Then
+            If IsNull(targetForm.Controls("created_at").Value) Then
+                targetForm.Controls("created_at").Value = currentTimestamp
             End If
         End If
 
-        If HasRecordsetField(targetForm, FIELD_CREATED_BY) Then
-            If IsValueEmpty(GetRecordsetFieldValue(targetForm, FIELD_CREATED_BY)) Then
-                SetRecordsetFieldValue targetForm, FIELD_CREATED_BY, currentUserName
+        If HasBoundControl(targetForm, "created_by") Then
+            If LenB(Trim$(Nz(targetForm.Controls("created_by").Value, vbNullString))) = 0 Then
+                targetForm.Controls("created_by").Value = currentUserName
             End If
         End If
     End If
 
-    If HasRecordsetField(targetForm, FIELD_UPDATED_AT) Then
-        SetRecordsetFieldValue targetForm, FIELD_UPDATED_AT, currentTimestamp
+    If HasBoundControl(targetForm, "updated_at") Then
+        targetForm.Controls("updated_at").Value = currentTimestamp
     End If
 
-    If HasRecordsetField(targetForm, FIELD_UPDATED_BY) Then
-        SetRecordsetFieldValue targetForm, FIELD_UPDATED_BY, currentUserName
+    If HasBoundControl(targetForm, "updated_by") Then
+        targetForm.Controls("updated_by").Value = currentUserName
     End If
+
     Exit Sub
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ApplyAuditFields", Err
 End Sub
-
 Public Function ResolveAuditUserName() As String
     On Error GoTo SafeExit
 
     If modSessionContext.IsSessionInitialized Then
-        ResolveAuditUserName = Trim$(modSessionContext.CurrentUserName)
+        ResolveAuditUserName = Trim$(modSessionContext.currentUserName)
         If LenB(ResolveAuditUserName) > 0 Then
             Exit Function
         End If
@@ -147,4 +143,24 @@ Private Function IsValueEmpty(ByVal fieldValue As Variant) As Boolean
     ElseIf VarType(fieldValue) = vbString Then
         IsValueEmpty = (LenB(Trim$(CStr(fieldValue))) = 0)
     End If
+End Function
+Private Function HasBoundControl(ByVal targetForm As Access.Form, ByVal ControlName As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim ctl As Access.Control
+
+    If targetForm Is Nothing Then
+        Exit Function
+    End If
+
+    For Each ctl In targetForm.Controls
+        If StrComp(ctl.Name, ControlName, vbTextCompare) = 0 Then
+            If LenB(Trim$(Nz(ctl.ControlSource, vbNullString))) > 0 Then
+                HasBoundControl = True
+                Exit Function
+            End If
+        End If
+    Next ctl
+
+SafeExit:
 End Function
