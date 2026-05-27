@@ -57,7 +57,7 @@ The exact physical field names may evolve by implementation detail, but the inte
 | Table | Primary Key |
 |---|---|
 | `tblAddresses` | `AddressID` |
-| `art_product_group` | `ProductGroupID` |
+| `art_product_group` | `product_group_id` |
 | `art_article` | `ArticleID` |
 | `ord_order` | `OrderID` |
 | `ord_order_line` | `OrderLineID` |
@@ -148,6 +148,17 @@ Stores customer and address master data used in business documents and order pro
 ### `art_product_group`
 
 Stores the grouping structure used to classify articles and support article organization.
+
+In the UI, this object is presented as `Artikelgruppe` / `Article Group`, but
+the existing physical tenant table and key naming stay aligned with the
+established Easis business model:
+
+- table
+  - `art_product_group`
+- key fields
+  - `product_group_id`
+  - `product_group_code`
+  - `product_group_name`
 
 ### `art_article`
 

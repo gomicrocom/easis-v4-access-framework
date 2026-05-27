@@ -5,7 +5,7 @@ Option Explicit
 ' Module    : modAppDashboardService
 ' Purpose   : Dashboard value population for a standard unbound Access form.
 ' Author    : Codex
-' Version   : 0.1.0
+' Version   : 0.2.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modAppDashboardService"
@@ -13,6 +13,11 @@ Private Const CONTROL_CARD_TENANT As String = "txtCardTenant"
 Private Const CONTROL_CARD_USER As String = "txtCardUser"
 Private Const CONTROL_CARD_BACKEND As String = "txtCardBackend"
 Private Const CONTROL_CARD_FRAMEWORK As String = "txtCardFramework"
+Private Const LABEL_CARD_TENANT As String = "lblCardTenantTitle"
+Private Const LABEL_CARD_USER As String = "lblCardUserTitle"
+Private Const LABEL_CARD_BACKEND As String = "lblCardBackendTitle"
+Private Const LABEL_CARD_FRAMEWORK As String = "lblCardFrameworkTitle"
+Private Const LABEL_CARD_STATUS As String = "lblCardStatusTitle"
 
 Public Function RefreshDashboard(ByVal dashboardForm As Access.Form) As Boolean
     On Error GoTo ErrorHandler
@@ -22,6 +27,7 @@ Public Function RefreshDashboard(ByVal dashboardForm As Access.Form) As Boolean
         Exit Function
     End If
 
+    ApplyDashboardTranslations dashboardForm
     SetDisplayValueIfPresent dashboardForm, CONTROL_CARD_TENANT, ResolveTenantStatusText()
     SetDisplayValueIfPresent dashboardForm, CONTROL_CARD_USER, ResolveUserStatusText()
     SetDisplayValueIfPresent dashboardForm, CONTROL_CARD_BACKEND, ResolveBackendStatusText()
@@ -37,6 +43,18 @@ ErrorHandler:
     RefreshDashboard = False
     modErrorHandler.HandleError MODULE_NAME, "RefreshDashboard", Err
 End Function
+
+Private Sub ApplyDashboardTranslations(ByVal dashboardForm As Access.Form)
+    On Error GoTo SafeExit
+
+    SetCaptionIfPresent dashboardForm, LABEL_CARD_TENANT, "FORM.FRMAPPDASHBOARD.TENANT", "Mandant"
+    SetCaptionIfPresent dashboardForm, LABEL_CARD_USER, "FORM.FRMAPPDASHBOARD.USER", "Benutzer"
+    SetCaptionIfPresent dashboardForm, LABEL_CARD_BACKEND, "FORM.FRMAPPDASHBOARD.BACKEND", "Backend"
+    SetCaptionIfPresent dashboardForm, LABEL_CARD_FRAMEWORK, "FORM.FRMAPPDASHBOARD.FRAMEWORK", "Framework"
+    SetCaptionIfPresent dashboardForm, LABEL_CARD_STATUS, "FORM.FRMAPPDASHBOARD.STATUS", "Status"
+
+SafeExit:
+End Sub
 
 Private Function ResolveTenantStatusText() As String
     If modTenantContext.IsTenantInitialized Then
@@ -124,6 +142,26 @@ Private Sub SetDisplayValueIfPresent( _
         Case Else
             ctl.Value = valueText
     End Select
+
+SafeExit:
+End Sub
+
+Private Sub SetCaptionIfPresent( _
+    ByVal formInstance As Access.Form, _
+    ByVal ControlName As String, _
+    ByVal translation_key As String, _
+    ByVal fallback_text As String)
+    On Error GoTo SafeExit
+
+    If formInstance Is Nothing Then
+        Exit Sub
+    End If
+
+    If Not HasControl(formInstance, ControlName) Then
+        Exit Sub
+    End If
+
+    formInstance.Controls(ControlName).Caption = modAppShell.ResolveShellText(translation_key, fallback_text)
 
 SafeExit:
 End Sub

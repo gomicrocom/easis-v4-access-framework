@@ -19,6 +19,7 @@ Private Const TBL_ADR_CONTACT As String = "adr_contact"
 Private Const TBL_DOC_DOCUMENT As String = "doc_document"
 Private Const TBL_DOC_POSITION As String = "doc_document_position"
 Private Const TBL_TEN_PARAMETER As String = "ten_parameter"
+Private Const TBL_ART_PRODUCT_GROUP As String = "art_product_group"
 
 Private Const created_by As String = "DemoDataSeeder"
 
@@ -71,6 +72,56 @@ ErrorHandler:
     On Error Resume Next
     DBEngine.Workspaces(0).Rollback
     MsgBox "Fehler beim Erstellen der Demo-Daten:" & vbCrLf & _
+           Err.Number & " - " & Err.description, vbCritical, "Easis v4 Demo Seeder"
+    Resume CleanExit
+End Sub
+
+Public Sub SeedProductGroups()
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+
+    Set db = CurrentDb
+
+    modArticleGroupService.EnsureArticleGroupTable
+    RequireTable db, TBL_ART_PRODUCT_GROUP
+    RequireField db, TBL_ART_PRODUCT_GROUP, "product_group_code"
+    RequireField db, TBL_ART_PRODUCT_GROUP, "product_group_name"
+    RequireField db, TBL_ART_PRODUCT_GROUP, "description_text"
+    RequireField db, TBL_ART_PRODUCT_GROUP, "sort_order"
+    RequireField db, TBL_ART_PRODUCT_GROUP, "is_active"
+    RequireField db, TBL_ART_PRODUCT_GROUP, "created_at"
+    RequireField db, TBL_ART_PRODUCT_GROUP, "created_by"
+    RequireField db, TBL_ART_PRODUCT_GROUP, "updated_at"
+    RequireField db, TBL_ART_PRODUCT_GROUP, "updated_by"
+
+    DBEngine.Workspaces(0).BeginTrans
+
+    ' Demo business values are intentionally language-neutral. UI localization
+    ' belongs in fw_translation, not in the business rows themselves.
+    UpsertProductGroup db, "SERVICES", "Dienstleistungen", "Dienstleistungs- und Beratungsangebote", 10, True
+    UpsertProductGroup db, "FOOD", "Lebensmittel", "Allgemeine Lebensmittel und Verpflegungsartikel", 20, True
+    UpsertProductGroup db, "BEVERAGES", "Getraenke", "Getraenke und zugehoerige Artikel", 30, True
+    UpsertProductGroup db, "OFFICE", "Buero", "Buero- und Verwaltungsbedarf", 40, True
+    UpsertProductGroup db, "SOFTWARE", "Software", "Softwareprodukte, Lizenzen und digitale Services", 50, True
+    UpsertProductGroup db, "HARDWARE", "Hardware", "Hardwarekomponenten und Geraete", 60, True
+    UpsertProductGroup db, "SUBSCRIPTIONS", "Abonnemente", "Wiederkehrende Leistungen und Abomodelle", 70, True
+
+    DBEngine.Workspaces(0).CommitTrans
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".SeedProductGroups", _
+        "Product group demo data seeded successfully."
+    MsgBox "Produktgruppen-Demo-Daten wurden erfolgreich initialisiert.", vbInformation, "Easis v4 Demo Seeder"
+
+CleanExit:
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    On Error Resume Next
+    DBEngine.Workspaces(0).Rollback
+    modErrorHandler.HandleError MODULE_NAME, "SeedProductGroups", Err
+    MsgBox "Fehler beim Initialisieren der Produktgruppen-Demo-Daten:" & vbCrLf & _
            Err.Number & " - " & Err.description, vbCritical, "Easis v4 Demo Seeder"
     Resume CleanExit
 End Sub
@@ -479,6 +530,43 @@ Private Sub UpsertTenantParameter(ByVal db As DAO.Database, ByVal ParamKey As St
     Set rs = Nothing
 End Sub
 
+Private Sub UpsertProductGroup( _
+    ByVal db As DAO.Database, _
+    ByVal productGroupCode As String, _
+    ByVal productGroupName As String, _
+    ByVal descriptionText As String, _
+    ByVal sortOrder As Long, _
+    ByVal isActive As Boolean)
+
+    Dim rs As DAO.Recordset
+    Dim sql As String
+
+    sql = "SELECT * FROM [" & TBL_ART_PRODUCT_GROUP & "] " & _
+          "WHERE [product_group_code]=" & SqlText(UCase$(Trim$(productGroupCode))) & ";"
+
+    Set rs = db.OpenRecordset(sql, dbOpenDynaset)
+
+    If rs.BOF And rs.EOF Then
+        rs.AddNew
+        SetFieldIfExists rs, "created_at", Now()
+        SetFieldIfExists rs, "created_by", created_by
+    Else
+        rs.Edit
+    End If
+
+    SetFieldIfExists rs, "product_group_code", UCase$(Trim$(productGroupCode))
+    SetFieldIfExists rs, "product_group_name", Trim$(productGroupName)
+    SetFieldIfExists rs, "description_text", Trim$(descriptionText)
+    SetFieldIfExists rs, "sort_order", sortOrder
+    SetFieldIfExists rs, "is_active", isActive
+    SetFieldIfExists rs, "updated_at", Now()
+    SetFieldIfExists rs, "updated_by", created_by
+    rs.Update
+
+    rs.Close
+    Set rs = Nothing
+End Sub
+
 Private Sub SetFieldIfExists(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal Value As Variant)
     If RecordsetHasField(rs, fieldName) Then
         rs.Fields(fieldName).Value = Value
@@ -543,14 +631,6 @@ Private Sub ExecSql(ByVal db As DAO.Database, ByVal sql As String)
     Debug.Print sql
     db.Execute sql, dbFailOnError
 End Sub
-
-Private Function SqlText(ByVal Value As Variant) As String
-    If IsNull(Value) Then
-        SqlText = "NULL"
-    Else
-        SqlText = "'" & Replace(CStr(Value), "'", "''") & "'"
-    End If
-End Function
 
 Private Function SqlNumber(ByVal Value As Variant) As String
     If IsNull(Value) Or LenB(Trim$(CStr(Value))) = 0 Then

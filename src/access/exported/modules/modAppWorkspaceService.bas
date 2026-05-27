@@ -5,7 +5,7 @@ Option Explicit
 ' Module    : modAppWorkspaceService
 ' Purpose   : Workspace host helpers and history support for the application shell.
 ' Author    : Codex
-' Version   : 0.3.0
+' Version   : 0.4.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modAppWorkspaceService"
@@ -64,6 +64,12 @@ Public Function OpenWorkspaceForm( _
         OpenWorkspaceForm = True
         modLoggingHandler.LogWarning MODULE_NAME & ".OpenWorkspaceForm", _
             "Shell workspace host is missing. Opened form '" & form_name & "' standalone."
+        Exit Function
+    End If
+
+    If Not CanReplaceWorkspaceContent(workspaceHost) Then
+        modLoggingHandler.LogInfo MODULE_NAME & ".OpenWorkspaceForm", _
+            "Workspace navigation to '" & form_name & "' was cancelled by the active workspace form."
         Exit Function
     End If
 
@@ -192,6 +198,33 @@ Public Function PeekWorkspaceHistory() As String
     If m_workspaceHistory.count > 0 Then
         PeekWorkspaceHistory = m_workspaceHistory(m_workspaceHistory.count)
     End If
+End Function
+
+Private Function CanReplaceWorkspaceContent(ByVal workspaceHost As Control) As Boolean
+    On Error GoTo SafeExit
+
+    Dim workspaceForm As Access.Form
+    Dim formObject As Object
+
+    CanReplaceWorkspaceContent = True
+
+    If workspaceHost Is Nothing Then
+        Exit Function
+    End If
+
+    If LenB(Trim$(Nz(workspaceHost.SourceObject, vbNullString))) = 0 Then
+        Exit Function
+    End If
+
+    Set workspaceForm = workspaceHost.Form
+    If workspaceForm Is Nothing Then
+        Exit Function
+    End If
+
+    Set formObject = workspaceForm
+    CanReplaceWorkspaceContent = CBool(CallByName(formObject, "CanLeaveWorkspace", VbMethod))
+
+SafeExit:
 End Function
 
 Public Function PreviewWorkspaceReport( _

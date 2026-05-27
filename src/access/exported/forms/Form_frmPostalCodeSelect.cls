@@ -223,10 +223,6 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
-Private Function SqlText(ByVal Value As String) As String
-    SqlText = "'" & Replace(NzString(Value), "'", "''") & "'"
-End Function
-
 Private Function NzString(ByVal Value As Variant, Optional ByVal DefaultValue As String = "") As String
     If IsNull(Value) Or IsEmpty(Value) Then
         NzString = DefaultValue

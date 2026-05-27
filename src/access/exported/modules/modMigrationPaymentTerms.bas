@@ -494,14 +494,6 @@ Private Sub ExecSql(ByVal db As DAO.Database, ByVal sql As String)
     db.Execute sql, dbFailOnError
 End Sub
 
-Private Function SqlText(ByVal v As Variant) As String
-    If IsNull(v) Then
-        SqlText = "NULL"
-    Else
-        SqlText = "'" & Replace(CStr(v), "'", "''") & "'"
-    End If
-End Function
-
 Private Function SqlDate(ByVal v As Variant) As String
     Dim dt As Date
 

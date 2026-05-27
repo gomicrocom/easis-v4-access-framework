@@ -48,6 +48,7 @@ Important fields:
 - `fallback_caption`
 - `object_name`
 - `object_type`
+- `open_mode`
 - `icon_key`
 - `sort_order`
 - `is_active`
@@ -67,6 +68,30 @@ The current version keeps role filtering lightweight:
 
 - if no role rows exist for a navigation entry, it is visible
 - if role rows exist, `GetNavigationRowSource()` can filter by `role_code`
+
+### Open Mode Metadata
+
+Navigation open behavior is metadata-driven through `fw_navigation.open_mode`.
+
+Allowed values:
+
+- `NORMAL`
+- `ADD`
+- `EDIT`
+- `READONLY`
+
+Current behavior:
+
+- `NORMAL`
+  - opens a form with standard workspace behavior
+- `ADD`
+  - opens a form in add or new-record mode through `modAppWorkspaceService`
+- `EDIT`
+  - currently falls back to `NORMAL`
+- `READONLY`
+  - currently falls back to `NORMAL`
+
+This avoids hardcoded special cases such as tying new-record behavior to a specific `caption_key` or form name.
 
 ### Accordion Behavior
 
@@ -120,6 +145,7 @@ Workspace-aware forms may optionally expose:
 
 - `Public Function GetWorkspaceState() As String`
 - `Public Sub RestoreWorkspaceState(ByVal stateText As String)`
+- `Public Function CanLeaveWorkspace() As Boolean`
 
 If these members are available, the workspace service will use them during back navigation.
 
@@ -197,13 +223,33 @@ Recommended approach:
    - `ACTION`
    - `GROUP`
 
-For this phase, navigation display is intentionally based on `fallback_caption` so the shell compiles and runs even without any translation dependency.
+For this phase, navigation display is translation-aware through `caption_key`, but it still remains fallback-first through `fallback_caption` so the shell compiles and runs safely even when translations are missing.
+
+### Navigation Maintenance
+
+Framework navigation can be maintained through:
+
+- `frmFwNavigationAdmin`
+
+Default placement:
+
+- `System`
+  - `Navigation verwalten`
+
+Maintenance rules:
+
+- do not physically delete seeded navigation rows
+- use `is_active=False` to deactivate entries
+- use `is_visible=False` to hide entries
+- setup may create missing default rows and update structural fields
+- setup should not reactivate or re-show rows that were manually disabled or hidden
 
 ### Navigation Click Flow
 
 - clicking a `GROUP` row toggles `is_expanded`
 - the navigation form requeries itself
 - clicking a `FORM` row calls `modAppWorkspaceService.OpenWorkspaceForm`
+- `open_mode=ADD` opens a blank new record through the same workspace service
 - clicking a `REPORT` row calls `modAppWorkspaceService.PreviewWorkspaceReport`
 - `ACTION` rows are only logged for now
 
@@ -213,6 +259,91 @@ For this phase, navigation display is intentionally based on `fallback_caption` 
 - `frmAppShell` hosts workspace content in `subWorkspaceHost`
 - forms are loaded into `subWorkspaceHost` through `SourceObject`
 - reports open in preview mode
+
+## Shell Translation Strategy
+
+The shell layer is translation-aware, but intentionally conservative.
+
+Current strategy:
+
+- shell labels use translation keys where available
+- navigation captions come from `fw_navigation.caption_key`
+- fallback always uses `fallback_caption`
+- dashboard card titles use translation keys
+- dynamic values remain technical and are not fully translated
+
+The shell uses a safe wrapper approach:
+
+- `ResolveShellText(translation_key, fallback_text)`
+
+Behavior:
+
+- return translated text if available
+- return fallback text if translation is missing
+- never break shell loading because of a missing translation
+
+### Navigation Caption Source
+
+Navigation captions are resolved from:
+
+- `caption_key`
+- `fallback_caption`
+
+This means a navigation entry can remain usable even if:
+
+- the current language has no translation yet
+- translation seeding has not been run
+
+### Translation Key Naming
+
+Current shell-related naming convention:
+
+- `NAV.*`
+- `FORM.<FORMNAME>.*`
+- `STATUS.*`
+
+For the broader framework translation policy, namespace rules, and cleanup phases, see:
+
+- [TRANSLATION_RULES.md](./TRANSLATION_RULES.md)
+
+Examples:
+
+- `NAV.GROUP.ADDRESSES`
+- `NAV.ADDRESS_LIST`
+- `FORM.FRMAPPSHELL.USER`
+- `FORM.FRMAPPSHELL.TENANT`
+- `FORM.FRMAPPDASHBOARD.BACKEND`
+
+### Form Translation Marker Rule
+
+For shell forms and other translatable UI controls, the official rule is:
+
+- `Caption`
+  - contains the readable fallback or design text
+- `Tag`
+  - contains the translation marker in the form `TR:<translation_key>`
+
+Example:
+
+- `Caption = Access Framework`
+- `Tag = TR:FORM.FRMAPPSHELL.APP_SUBTITLE`
+
+Important:
+
+- `fw_translation.translation_key` stores only the pure key
+- the `TR:` prefix is a runtime and designer marker only
+- new translation-tag writes should update `Tag`, not `Caption`
+- legacy `Caption` values that begin with `TR:` are tolerated for backward compatibility, but they are no longer the target pattern
+
+### Adding Translated Navigation Entries
+
+When adding a new shell navigation entry:
+
+1. define a stable `caption_key`
+2. keep a readable `fallback_caption`
+3. set `open_mode` explicitly when behavior differs from the default
+4. add translation rows for at least the supported shell languages
+5. do not rely on translation availability for functional navigation
 
 ### Workspace-Safe Form Navigation
 
@@ -225,6 +356,7 @@ Recommended pattern:
 - pass a `where_condition` when opening an existing record
 - use add mode only when a genuine new-record workflow is intended
 - rely on workspace history instead of reopening previous lists manually
+- keep save and cancel behavior inside the workspace form instead of closing forms aggressively
 
 This helps preserve a single-shell workflow:
 
@@ -246,6 +378,8 @@ Example:
 - open `frmAddressDetail`
 - execute `GoBack()`
 - return to `frmAddressList` with restored list context when supported by the form
+
+For shell-aware detail forms, `CanLeaveWorkspace()` can be used to prevent accidental loss of unsaved changes during shell navigation.
 
 ## Manual Layout Notes
 

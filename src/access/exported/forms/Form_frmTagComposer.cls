@@ -414,7 +414,7 @@ End Function
 
 Private Function IsComposerInternalObject(ByVal objectName As String) As Boolean
     Select Case UCase$(Trim$(objectName))
-        Case "FRMTAGCOMPOSER", "FRMTAGHELP", "SFRMTMPTAGCOMPOSER", "FRMFWCOMPOSER", "FRMFWTRANSLATIONLIST"
+        Case "FRMTAGCOMPOSER", "FRMTAGHELP", "SFRMTMPTAGCOMPOSER", "FRMFWTRANSLATIONS", "FRMFWTRANSLATIONLIST"
             IsComposerInternalObject = True
         Case Else
             IsComposerInternalObject = False

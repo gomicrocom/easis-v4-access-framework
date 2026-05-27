@@ -40,6 +40,7 @@ The system combines:
 - navigation
 - validation engine
 - UI policy engine (Tag-based)
+- centralized Access SQL literal helpers (`modSqlHelper`)
 
 ### 3. Application Modules
 Optional feature packages:
@@ -107,7 +108,7 @@ BasicModule v1 currently centers around the following tenant-backend tables:
 - `tblAddresses`
   - address master data for customers, contacts, invoice addresses, and delivery addresses
 - `art_product_group`
-  - logical grouping and classification of sellable items
+  - tenant-specific article-group master data used for article classification and future business grouping
 - `art_article`
   - article and service master data used in order lines
 - `ord_order`
@@ -152,6 +153,53 @@ BasicModule v1 depends on the framework layer in the following way:
 - logging
   - runtime diagnostics, validation issues, and service errors are written through centralized logging helpers
 
+### Language-Neutral Business Data
+
+Business and master-data tables are intentionally language-neutral.
+
+That includes values such as:
+
+- `art_product_group.product_group_name`
+- country names stored as business values
+- currency names stored as business values
+
+Localization belongs to UI and rendering layers only:
+
+- forms
+- navigation
+- messages
+- status texts
+- reports
+- document output
+
+The framework therefore does not model multilingual duplicate business rows and
+does not require translation joins for normal master-data access.
+
+### Audit Field Convention
+
+The framework uses a shared audit-field convention for bound record forms.
+
+Standard field names:
+
+- `created_at`
+- `created_by`
+- `updated_at`
+- `updated_by`
+
+Rules:
+
+- `created_at` and `created_by`
+  - are set only when a record is created
+  - are not overwritten on later saves
+- `updated_at` and `updated_by`
+  - are refreshed whenever a record is saved
+
+Implementation direction:
+
+- reusable form-level audit handling belongs in `modAuditHelper`
+- detail forms should use the shared helper instead of duplicating audit logic
+- forms without audit fields must continue to save safely without runtime errors
+
 ### UI Form Architecture
 
 The business application layer now follows a standardized form naming convention.
@@ -190,6 +238,8 @@ The following naming patterns are the standard for future business forms:
 
 - `frmAddressList`
 - `frmAddressDetail`
+- `frmArticleGroupList`
+- `frmArticleGroupDetail`
 - `frmOrderList`
 - `frmOrderDetail`
 - `frmArticleList`
@@ -250,6 +300,47 @@ The preferred pattern is:
 - `frm<Entity>Detail` and related forms as targets
 
 This keeps business navigation extensible without adding many hard-coded per-row UI actions.
+
+### Article Groups
+
+The first additional tenant master-data object after the initial shell and framework rollout is:
+
+- `Article Groups`
+
+Implemented objects:
+
+- table
+  - `art_product_group`
+  - primary key: `product_group_id`
+- list form
+  - `frmArticleGroupList`
+- detail form
+  - `frmArticleGroupDetail`
+- service module
+  - `modArticleGroupService`
+
+The UI and business term remains `Artikelgruppe` / `Article Group`, while the
+physical tenant table follows the existing Easis naming convention:
+
+- physical table
+  - `art_product_group`
+- physical key fields
+  - `product_group_id`
+  - `product_group_code`
+  - `product_group_name`
+
+Navigation placement:
+
+- `Mandant`
+  - `Artikelgruppen`
+  - `Neue Artikelgruppe`
+
+The implementation follows the established shell-aware list/detail workflow:
+
+- list form opens in the workspace
+- detail form opens in the workspace
+- add mode is driven by navigation `open_mode=ADD`
+- back navigation restores the list state where possible
 
 ---
 
@@ -340,6 +431,48 @@ Features:
 - placeholder support `{0}`, `{1}`
 - multi-language (EN / DE)
 - table-driven (`fw_translation`)
+- runtime translation marker support through `Control.Tag`
+
+#### Official UI Translation Rule
+
+For translatable UI controls:
+
+- `Caption`
+  - contains the readable fallback text shown in design mode
+- `Tag`
+  - contains `TR:<translation_key>`
+
+Example:
+
+- `Caption = Access Framework`
+- `Tag = TR:FORM.FRMAPPSHELL.APP_SUBTITLE`
+
+Important:
+
+- `fw_translation.translation_key` stores only the pure key
+- `TR:` is not stored in `fw_translation`
+- new translation-tag maintenance writes the marker into `Tag`
+- legacy caption-based `TR:` markers may still be tolerated by the runtime for backward compatibility
+
+### SQL Helper Convention
+
+Module:
+- `modSqlHelper`
+
+Purpose:
+- central Access SQL literal formatting
+- one shared place for string, nullable text, boolean, numeric-id, and date-time SQL literals
+
+Recommended helpers:
+- `SqlText(...)`
+- `SqlNullableText(...)`
+- `SqlBoolean(...)`
+- `SqlLongOrNull(...)`
+- `SqlDateTime(...)`
+
+Project rule:
+- modules and form classes should reuse the shared helpers
+- new local `Private Function SqlText(...)` copies should not be introduced
 
 ---
 
@@ -352,8 +485,80 @@ Features:
 - visual editing of Tag strings
 - multi-control editing
 - temporary storage via `fw_tmp_tag_composer`
-- preserves `TR:*` tags
+- preserves unrelated Tag segments while translation markers are managed separately
 - prevents syntax errors
+
+### Translation Maintenance
+
+Form:
+- `frmFwTranslations`
+
+Purpose:
+- translation maintenance
+- translation key assignment
+- `fw_translation` editing
+- safe management of the `TR:` marker inside `Control.Tag`
+- maintenance of both UI-bound and free/system translation namespaces
+
+Official namespaces:
+
+- `FORM.*`
+  - form and control captions
+- `NAV.*`
+  - shell and navigation captions
+- `MSG.*`
+  - messages and dialog texts
+- `STATUS.*`
+  - status labels and status texts
+- `REPORT.*`
+  - report-focused captions and report text resources
+- `DOCUMENT.*`
+  - document generation texts and reusable output labels
+- `REF.*`
+  - reference and reusable display labels
+
+Scope workflow:
+
+- `FORM`
+  - keeps the existing form/control workflow
+  - translation keys are derived from the selected form/report and control context
+- `NAV`, `MSG`, `STATUS`, `REPORT`, `DOCUMENT`, `REF`
+  - allow direct maintenance of free keys
+  - no form/control selection is required
+  - key prefix must match the selected scope
+- `ALL`
+  - shows non-form keys across free/system namespaces
+  - excludes `FORM.*`
+
+Free-key scope specifics:
+
+- `MSG`
+  - accepts both `MSG.*` and legacy `MSG_*`
+- `REF`
+  - includes:
+    - `ADDRESS_TYPE.*`
+    - `SALUTATION.*`
+    - `CONTACT_TYPE.*`
+    - `UNIT.*`
+    - `VAT.*`
+    - `REF.*`
+
+Important rules:
+
+- `fw_translation.translation_key`
+  - stores only the pure key such as `FORM.FRMAPPSHELL.APP_SUBTITLE`
+- `TR:`
+  - is a runtime/designer marker only
+  - belongs in `Control.Tag`
+  - must not be stored in `fw_translation.translation_key`
+
+This is intentionally separate from `frmTagComposer`:
+
+- `frmFwTranslations`
+  - manages translation keys and translation data
+  - manages `FORM.*`, `NAV.*`, `MSG.*`, `STATUS.*`, and `REF.*`
+- `frmTagComposer`
+  - manages validation, behavior, access, and other Tag metadata
 
 ---
 

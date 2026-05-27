@@ -9,7 +9,6 @@ Option Explicit
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFormLocalization"
-Private Const TAG_PREFIX_TRANSLATION As String = "TR:"
 
 Public Sub LocalizeForm(ByVal formInstance As Access.Form)
     On Error GoTo ErrorHandler
@@ -22,14 +21,14 @@ Public Sub LocalizeForm(ByVal formInstance As Access.Form)
         Exit Sub
     End If
 
-    translationKey = ExtractTranslationKeyFromTag(formInstance.Tag)
+    translationKey = modFwTranslationRuntime.GetTranslationKeyFromTag(formInstance.Tag)
     If LenB(translationKey) > 0 Then
         SetFormCaption formInstance, translationKey, NzString(formInstance.Caption)
         localizedCount = localizedCount + 1
     End If
 
     For Each ctl In formInstance.Controls
-        translationKey = ExtractTranslationKeyFromTag(ctl.Tag)
+        translationKey = modFwTranslationRuntime.GetTranslationKeyFromTag(ctl.Tag)
         If LenB(translationKey) > 0 Then
             LocalizeControl ctl, translationKey, GetControlFallbackCaption(ctl)
             localizedCount = localizedCount + 1
@@ -89,21 +88,6 @@ Public Sub LocalizeControl(ByVal ControlInstance As Control, ByVal translationKe
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "LocalizeControl", Err
 End Sub
-
-Private Function ExtractTranslationKeyFromTag(ByVal TagValue As String) As String
-    Dim trimmedTag As String
-
-    trimmedTag = Trim$(TagValue)
-    If LenB(trimmedTag) = 0 Then
-        Exit Function
-    End If
-
-    If UCase$(Left$(trimmedTag, Len(TAG_PREFIX_TRANSLATION))) <> TAG_PREFIX_TRANSLATION Then
-        Exit Function
-    End If
-
-    ExtractTranslationKeyFromTag = Trim$(Mid$(trimmedTag, Len(TAG_PREFIX_TRANSLATION) + 1))
-End Function
 
 Private Function SupportsCaptionLocalization(ByVal ControlInstance As Control) As Boolean
     On Error GoTo ErrorHandler
@@ -173,7 +157,7 @@ Private Function LocalizeTabPages(ByVal TabControlInstance As Control) As Long
     End If
 
     For Each Page In TabControlInstance.Pages
-        translationKey = ExtractTranslationKeyFromTag(NzString(Page.Tag))
+        translationKey = modFwTranslationRuntime.GetTranslationKeyFromTag(NzString(Page.Tag))
         If LenB(translationKey) > 0 Then
             fallbackCaption = NzString(Page.Caption)
             Page.Caption = modTranslationService.T(translationKey, fallbackCaption)

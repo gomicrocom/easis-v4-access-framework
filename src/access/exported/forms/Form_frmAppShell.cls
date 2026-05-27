@@ -5,7 +5,7 @@ Option Explicit
 ' Module    : Form_frmAppShell
 ' Purpose   : Main application shell host form.
 ' Author    : Codex
-' Version   : 0.2.0
+' Version   : 0.3.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "Form_frmAppShell"
@@ -14,6 +14,7 @@ Private Sub Form_Load()
     On Error GoTo ErrorHandler
 
     Debug.Print "frmAppShell Form_Load started"
+    modFwTranslationRuntime.ApplyTranslations Me
 
     If Not modAppShell.InitializeAppShell(Me) Then
         Debug.Print "InitializeAppShell returned False"

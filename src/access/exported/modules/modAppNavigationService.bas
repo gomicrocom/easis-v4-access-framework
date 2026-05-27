@@ -1,11 +1,12 @@
-﻿Option Compare Database
+Attribute VB_Name = "modAppNavigationService"
+Option Compare Database
 Option Explicit
 
 '===============================================================================
 ' Module    : modAppNavigationService
 ' Purpose   : Hierarchical shell navigation setup, seeding, and click handling.
 ' Author    : Codex
-' Version   : 0.2.1
+' Version   : 0.5.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modAppNavigationService"
@@ -15,6 +16,10 @@ Private Const TYPE_FORM As String = "FORM"
 Private Const TYPE_REPORT As String = "REPORT"
 Private Const TYPE_ACTION As String = "ACTION"
 Private Const TYPE_GROUP As String = "GROUP"
+Private Const OPEN_MODE_NORMAL As String = "NORMAL"
+Private Const OPEN_MODE_ADD As String = "ADD"
+Private Const OPEN_MODE_EDIT As String = "EDIT"
+Private Const OPEN_MODE_READONLY As String = "READONLY"
 Private Const PREFIX_GROUP_EXPANDED As String = "- "
 Private Const PREFIX_GROUP_COLLAPSED As String = "+ "
 Private Const PREFIX_CHILD As String = "    "
@@ -41,49 +46,69 @@ Public Function SeedDefaultNavigation() As Boolean
 
     Dim addressGroupId As Long
     Dim documentGroupId As Long
+    Dim tenantGroupId As Long
     Dim frameworkGroupId As Long
+    Dim systemGroupId As Long
+    Dim createdCount As Long
+    Dim updatedCount As Long
 
     If Not EnsureNavigationTables() Then
         Exit Function
     End If
 
     addressGroupId = EnsureNavigationEntry( _
-        0, "Adressen", "NAV.GROUP.ADDRESSES", "Adressen", vbNullString, TYPE_GROUP, 10, True, True, True)
+        0, "Adressen", "NAV.GROUP.ADDRESSES", "Adressen", vbNullString, TYPE_GROUP, OPEN_MODE_NORMAL, 10, True, True, True, createdCount, updatedCount)
 
     EnsureNavigationEntry _
-        addressGroupId, "Adressen", "NAV.ADDRESS_LIST", "Adressliste", "frmAddressList", TYPE_FORM, 10, False, True, True
+        addressGroupId, "Adressen", "NAV.ADDRESS_LIST", "Adressliste", "frmAddressList", TYPE_FORM, OPEN_MODE_NORMAL, 10, False, True, True, createdCount, updatedCount
 
     EnsureNavigationEntry _
-        addressGroupId, "Adressen", "NAV.NEW_ADDRESS", "Neue Adresse", "frmAddressDetail", TYPE_FORM, 20, False, True, True
+        addressGroupId, "Adressen", "NAV.NEW_ADDRESS", "Neue Adresse", "frmAddressDetail", TYPE_FORM, OPEN_MODE_ADD, 20, False, True, True, createdCount, updatedCount
 
     documentGroupId = EnsureNavigationEntry( _
-        0, "Dokumente", "NAV.GROUP.DOCUMENTS", "Dokumente", vbNullString, TYPE_GROUP, 20, False, True, True)
+        0, "Dokumente", "NAV.GROUP.DOCUMENTS", "Dokumente", vbNullString, TYPE_GROUP, OPEN_MODE_NORMAL, 20, False, True, True, createdCount, updatedCount)
 
     EnsureNavigationEntry _
-        documentGroupId, "Dokumente", "NAV.DOCUMENT_PREVIEW", "Dokumentvorschau", "rpt_document", TYPE_REPORT, 10, False, True, True
+        documentGroupId, "Dokumente", "NAV.DOCUMENT_PREVIEW", "Dokumentvorschau", "rpt_document", TYPE_REPORT, OPEN_MODE_NORMAL, 10, False, True, True, createdCount, updatedCount
+
+    tenantGroupId = EnsureNavigationEntry( _
+        0, "Mandant", "NAV.GROUP.TENANT", "Mandant", vbNullString, TYPE_GROUP, OPEN_MODE_NORMAL, 80, False, True, True, createdCount, updatedCount)
+
+    EnsureNavigationEntry _
+        tenantGroupId, "Mandant", "NAV.ARTICLE_GROUPS", "Artikelgruppen", "frmArticleGroupList", TYPE_FORM, OPEN_MODE_NORMAL, 10, False, True, True, createdCount, updatedCount
+
+    EnsureNavigationEntry _
+        tenantGroupId, "Mandant", "NAV.NEW_ARTICLE_GROUP", "Neue Artikelgruppe", "frmArticleGroupDetail", TYPE_FORM, OPEN_MODE_ADD, 20, False, True, True, createdCount, updatedCount
 
     frameworkGroupId = EnsureNavigationEntry( _
-        0, "Framework", "NAV.GROUP.FRAMEWORK", "Framework", vbNullString, TYPE_GROUP, 90, False, True, True)
+        0, "Framework", "NAV.GROUP.FRAMEWORK", "Framework", vbNullString, TYPE_GROUP, OPEN_MODE_NORMAL, 90, False, True, True, createdCount, updatedCount)
 
     EnsureNavigationEntry _
-        frameworkGroupId, "Framework", "NAV.TRANSLATIONS", "Uebersetzungen", "frmFwTranslationList", TYPE_FORM, 10, False, True, True
+        frameworkGroupId, "Framework", "NAV.TRANSLATIONS", "Uebersetzungen", "frmFwTranslationList", TYPE_FORM, OPEN_MODE_NORMAL, 10, False, True, True, createdCount, updatedCount
 
     EnsureNavigationEntry _
-        frameworkGroupId, "Framework", "NAV.COMPOSER", "Composer", "frmFwComposer", TYPE_FORM, 20, False, True, True
+        frameworkGroupId, "Framework", "NAV.FW_TRANSLATIONS", "Uebersetzungen pflegen", "frmFwTranslations", TYPE_FORM, OPEN_MODE_NORMAL, 20, False, True, True, createdCount, updatedCount
 
     EnsureNavigationEntry _
-        frameworkGroupId, "Framework", "NAV.LOCALISATION", "Lokalisierung", "frmLocalisation", TYPE_FORM, 30, False, True, True
+        frameworkGroupId, "Framework", "NAV.LOCALISATION", "Lokalisierung", "frmLocalisation", TYPE_FORM, OPEN_MODE_NORMAL, 30, False, True, True, createdCount, updatedCount
 
     EnsureNavigationEntry _
-        frameworkGroupId, "Framework", "NAV.TAGS", "Tags", "frmTagComposer", TYPE_FORM, 40, False, True, True
+        frameworkGroupId, "Framework", "NAV.TAGS", "Tags", "frmTagComposer", TYPE_FORM, OPEN_MODE_NORMAL, 40, False, True, True, createdCount, updatedCount
 
     EnsureNavigationEntry _
-        frameworkGroupId, "Framework", "NAV.TAG_HELP", "Tag-Hilfe", "frmTagHelp", TYPE_FORM, 50, False, True, True
+        frameworkGroupId, "Framework", "NAV.TAG_HELP", "Tag-Hilfe", "frmTagHelp", TYPE_FORM, OPEN_MODE_NORMAL, 50, False, True, True, createdCount, updatedCount
+
+    systemGroupId = EnsureNavigationEntry( _
+        0, "System", "NAV.GROUP.SYSTEM", "System", vbNullString, TYPE_GROUP, OPEN_MODE_NORMAL, 100, False, True, True, createdCount, updatedCount)
+
+    EnsureNavigationEntry _
+        systemGroupId, "System", "NAV.FW_NAVIGATION_ADMIN", "Navigation verwalten", "frmFwNavigationAdmin", TYPE_FORM, OPEN_MODE_NORMAL, 10, False, True, True, createdCount, updatedCount
 
     SeedDefaultNavigation = True
 
     modLoggingHandler.LogInfo MODULE_NAME & ".SeedDefaultNavigation", _
-        "Default navigation ensured successfully."
+        "Default navigation ensured successfully. created=" & CStr(createdCount) & _
+        " updated=" & CStr(updatedCount) & "."
     Exit Function
 
 ErrorHandler:
@@ -205,13 +230,15 @@ Public Function HandleNavigationClick( _
     Dim sqlStatement As String
     Dim objectName As String
     Dim objectType As String
+    Dim openMode As String
+    Dim dataMode As AcFormOpenDataMode
 
     If navigation_id <= 0 Then
         Exit Function
     End If
 
     Set db = CurrentDb
-    sqlStatement = "SELECT TOP 1 object_name, object_type " & _
+    sqlStatement = "SELECT TOP 1 object_name, object_type, open_mode " & _
                    "FROM " & TABLE_NAVIGATION & " " & _
                    "WHERE navigation_id = " & CStr(navigation_id) & " " & _
                    "AND Nz(is_active, True) = True " & _
@@ -225,13 +252,15 @@ Public Function HandleNavigationClick( _
 
     objectName = Trim$(modDaoHelper.NzString(rs.Fields("object_name").Value))
     objectType = UCase$(Trim$(modDaoHelper.NzString(rs.Fields("object_type").Value)))
+    openMode = NormalizeOpenMode(modDaoHelper.NzString(rs.Fields("open_mode").Value))
 
     Select Case objectType
         Case TYPE_GROUP
             HandleNavigationClick = ToggleNavigationGroup(navigation_id)
 
         Case TYPE_FORM
-            HandleNavigationClick = modAppWorkspaceService.OpenWorkspaceForm(shellForm, objectName)
+            dataMode = ResolveOpenDataMode(openMode)
+            HandleNavigationClick = modAppWorkspaceService.OpenWorkspaceForm(shellForm, objectName, vbNullString, dataMode)
 
         Case TYPE_REPORT
             HandleNavigationClick = modAppWorkspaceService.PreviewWorkspaceReport(shellForm, objectName)
@@ -259,50 +288,42 @@ ErrorHandler:
 End Function
 
 Private Function BuildNavigationRowSource(ByVal onlyVisibleRows As Boolean, ByVal role_code As String) As String
-    Dim normalizedRoleCode As String
     Dim sqlStatement As String
-
-    normalizedRoleCode = UCase$(Trim$(role_code))
 
     sqlStatement = ""
     sqlStatement = sqlStatement & "SELECT "
     sqlStatement = sqlStatement & "n.navigation_id, "
     sqlStatement = sqlStatement & "n.parent_navigation_id, "
-    sqlStatement = sqlStatement & "n.fallback_caption AS display_caption, "
+    sqlStatement = sqlStatement & "ResolveShellText(Nz(n.caption_key,''), Nz(n.fallback_caption,'')) AS display_caption, "
     sqlStatement = sqlStatement & "n.fallback_caption, "
+    sqlStatement = sqlStatement & "n.caption_key, "
     sqlStatement = sqlStatement & "n.object_name, "
     sqlStatement = sqlStatement & "n.object_type, "
+    sqlStatement = sqlStatement & "n.open_mode, "
     sqlStatement = sqlStatement & "n.icon_key, "
     sqlStatement = sqlStatement & "n.sort_order, "
     sqlStatement = sqlStatement & "n.is_expanded, "
     sqlStatement = sqlStatement & "IIf(UCase(Nz(n.object_type,''))='GROUP', True, False) AS is_group, "
     sqlStatement = sqlStatement & "IIf(n.parent_navigation_id Is Null, 0, 1) AS display_level, "
     sqlStatement = sqlStatement & "IIf(UCase(Nz(n.object_type,''))='GROUP', "
-    sqlStatement = sqlStatement & "IIf(Nz(n.is_expanded,False)=True, " & SqlText(PREFIX_GROUP_EXPANDED) & ", " & SqlText(PREFIX_GROUP_COLLAPSED) & ") & n.fallback_caption, "
-    sqlStatement = sqlStatement & SqlText(PREFIX_CHILD) & " & n.fallback_caption) AS display_text "
+    sqlStatement = sqlStatement & "IIf(Nz(n.is_expanded,False)=True, " & SqlTextNav(PREFIX_GROUP_EXPANDED) & ", " & SqlTextNav(PREFIX_GROUP_COLLAPSED) & ") & ResolveShellText(Nz(n.caption_key,''), Nz(n.fallback_caption,'')), "
+    sqlStatement = sqlStatement & SqlTextNav(PREFIX_CHILD) & " & ResolveShellText(Nz(n.caption_key,''), Nz(n.fallback_caption,''))) AS display_text "
     sqlStatement = sqlStatement & "FROM " & TABLE_NAVIGATION & " AS n "
     sqlStatement = sqlStatement & "LEFT JOIN " & TABLE_NAVIGATION & " AS p "
     sqlStatement = sqlStatement & "ON n.parent_navigation_id = p.navigation_id "
 
-    If LenB(normalizedRoleCode) > 0 Then
-        sqlStatement = sqlStatement & "LEFT JOIN " & TABLE_NAVIGATION_ROLE & " AS nr "
-        sqlStatement = sqlStatement & "ON n.navigation_id = nr.navigation_id "
-    End If
-
     sqlStatement = sqlStatement & "WHERE Nz(n.is_active, True) = True "
     sqlStatement = sqlStatement & "AND Nz(n.is_visible, True) = True "
 
-    If LenB(normalizedRoleCode) > 0 Then
-        sqlStatement = sqlStatement & "AND (nr.role_code = " & SqlText(normalizedRoleCode) & " "
-        sqlStatement = sqlStatement & "OR nr.navigation_role_id Is Null) "
-        sqlStatement = sqlStatement & "AND (Nz(nr.is_active, True) = True "
-        sqlStatement = sqlStatement & "OR nr.navigation_role_id Is Null) "
-    End If
+    sqlStatement = sqlStatement & "AND (n.parent_navigation_id Is Null "
+    sqlStatement = sqlStatement & "OR (Nz(p.is_active, True) = True "
+    sqlStatement = sqlStatement & "AND Nz(p.is_visible, True) = True"
 
     If onlyVisibleRows Then
-        sqlStatement = sqlStatement & "AND (n.parent_navigation_id Is Null "
-        sqlStatement = sqlStatement & "OR Nz(p.is_expanded, False) = True) "
+        sqlStatement = sqlStatement & " AND Nz(p.is_expanded, False) = True"
     End If
+
+    sqlStatement = sqlStatement & ")) "
 
     sqlStatement = sqlStatement & "ORDER BY "
     sqlStatement = sqlStatement & "IIf(n.parent_navigation_id Is Null, n.sort_order, p.sort_order), "
@@ -323,6 +344,7 @@ Private Sub EnsureNavigationTable()
                    "fallback_caption TEXT(150), " & _
                    "object_name TEXT(150), " & _
                    "object_type TEXT(30), " & _
+                   "open_mode TEXT(30), " & _
                    "icon_key TEXT(100), " & _
                    "sort_order LONG, " & _
                    "is_active YESNO, " & _
@@ -340,6 +362,7 @@ Private Sub EnsureNavigationTable()
     EnsureFieldExists TABLE_NAVIGATION, "fallback_caption", "TEXT(150)"
     EnsureFieldExists TABLE_NAVIGATION, "object_name", "TEXT(150)"
     EnsureFieldExists TABLE_NAVIGATION, "object_type", "TEXT(30)"
+    EnsureFieldExists TABLE_NAVIGATION, "open_mode", "TEXT(30)"
     EnsureFieldExists TABLE_NAVIGATION, "icon_key", "TEXT(100)"
     EnsureFieldExists TABLE_NAVIGATION, "sort_order", "LONG"
     EnsureFieldExists TABLE_NAVIGATION, "is_active", "YESNO"
@@ -349,6 +372,10 @@ Private Sub EnsureNavigationTable()
     EnsureFieldExists TABLE_NAVIGATION, "created_by", "TEXT(100)"
     EnsureFieldExists TABLE_NAVIGATION, "updated_at", "DATETIME"
     EnsureFieldExists TABLE_NAVIGATION, "updated_by", "TEXT(100)"
+
+    ExecuteSql "UPDATE " & TABLE_NAVIGATION & " " & _
+               "SET open_mode = " & SqlText(OPEN_MODE_NORMAL) & " " & _
+               "WHERE open_mode Is Null OR Trim(open_mode) = '';"
 
     EnsureIndexExists TABLE_NAVIGATION, "ix_fw_navigation_parent_navigation_id", _
         "CREATE INDEX ix_fw_navigation_parent_navigation_id ON fw_navigation (parent_navigation_id);"
@@ -364,6 +391,9 @@ Private Sub EnsureNavigationTable()
 
     EnsureIndexExists TABLE_NAVIGATION, "ix_fw_navigation_object_type", _
         "CREATE INDEX ix_fw_navigation_object_type ON fw_navigation (object_type);"
+
+    EnsureIndexExists TABLE_NAVIGATION, "ix_fw_navigation_open_mode", _
+        "CREATE INDEX ix_fw_navigation_open_mode ON fw_navigation (open_mode);"
 End Sub
 
 Private Sub EnsureNavigationRoleTable()
@@ -404,10 +434,13 @@ Private Function EnsureNavigationEntry( _
     ByVal fallbackCaption As String, _
     ByVal objectName As String, _
     ByVal objectType As String, _
+    ByVal openMode As String, _
     ByVal sortOrder As Long, _
     ByVal isExpanded As Boolean, _
     ByVal isVisible As Boolean, _
-    ByVal isActive As Boolean) As Long
+    ByVal isActive As Boolean, _
+    Optional ByRef createdCount As Long = 0, _
+    Optional ByRef updatedCount As Long = 0) As Long
     On Error GoTo ErrorHandler
 
     Dim sqlStatement As String
@@ -418,20 +451,22 @@ Private Function EnsureNavigationEntry( _
     If existingId <= 0 Then
         sqlStatement = "INSERT INTO " & TABLE_NAVIGATION & " (" & _
                        "parent_navigation_id, navigation_group, caption_key, fallback_caption, " & _
-                       "object_name, object_type, icon_key, sort_order, is_active, is_expanded, is_visible, " & _
+                       "object_name, object_type, open_mode, icon_key, sort_order, is_active, is_expanded, is_visible, " & _
                        "created_at, created_by, updated_at, updated_by) VALUES (" & _
                        SqlLongOrNull(parentNavigationId) & ", " & _
                        SqlText(navigationGroup) & ", " & _
                        SqlText(captionKey) & ", " & _
                        SqlText(fallbackCaption) & ", " & _
                        SqlNullableText(objectName) & ", " & _
-                       SqlText(UCase$(Trim$(objectType))) & ", Null, " & _
+                       SqlText(UCase$(Trim$(objectType))) & ", " & _
+                       SqlText(NormalizeOpenMode(openMode)) & ", Null, " & _
                        CStr(sortOrder) & ", " & _
                        SqlBoolean(isActive) & ", " & _
                        SqlBoolean(isExpanded) & ", " & _
                        SqlBoolean(isVisible) & ", " & _
                        "Now(), 'SYSTEM', Now(), 'SYSTEM');"
         ExecuteSql sqlStatement
+        createdCount = createdCount + 1
     Else
         sqlStatement = "UPDATE " & TABLE_NAVIGATION & " SET " & _
                        "parent_navigation_id = " & SqlLongOrNull(parentNavigationId) & ", " & _
@@ -440,14 +475,13 @@ Private Function EnsureNavigationEntry( _
                        "fallback_caption = " & SqlText(fallbackCaption) & ", " & _
                        "object_name = " & SqlNullableText(objectName) & ", " & _
                        "object_type = " & SqlText(UCase$(Trim$(objectType))) & ", " & _
+                       "open_mode = " & SqlText(NormalizeOpenMode(openMode)) & ", " & _
                        "sort_order = " & CStr(sortOrder) & ", " & _
-                       "is_active = " & SqlBoolean(isActive) & ", " & _
-                       "is_expanded = " & SqlBoolean(isExpanded) & ", " & _
-                       "is_visible = " & SqlBoolean(isVisible) & ", " & _
                        "updated_at = Now(), " & _
                        "updated_by = 'SYSTEM' " & _
                        "WHERE navigation_id = " & CStr(existingId) & ";"
         ExecuteSql sqlStatement
+        updatedCount = updatedCount + 1
     End If
 
     EnsureNavigationEntry = LookupNavigationId(captionKey, objectType, objectName, fallbackCaption)
@@ -455,6 +489,35 @@ Private Function EnsureNavigationEntry( _
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "EnsureNavigationEntry", Err
+End Function
+
+Private Function NormalizeOpenMode(ByVal openMode As String) As String
+    openMode = UCase$(Trim$(openMode))
+
+    Select Case openMode
+        Case OPEN_MODE_ADD, OPEN_MODE_EDIT, OPEN_MODE_READONLY
+            NormalizeOpenMode = openMode
+        Case Else
+            NormalizeOpenMode = OPEN_MODE_NORMAL
+    End Select
+End Function
+
+Private Function ResolveOpenDataMode(ByVal openMode As String) As AcFormOpenDataMode
+    openMode = NormalizeOpenMode(openMode)
+
+    Select Case openMode
+        Case OPEN_MODE_ADD
+            ResolveOpenDataMode = acFormAdd
+
+        Case OPEN_MODE_EDIT, OPEN_MODE_READONLY
+            ResolveOpenDataMode = acFormPropertySettings
+
+            modLoggingHandler.LogInfo MODULE_NAME & ".ResolveOpenDataMode", _
+                "open_mode '" & openMode & "' currently falls back to NORMAL behavior."
+
+        Case Else
+            ResolveOpenDataMode = acFormPropertySettings
+    End Select
 End Function
 
 Private Function LookupNavigationId( _
@@ -638,27 +701,3 @@ End Function
 Private Sub ExecuteSql(ByVal sqlStatement As String)
     CurrentDb.Execute sqlStatement, dbFailOnError
 End Sub
-
-Private Function SqlText(ByVal Value As String) As String
-    SqlText = "'" & Replace(Trim$(Value), "'", "''") & "'"
-End Function
-
-Private Function SqlNullableText(ByVal Value As String) As String
-    If LenB(Trim$(Value)) = 0 Then
-        SqlNullableText = "Null"
-    Else
-        SqlNullableText = SqlText(Value)
-    End If
-End Function
-
-Private Function SqlLongOrNull(ByVal Value As Long) As String
-    If Value > 0 Then
-        SqlLongOrNull = CStr(Value)
-    Else
-        SqlLongOrNull = "Null"
-    End If
-End Function
-
-Private Function SqlBoolean(ByVal Value As Boolean) As String
-    SqlBoolean = IIf(Value, "True", "False")
-End Function

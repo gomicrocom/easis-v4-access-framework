@@ -6,7 +6,7 @@ Option Explicit
 ' Purpose   : Provides initialization and seeding routines for framework data
 '             such as translations, tag help definitions, and demo content.
 ' Author    : Codex
-' Version   : 1.5.0
+' Version   : 1.6.0
 ' Notes     : Safe to re-run. Existing data will be replaced.
 '===============================================================================
 
@@ -68,12 +68,28 @@ Public Sub SeedTranslations()
     InsertContactTypeTranslations db
     InsertUnitTranslations db
     InsertVatCodeTranslations db
+    InsertShellTranslations db
 
     MsgBox "fw_translation wurde erfolgreich initialisiert.", vbInformation
     Exit Sub
 
 ErrorHandler:
     MsgBox "Fehler beim Initialisieren von fw_translation: " & Err.description, vbExclamation
+End Sub
+
+Public Sub SeedShellTranslations()
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Set db = CurrentDb
+
+    InsertShellTranslations db
+
+    MsgBox "Shell-, Dashboard- und Navigations-Uebersetzungen wurden erfolgreich initialisiert.", vbInformation, MODULE_NAME
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Fehler beim Initialisieren der Shell-Uebersetzungen: " & Err.description, vbExclamation, MODULE_NAME
 End Sub
 
 Public Sub SeedVatCodeReference()
@@ -209,17 +225,22 @@ Private Sub InsertTranslation( _
     ByVal LanguageCode As String, _
     ByVal translationKey As String, _
     ByVal TranslationValue As String, _
-    ByVal isActive As Boolean)
+    ByVal isActive As Boolean, _
+    Optional ByVal moduleCode As String = "", _
+    Optional ByVal sortOrder As Long = 0)
 
     Dim sqlStatement As String
 
     sqlStatement = "INSERT INTO fw_translation " & _
-                   "(language_code, translation_key, translation_value, is_active) " & _
+                   "(language_code, translation_key, translation_value, is_active, module_code, sort_order, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
-                   "'" & EscapeSqlText(LanguageCode) & "', " & _
-                   "'" & EscapeSqlText(translationKey) & "', " & _
-                   "'" & EscapeSqlText(TranslationValue) & "', " & _
-                   IIf(isActive, "True", "False") & ")"
+                   SqlText(LanguageCode) & ", " & _
+                   SqlText(translationKey) & ", " & _
+                   SqlText(TranslationValue) & ", " & _
+                   IIf(isActive, "True", "False") & ", " & _
+                   SqlNullableText(moduleCode) & ", " & _
+                   CStr(sortOrder) & ", " & _
+                   "Now(), 'SYSTEM', Now(), 'SYSTEM')"
 
     db.Execute sqlStatement, dbFailOnError
 End Sub
@@ -236,8 +257,8 @@ Private Sub InsertAddressType( _
     sqlStatement = "INSERT INTO ref_address_type " & _
                    "(address_type_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
-                   "'" & EscapeSqlText(addressTypeCode) & "', " & _
-                   "'" & EscapeSqlText(translationKey) & "', " & _
+                   SqlText(addressTypeCode) & ", " & _
+                   SqlText(translationKey) & ", " & _
                    CStr(sortOrder) & ", " & _
                    IIf(isActive, "True", "False") & ", " & _
                    "Now(), 'SYSTEM', Now(), 'SYSTEM')"
@@ -257,8 +278,8 @@ Private Sub InsertSalutation( _
     sqlStatement = "INSERT INTO ref_salutation " & _
                    "(salutation_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
-                   "'" & EscapeSqlText(salutationCode) & "', " & _
-                   "'" & EscapeSqlText(translationKey) & "', " & _
+                   SqlText(salutationCode) & ", " & _
+                   SqlText(translationKey) & ", " & _
                    CStr(sortOrder) & ", " & _
                    IIf(isActive, "True", "False") & ", " & _
                    "Now(), 'SYSTEM', Now(), 'SYSTEM')"
@@ -278,8 +299,8 @@ Private Sub InsertAddressingMode( _
     sqlStatement = "INSERT INTO ref_addressing_mode " & _
                    "(addressing_mode_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
-                   "'" & EscapeSqlText(addressingModeCode) & "', " & _
-                   "'" & EscapeSqlText(translationKey) & "', " & _
+                   SqlText(addressingModeCode) & ", " & _
+                   SqlText(translationKey) & ", " & _
                    CStr(sortOrder) & ", " & _
                    IIf(isActive, "True", "False") & ", " & _
                    "Now(), 'SYSTEM', Now(), 'SYSTEM')"
@@ -299,8 +320,8 @@ Private Sub InsertContactType( _
     sqlStatement = "INSERT INTO ref_contact_type " & _
                    "(contact_type_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
-                   "'" & EscapeSqlText(contactTypeCode) & "', " & _
-                   "'" & EscapeSqlText(translationKey) & "', " & _
+                   SqlText(contactTypeCode) & ", " & _
+                   SqlText(translationKey) & ", " & _
                    CStr(sortOrder) & ", " & _
                    IIf(isActive, "True", "False") & ", " & _
                    "Now(), 'SYSTEM', Now(), 'SYSTEM')"
@@ -320,8 +341,8 @@ Private Sub InsertUnit( _
     sqlStatement = "INSERT INTO ref_unit " & _
                    "(unit_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
-                   "'" & EscapeSqlText(unitCode) & "', " & _
-                   "'" & EscapeSqlText(translationKey) & "', " & _
+                   SqlText(unitCode) & ", " & _
+                   SqlText(translationKey) & ", " & _
                    CStr(sortOrder) & ", " & _
                    IIf(isActive, "True", "False") & ", " & _
                    "Now(), 'SYSTEM', Now(), 'SYSTEM')"
@@ -345,10 +366,10 @@ Private Sub InsertVatCode( _
     sqlStatement = "INSERT INTO ref_vat_code " & _
                    "(vat_code, translation_key, vat_rate, country_code, valid_from, valid_to, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
-                   "'" & EscapeSqlText(vatCode) & "', " & _
-                   "'" & EscapeSqlText(translationKey) & "', " & _
+                   SqlText(vatCode) & ", " & _
+                   SqlText(translationKey) & ", " & _
                    Replace(CStr(vatRate), ",", ".") & ", " & _
-                   "'" & EscapeSqlText(countryCode) & "', " & _
+                   SqlText(countryCode) & ", " & _
                    "#" & Format$(validFrom, "yyyy-mm-dd") & "#, " & _
                    SqlDateOrNull(validTo) & ", " & _
                    CStr(sortOrder) & ", " & _
@@ -544,6 +565,186 @@ Private Sub InsertVatCodeTranslations(ByVal db As DAO.Database)
     InsertTranslation db, "EN-US", "VAT.CH.ZERO", "Zero rate", True
 End Sub
 
+Private Sub InsertShellTranslations(ByVal db As DAO.Database)
+    EnsureTranslationSeed db, "DE-CH", "NAV.GROUP.ADDRESSES", "Adressen", "NAVIGATION", 10
+    EnsureTranslationSeed db, "EN-US", "NAV.GROUP.ADDRESSES", "Addresses", "NAVIGATION", 10
+    EnsureTranslationSeed db, "DE-CH", "NAV.ADDRESS_LIST", "Adressliste", "NAVIGATION", 20
+    EnsureTranslationSeed db, "EN-US", "NAV.ADDRESS_LIST", "Address list", "NAVIGATION", 20
+    EnsureTranslationSeed db, "DE-CH", "NAV.NEW_ADDRESS", "Neue Adresse", "NAVIGATION", 30
+    EnsureTranslationSeed db, "EN-US", "NAV.NEW_ADDRESS", "New address", "NAVIGATION", 30
+    EnsureTranslationSeed db, "DE-CH", "NAV.GROUP.DOCUMENTS", "Dokumente", "NAVIGATION", 40
+    EnsureTranslationSeed db, "EN-US", "NAV.GROUP.DOCUMENTS", "Documents", "NAVIGATION", 40
+    EnsureTranslationSeed db, "DE-CH", "NAV.DOCUMENT_PREVIEW", "Dokumentvorschau", "NAVIGATION", 50
+    EnsureTranslationSeed db, "EN-US", "NAV.DOCUMENT_PREVIEW", "Document preview", "NAVIGATION", 50
+    EnsureTranslationSeed db, "DE-CH", "NAV.GROUP.FRAMEWORK", "Framework", "NAVIGATION", 60
+    EnsureTranslationSeed db, "EN-US", "NAV.GROUP.FRAMEWORK", "Framework", "NAVIGATION", 60
+    EnsureTranslationSeed db, "DE-CH", "NAV.TRANSLATIONS", "Uebersetzungen", "NAVIGATION", 70
+    EnsureTranslationSeed db, "EN-US", "NAV.TRANSLATIONS", "Translations", "NAVIGATION", 70
+    EnsureTranslationSeed db, "DE-CH", "NAV.FW_TRANSLATIONS", "Uebersetzungen pflegen", "NAVIGATION", 80
+    EnsureTranslationSeed db, "EN-US", "NAV.FW_TRANSLATIONS", "Maintain translations", "NAVIGATION", 80
+    EnsureTranslationSeed db, "DE-CH", "NAV.LOCALISATION", "Lokalisierung", "NAVIGATION", 90
+    EnsureTranslationSeed db, "EN-US", "NAV.LOCALISATION", "Localisation", "NAVIGATION", 90
+    EnsureTranslationSeed db, "DE-CH", "NAV.TAGS", "Tags", "NAVIGATION", 100
+    EnsureTranslationSeed db, "EN-US", "NAV.TAGS", "Tags", "NAVIGATION", 100
+    EnsureTranslationSeed db, "DE-CH", "NAV.TAG_HELP", "Tag-Hilfe", "NAVIGATION", 110
+    EnsureTranslationSeed db, "EN-US", "NAV.TAG_HELP", "Tag help", "NAVIGATION", 110
+    EnsureTranslationSeed db, "DE-CH", "NAV.GROUP.ORDERS", "Bestellungen", "NAVIGATION", 120
+    EnsureTranslationSeed db, "EN-US", "NAV.GROUP.ORDERS", "Orders", "NAVIGATION", 120
+    EnsureTranslationSeed db, "DE-CH", "NAV.GROUP.FINANCE", "Finanzen", "NAVIGATION", 130
+    EnsureTranslationSeed db, "EN-US", "NAV.GROUP.FINANCE", "Finance", "NAVIGATION", 130
+    EnsureTranslationSeed db, "DE-CH", "NAV.GROUP.REPORTING", "Auswertungen", "NAVIGATION", 140
+    EnsureTranslationSeed db, "EN-US", "NAV.GROUP.REPORTING", "Reports", "NAVIGATION", 140
+    EnsureTranslationSeed db, "DE-CH", "NAV.GROUP.TENANT", "Mandant", "NAVIGATION", 150
+    EnsureTranslationSeed db, "EN-US", "NAV.GROUP.TENANT", "Tenant", "NAVIGATION", 150
+    EnsureTranslationSeed db, "DE-CH", "NAV.ARTICLE_GROUPS", "Artikelgruppen", "NAVIGATION", 155
+    EnsureTranslationSeed db, "EN-US", "NAV.ARTICLE_GROUPS", "Article groups", "NAVIGATION", 155
+    EnsureTranslationSeed db, "DE-CH", "NAV.NEW_ARTICLE_GROUP", "Neue Artikelgruppe", "NAVIGATION", 156
+    EnsureTranslationSeed db, "EN-US", "NAV.NEW_ARTICLE_GROUP", "New article group", "NAVIGATION", 156
+    EnsureTranslationSeed db, "DE-CH", "NAV.GROUP.SYSTEM", "System", "NAVIGATION", 160
+    EnsureTranslationSeed db, "EN-US", "NAV.GROUP.SYSTEM", "System", "NAVIGATION", 160
+    EnsureTranslationSeed db, "DE-CH", "NAV.FW_NAVIGATION_ADMIN", "Navigation verwalten", "NAVIGATION", 170
+    EnsureTranslationSeed db, "EN-US", "NAV.FW_NAVIGATION_ADMIN", "Manage navigation", "NAVIGATION", 170
+
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPSHELL.APP_TITLE", "EASIS v4", "FORM", 10
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPSHELL.APP_TITLE", "EASIS v4", "FORM", 10
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPSHELL.APP_SUBTITLE", "Access Framework", "FORM", 20
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPSHELL.APP_SUBTITLE", "Access Framework", "FORM", 20
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPSHELL.USER", "Benutzer", "FORM", 30
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPSHELL.USER", "User", "FORM", 30
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPSHELL.TENANT", "Mandant", "FORM", 40
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPSHELL.TENANT", "Tenant", "FORM", 40
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPSHELL.ROLE", "Rolle", "FORM", 50
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPSHELL.ROLE", "Role", "FORM", 50
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPSHELL.ENVIRONMENT", "Umgebung", "FORM", 60
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPSHELL.ENVIRONMENT", "Environment", "FORM", 60
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPSHELL.BACKEND", "Backend", "FORM", 70
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPSHELL.BACKEND", "Backend", "FORM", 70
+
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPDASHBOARD.TENANT", "Mandant", "FORM", 80
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPDASHBOARD.TENANT", "Tenant", "FORM", 80
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPDASHBOARD.USER", "Benutzer", "FORM", 90
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPDASHBOARD.USER", "User", "FORM", 90
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPDASHBOARD.BACKEND", "Backend", "FORM", 100
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPDASHBOARD.BACKEND", "Backend", "FORM", 100
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPDASHBOARD.FRAMEWORK", "Framework", "FORM", 110
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPDASHBOARD.FRAMEWORK", "Framework", "FORM", 110
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPDASHBOARD.STATUS", "Status", "FORM", 120
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPDASHBOARD.STATUS", "Status", "FORM", 120
+
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWNAVIGATIONADMIN.FORM_TITLE", "Navigation verwalten", "FORM", 130
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWNAVIGATIONADMIN.FORM_TITLE", "Manage navigation", "FORM", 130
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWNAVIGATIONADMIN.SAVE", "Speichern", "FORM", 140
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWNAVIGATIONADMIN.SAVE", "Save", "FORM", 140
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWNAVIGATIONADMIN.REFRESH", "Aktualisieren", "FORM", 150
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWNAVIGATIONADMIN.REFRESH", "Refresh", "FORM", 150
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWNAVIGATIONADMIN.NEW_GROUP", "Neue Gruppe", "FORM", 160
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWNAVIGATIONADMIN.NEW_GROUP", "New group", "FORM", 160
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWNAVIGATIONADMIN.NEW_ITEM", "Neuer Eintrag", "FORM", 170
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWNAVIGATIONADMIN.NEW_ITEM", "New item", "FORM", 170
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWNAVIGATIONADMIN.DEACTIVATE", "Deaktivieren", "FORM", 180
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWNAVIGATIONADMIN.DEACTIVATE", "Deactivate", "FORM", 180
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWNAVIGATIONADMIN.HIDE", "Ausblenden", "FORM", 190
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWNAVIGATIONADMIN.HIDE", "Hide", "FORM", 190
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWNAVIGATIONADMIN.SHOW", "Einblenden", "FORM", 200
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWNAVIGATIONADMIN.SHOW", "Show", "FORM", 200
+
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPLIST.FORM_TITLE", "Artikelgruppen", "FORM", 205
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPLIST.FORM_TITLE", "Article groups", "FORM", 205
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPLIST.SEARCH", "Suche", "FORM", 206
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPLIST.SEARCH", "Search", "FORM", 206
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPLIST.EDIT", "Bearbeiten", "FORM", 207
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPLIST.EDIT", "Edit", "FORM", 207
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPLIST.REFRESH", "Aktualisieren", "FORM", 208
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPLIST.REFRESH", "Refresh", "FORM", 208
+
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPDETAIL.FORM_TITLE", "Artikelgruppe", "FORM", 209
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPDETAIL.FORM_TITLE", "Article group", "FORM", 209
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPDETAIL.PRODUCT_GROUP_CODE", "Artikelgruppen-Code", "FORM", 210
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPDETAIL.PRODUCT_GROUP_CODE", "Article group code", "FORM", 210
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPDETAIL.PRODUCT_GROUP_NAME", "Artikelgruppen-Name", "FORM", 211
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPDETAIL.PRODUCT_GROUP_NAME", "Article group name", "FORM", 211
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPDETAIL.DESCRIPTION_TEXT", "Beschreibung", "FORM", 212
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPDETAIL.DESCRIPTION_TEXT", "Description", "FORM", 212
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPDETAIL.ARTICLE_GROUP_CODE", "Artikelgruppen-Code", "FORM", 210
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPDETAIL.ARTICLE_GROUP_CODE", "Article group code", "FORM", 210
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPDETAIL.ARTICLE_GROUP_NAME", "Artikelgruppen-Name", "FORM", 211
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPDETAIL.ARTICLE_GROUP_NAME", "Article group name", "FORM", 211
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPDETAIL.DESCRIPTION", "Beschreibung", "FORM", 212
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPDETAIL.DESCRIPTION", "Description", "FORM", 212
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPDETAIL.IS_ACTIVE", "Aktiv", "FORM", 213
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPDETAIL.IS_ACTIVE", "Active", "FORM", 213
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPDETAIL.SORT_ORDER", "Sortierung", "FORM", 214
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPDETAIL.SORT_ORDER", "Sort order", "FORM", 214
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPDETAIL.SAVE", "Speichern", "FORM", 215
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPDETAIL.SAVE", "Save", "FORM", 215
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPDETAIL.CANCEL", "Abbrechen", "FORM", 216
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPDETAIL.CANCEL", "Cancel", "FORM", 216
+
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_GROUP_CODE_REQUIRED", "Artikelgruppen-Code ist erforderlich.", "MSG", 217
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_GROUP_CODE_REQUIRED", "Article group code is required.", "MSG", 217
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_GROUP_NAME_REQUIRED", "Artikelgruppen-Name ist erforderlich.", "MSG", 218
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_GROUP_NAME_REQUIRED", "Article group name is required.", "MSG", 218
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_GROUP_DUPLICATE_CODE", "Artikelgruppen-Code existiert bereits.", "MSG", 219
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_GROUP_DUPLICATE_CODE", "Article group code already exists.", "MSG", 219
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_GROUP_SELECT_FIRST", "Bitte zuerst eine Artikelgruppe auswaehlen.", "MSG", 221
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_GROUP_SELECT_FIRST", "Please select an article group first.", "MSG", 221
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_GROUP_DISCARD_CHANGES", "Ungespeicherte Aenderungen verwerfen?", "MSG", 222
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_GROUP_DISCARD_CHANGES", "Discard unsaved changes?", "MSG", 222
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_GROUP_CANCEL_CONFIRM", "Aenderungen verwerfen?", "MSG", 223
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_GROUP_CANCEL_CONFIRM", "Discard changes?", "MSG", 223
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_GROUP_SAVE_OR_CANCEL_FIRST", "Bitte zuerst speichern oder abbrechen.", "MSG", 224
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_GROUP_SAVE_OR_CANCEL_FIRST", "Please save or cancel first.", "MSG", 224
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_GROUP_LIST_LOAD_ERROR", "Fehler beim Laden der Artikelgruppenliste.", "MSG", 225
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_GROUP_LIST_LOAD_ERROR", "Error loading the article group list.", "MSG", 225
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_GROUP_DETAIL_LOAD_ERROR", "Fehler beim Laden der Artikelgruppendetails.", "MSG", 226
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_GROUP_DETAIL_LOAD_ERROR", "Error loading the article group details.", "MSG", 226
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_GROUP_SAVE_ERROR", "Fehler beim Speichern der Artikelgruppe.", "MSG", 227
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_GROUP_SAVE_ERROR", "Error saving the article group.", "MSG", 227
+
+    EnsureTranslationSeed db, "DE-CH", "STATUS.READY", "Bereit", "STATUS", 230
+    EnsureTranslationSeed db, "EN-US", "STATUS.READY", "Ready", "STATUS", 230
+End Sub
+
+Private Sub EnsureTranslationSeed( _
+    ByVal db As DAO.Database, _
+    ByVal LanguageCode As String, _
+    ByVal translationKey As String, _
+    ByVal TranslationValue As String, _
+    ByVal moduleCode As String, _
+    ByVal sortOrder As Long)
+
+    If Not TranslationSeedExists(db, LanguageCode, translationKey) Then
+        InsertTranslation db, LanguageCode, translationKey, TranslationValue, True, moduleCode, sortOrder
+    End If
+End Sub
+
+Private Function TranslationSeedExists( _
+    ByVal db As DAO.Database, _
+    ByVal LanguageCode As String, _
+    ByVal translationKey As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim rs As DAO.Recordset
+    Dim sqlStatement As String
+
+    sqlStatement = "SELECT TOP 1 translation_key " & _
+                   "FROM fw_translation " & _
+                   "WHERE language_code = " & SqlText(LanguageCode) & " " & _
+                   "AND translation_key = " & SqlText(translationKey) & ";"
+
+    Set rs = db.OpenRecordset(sqlStatement, dbOpenSnapshot)
+    TranslationSeedExists = Not (rs.BOF And rs.EOF)
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Exit Function
+
+ErrorHandler:
+    TranslationSeedExists = False
+End Function
+
 Public Sub SeedTagHelp()
     On Error GoTo ErrorHandler
 
@@ -643,9 +844,9 @@ Public Sub SeedTagHelp()
         150, True
 
     InsertTagHelp db, "TR", "I18N", "TR:<translationkey>", _
-        "Verweist auf einen Uebersetzungsschluessel.", _
-        "TR:LBL_CUSTOMER", _
-        "Soll vom Tag-Composer erhalten, aber nicht ueberschrieben werden.", _
+        "Verweist im Control.Tag auf einen Uebersetzungsschluessel.", _
+        "TR:FORM.FRMAPPSHELL.APP_SUBTITLE", _
+        "Der TR:-Marker wird vom Uebersetzungswerkzeug verwaltet, andere Tag-Segmente bleiben erhalten.", _
         160, True
 
     MsgBox "fw_tag_help wurde erfolgreich initialisiert.", vbInformation
@@ -671,12 +872,12 @@ Private Sub InsertTagHelp( _
     sqlStatement = "INSERT INTO fw_tag_help " & _
                    "(token_key, category, syntax_text, description_text, example_text, notes_text, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
-                   "'" & EscapeSqlText(TokenKey) & "', " & _
-                   "'" & EscapeSqlText(Category) & "', " & _
-                   "'" & EscapeSqlText(SyntaxText) & "', " & _
-                   "'" & EscapeSqlText(DescriptionText) & "', " & _
-                   "'" & EscapeSqlText(ExampleText) & "', " & _
-                   "'" & EscapeSqlText(NotesText) & "', " & _
+                   SqlText(TokenKey) & ", " & _
+                   SqlText(Category) & ", " & _
+                   SqlText(SyntaxText) & ", " & _
+                   SqlText(DescriptionText) & ", " & _
+                   SqlText(ExampleText) & ", " & _
+                   SqlText(NotesText) & ", " & _
                    CStr(sortOrder) & ", " & _
                    IIf(isActive, "True", "False") & ", " & _
                    "Now(), 'SYSTEM', Now(), 'SYSTEM')"
@@ -684,14 +885,3 @@ Private Sub InsertTagHelp( _
     db.Execute sqlStatement, dbFailOnError
 End Sub
 
-Private Function EscapeSqlText(ByVal Value As String) As String
-    EscapeSqlText = Replace(Nz(Value, vbNullString), "'", "''")
-End Function
-
-Private Function SqlDateOrNull(ByVal Value As Variant) As String
-    If IsNull(Value) Or IsEmpty(Value) Then
-        SqlDateOrNull = "Null"
-    Else
-        SqlDateOrNull = "#" & Format$(CDate(Value), "yyyy-mm-dd") & "#"
-    End If
-End Function

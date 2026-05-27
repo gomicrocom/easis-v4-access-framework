@@ -5,7 +5,7 @@ Option Explicit
 ' Module    : Form_frmAppNavigation
 ' Purpose   : Hierarchical navigation menu form for the application shell.
 ' Author    : Codex
-' Version   : 0.2.1
+' Version   : 0.3.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "Form_frmAppNavigation"
@@ -28,6 +28,7 @@ Private Sub Form_Load()
     On Error GoTo ErrorHandler
 
     modFormRuntime.InitializeForm Me
+    modFwTranslationRuntime.ApplyTranslations Me
     RefreshNavigationMenu
 
     Exit Sub
@@ -90,7 +91,7 @@ End Sub
 Private Sub RefreshNavigationMenu()
     On Error GoTo ErrorHandler
 
-    Me.RecordSource = modAppNavigationService.GetVisibleNavigationRowSource()
+    Me.RecordSource = modAppNavigationService.GetVisibleNavigationRowSource(ResolveCurrentRoleCode())
     Me.Requery
 
     Exit Sub

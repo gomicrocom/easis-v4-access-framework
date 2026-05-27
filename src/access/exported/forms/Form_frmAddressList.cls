@@ -616,10 +616,6 @@ Private Function NzLong(ByVal Value As Variant, Optional ByVal DefaultValue As L
     End If
 End Function
 
-Private Function SqlText(ByVal Value As String) As String
-    SqlText = "'" & Replace(Nz(Value, vbNullString), "'", "''") & "'"
-End Function
-
 Private Function AddWorkspaceStatePair( _
     ByVal stateText As String, _
     ByVal keyName As String, _

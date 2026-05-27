@@ -3,10 +3,10 @@ Option Explicit
 
 '===============================================================================
 ' Module    : modFwComposerService
-' Purpose   : Provides object and control inspection helpers for a future
-'             framework composer form.
+' Purpose   : Provides object and control inspection helpers for translation
+'             maintenance and Tag-based translation key management.
 ' Author    : Codex
-' Version   : 0.1.3
+' Version   : 0.2.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFwComposerService"
@@ -175,6 +175,22 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.description
 End Function
 
+Public Function GetControlTranslationKeyValue( _
+    ByVal objectType As String, _
+    ByVal objectName As String, _
+    ByVal ControlName As String _
+) As String
+    On Error GoTo ErrorHandler
+
+    GetControlTranslationKeyValue = modFwTranslationRuntime.GetTranslationKeyFromTag( _
+        GetControlTagValue(objectType, objectName, ControlName))
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "GetControlTranslationKeyValue", Err
+    Err.Raise Err.Number, Err.Source, Err.description
+End Function
+
 Public Function EnsureTranslationPlaceholders(ByVal translationKey As String) As Long
     On Error GoTo ErrorHandler
 
@@ -263,6 +279,8 @@ Public Function ApplyTranslationTagsToObject( _
     Dim ControlName As Variant
     Dim translationKey As String
     Dim currentCaption As String
+    Dim currentTag As String
+    Dim updatedTag As String
     Dim WasLoaded As Boolean
     Dim WasVisible As Boolean
     Dim openedByService As Boolean
@@ -296,18 +314,26 @@ Public Function ApplyTranslationTagsToObject( _
         End If
 
         currentCaption = GetControlCaptionForLoadedObject(normalizedObjectType, objectName, CStr(ControlName))
+        currentTag = GetControlTagForLoadedObject(normalizedObjectType, objectName, CStr(ControlName))
 
         If LenB(currentCaption) = 0 Then
             SkippedCount = SkippedCount + 1
             GoTo NextControl
         End If
 
-        If StrComp(Left$(Trim$(currentCaption), 3), "TR:", vbTextCompare) = 0 Then
+        updatedTag = modFwTranslationRuntime.SetTranslationKeyInTag(currentTag, translationKey)
+        If StrComp(updatedTag, currentTag, vbBinaryCompare) = 0 And _
+           LenB(modFwTranslationRuntime.GetTranslationKeyFromTag(currentTag)) > 0 Then
             SkippedCount = SkippedCount + 1
             GoTo NextControl
         End If
 
-        If SetControlCaptionForLoadedObject(normalizedObjectType, objectName, CStr(ControlName), "TR:" & translationKey) Then
+        If SetControlTagForLoadedObject(normalizedObjectType, objectName, CStr(ControlName), updatedTag) Then
+            If StrComp(Left$(Trim$(currentCaption), 3), "TR:", vbTextCompare) = 0 Then
+                SetControlCaptionForLoadedObject normalizedObjectType, objectName, CStr(ControlName), _
+                    ResolveReadableFallbackCaption(translationKey, currentCaption, CStr(ControlName))
+            End If
+
             AppliedCount = AppliedCount + 1
             updatedObject = True
         Else
@@ -405,6 +431,7 @@ End Function
 Private Function IsComposerInternalObject(ByVal objectName As String) As Boolean
     Select Case UCase$(Trim$(objectName))
         Case "FRMFWCOMPOSER", _
+             "FRMFWTRANSLATIONS", _
              "FRMFWTRANSLATIONLIST"
             IsComposerInternalObject = True
         Case Else
@@ -829,6 +856,25 @@ SafeExit:
     GetControlCaptionForLoadedObject = vbNullString
 End Function
 
+Private Function GetControlTagForLoadedObject( _
+    ByVal objectType As String, _
+    ByVal objectName As String, _
+    ByVal ControlName As String _
+) As String
+    On Error GoTo SafeExit
+
+    Select Case NormalizeObjectType(objectType)
+        Case OBJECT_TYPE_FORM
+            GetControlTagForLoadedObject = GetObjectPropertySafely(Forms(objectName).Controls(ControlName), "Tag")
+        Case OBJECT_TYPE_REPORT
+            GetControlTagForLoadedObject = GetObjectPropertySafely(Reports(objectName).Controls(ControlName), "Tag")
+    End Select
+    Exit Function
+
+SafeExit:
+    GetControlTagForLoadedObject = vbNullString
+End Function
+
 Private Function SetControlCaptionForLoadedObject( _
     ByVal objectType As String, _
     ByVal objectName As String, _
@@ -849,6 +895,57 @@ Private Function SetControlCaptionForLoadedObject( _
 
 SafeExit:
     SetControlCaptionForLoadedObject = False
+End Function
+
+Private Function SetControlTagForLoadedObject( _
+    ByVal objectType As String, _
+    ByVal objectName As String, _
+    ByVal ControlName As String, _
+    ByVal tagValue As String _
+) As Boolean
+    On Error GoTo SafeExit
+
+    Select Case NormalizeObjectType(objectType)
+        Case OBJECT_TYPE_FORM
+            Forms(objectName).Controls(ControlName).Properties("Tag").Value = tagValue
+        Case OBJECT_TYPE_REPORT
+            Reports(objectName).Controls(ControlName).Properties("Tag").Value = tagValue
+    End Select
+
+    SetControlTagForLoadedObject = True
+    Exit Function
+
+SafeExit:
+    SetControlTagForLoadedObject = False
+End Function
+
+Private Function ResolveReadableFallbackCaption( _
+    ByVal translationKey As String, _
+    ByVal currentCaption As String, _
+    ByVal ControlName As String) As String
+
+    ResolveReadableFallbackCaption = modFwTranslationRuntime.ResolveCaptionText(vbNullString, "TR:" & translationKey)
+
+    If LenB(Trim$(ResolveReadableFallbackCaption)) = 0 Then
+        ResolveReadableFallbackCaption = BuildReadableCaptionFromControlName(ControlName)
+    ElseIf StrComp(Trim$(ResolveReadableFallbackCaption), Trim$(translationKey), vbTextCompare) = 0 Then
+        ResolveReadableFallbackCaption = BuildReadableCaptionFromControlName(ControlName)
+    ElseIf StrComp(Trim$(ResolveReadableFallbackCaption), Trim$(currentCaption), vbTextCompare) = 0 Then
+        ResolveReadableFallbackCaption = BuildReadableCaptionFromControlName(ControlName)
+    End If
+End Function
+
+Private Function BuildReadableCaptionFromControlName(ByVal ControlName As String) As String
+    Dim fallbackCaption As String
+
+    fallbackCaption = NormalizeTranslationName(StripPrefix(ControlName, "lbl"))
+    fallbackCaption = Replace(fallbackCaption, "_", " ")
+
+    If LenB(Trim$(fallbackCaption)) = 0 Then
+        BuildReadableCaptionFromControlName = ControlName
+    Else
+        BuildReadableCaptionFromControlName = fallbackCaption
+    End If
 End Function
 
 Private Function EnsureTranslationPlaceholderRow( _
@@ -954,10 +1051,6 @@ Private Function GetTranslationModuleCode(ByVal translationKey As String) As Str
     Else
         GetTranslationModuleCode = "FRAMEWORK"
     End If
-End Function
-
-Private Function SqlText(ByVal Value As String) As String
-    SqlText = "'" & Replace(Nz(Value, vbNullString), "'", "''") & "'"
 End Function
 
 Private Function BuildMissingTranslationWhereClause( _

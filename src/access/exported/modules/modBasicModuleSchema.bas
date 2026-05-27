@@ -226,27 +226,26 @@ Private Sub CreateTblAddresses(ByVal db As DAO.Database)
 End Sub
 
 Private Sub CreateTblProductGroups(ByVal db As DAO.Database)
-    Dim SqlText As String
+    Dim sqlStatement As String
 
-    SqlText = ""
-    SqlText = SqlText & "CREATE TABLE art_product_group ("
-    SqlText = SqlText & "ProductGroupId AUTOINCREMENT CONSTRAINT pk_art_product_group PRIMARY KEY, "
-    SqlText = SqlText & "ProductGroupCode TEXT(30) NOT NULL, "
-    SqlText = SqlText & "ProductGroupName TEXT(100), "
-    SqlText = SqlText & "RevenueAccount TEXT(20), "
-    SqlText = SqlText & "ExpenseAccount TEXT(20), "
-    SqlText = SqlText & "vat_code TEXT(30), "
-    SqlText = SqlText & "IsActive YESNO, "
-    SqlText = SqlText & "SortOrder LONG, "
-    SqlText = SqlText & "CreatedAt DATETIME, "
-    SqlText = SqlText & "CreatedBy TEXT(50), "
-    SqlText = SqlText & "UpdatedAt DATETIME, "
-    SqlText = SqlText & "UpdatedBy TEXT(50)"
-    SqlText = SqlText & ");"
+    sqlStatement = ""
+    sqlStatement = sqlStatement & "CREATE TABLE art_product_group ("
+    sqlStatement = sqlStatement & "product_group_id AUTOINCREMENT CONSTRAINT pk_art_product_group PRIMARY KEY, "
+    sqlStatement = sqlStatement & "product_group_code TEXT(50) NOT NULL, "
+    sqlStatement = sqlStatement & "product_group_name TEXT(150), "
+    sqlStatement = sqlStatement & "description_text LONGTEXT, "
+    sqlStatement = sqlStatement & "is_active YESNO, "
+    sqlStatement = sqlStatement & "sort_order LONG, "
+    sqlStatement = sqlStatement & "created_at DATETIME, "
+    sqlStatement = sqlStatement & "created_by TEXT(100), "
+    sqlStatement = sqlStatement & "updated_at DATETIME, "
+    sqlStatement = sqlStatement & "updated_by TEXT(100)"
+    sqlStatement = sqlStatement & ");"
 
-    ExecuteDdl db, SqlText
-    ExecuteDdl db, "CREATE UNIQUE INDEX ux_art_product_group_Code ON art_product_group (ProductGroupCode);"
-    ExecuteDdl db, "CREATE INDEX ix_art_product_group_vat_code ON art_product_group (vat_code);"
+    ExecuteDdl db, sqlStatement
+    ExecuteDdl db, "CREATE UNIQUE INDEX ux_art_product_group_code ON art_product_group (product_group_code);"
+    ExecuteDdl db, "CREATE INDEX ix_art_product_group_sort_order ON art_product_group (sort_order);"
+    ExecuteDdl db, "CREATE INDEX ix_art_product_group_is_active ON art_product_group (is_active);"
 End Sub
 
 Private Sub CreateTblArticles(ByVal db As DAO.Database)

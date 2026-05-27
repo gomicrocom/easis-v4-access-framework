@@ -6,7 +6,7 @@ Option Explicit
 ' Purpose   : Address detail maintenance with runtime translations, validation,
 '             and postal reference lookups.
 ' Author    : Codex
-' Version   : 0.6.0
+' Version   : 0.7.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "Form_frmAddressDetail"
@@ -39,6 +39,36 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "cboAddressingMode_AfterUpdate", Err
 End Sub
 
+Private Sub cmdCancel_Click()
+    On Error GoTo ErrorHandler
+
+    CancelCurrentEdit
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdCancel_Click", Err
+End Sub
+
+Private Sub cmdRefresh_Click()
+    On Error GoTo ErrorHandler
+
+    RefreshCurrentRecord
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdRefresh_Click", Err
+End Sub
+
+Private Sub cmdSave_Click()
+    On Error GoTo ErrorHandler
+
+    SaveCurrentRecord
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdSave_Click", Err
+End Sub
+
 Private Sub cboCity_BeforeUpdate(Cancel As Integer)
     On Error GoTo ErrorHandler
 
@@ -54,6 +84,7 @@ Private Sub Form_Current()
     On Error GoTo ErrorHandler
 
     UpdateAddressingModeUi
+    UpdateHeaderCaptionUi
     
     Exit Sub
 
@@ -66,6 +97,7 @@ Private Sub Form_Load()
 
     ConfigureReferenceCombos
     modFwTranslationRuntime.ApplyTranslations Me
+    UpdateHeaderCaptionUi
 
     modLoggingHandler.LogInfo MODULE_NAME & ".Form_Load", _
         "Address detail loaded."
@@ -692,6 +724,58 @@ Private Function GetControlTextValue( _
 SafeExit:
 End Function
 
+Public Function CanLeaveWorkspace() As Boolean
+    On Error GoTo ErrorHandler
+
+    If Not HasUnsavedChanges() Then
+        CanLeaveWorkspace = True
+        Exit Function
+    End If
+
+    If MsgBox( _
+        "Ungespeicherte Aenderungen verwerfen?", _
+        vbQuestion + vbYesNo + vbDefaultButton2, _
+        MODULE_NAME) = vbYes Then
+        CancelCurrentEdit False
+        CanLeaveWorkspace = True
+    End If
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "CanLeaveWorkspace", Err
+End Function
+
+Public Function GetCurrentWorkspaceRecordId() As Long
+    GetCurrentWorkspaceRecordId = GetCurrentAddressId()
+End Function
+
+Public Function GetWorkspaceState() As String
+    Dim stateText As String
+
+    stateText = AddWorkspaceStatePair(stateText, "address_id", CStr(GetCurrentAddressId()))
+    stateText = AddWorkspaceStatePair(stateText, "is_new", IIf(Me.NewRecord, "1", "0"))
+
+    GetWorkspaceState = stateText
+End Function
+
+Public Sub RestoreWorkspaceState(ByVal stateText As String)
+    On Error GoTo ErrorHandler
+
+    Dim addressId As Long
+
+    addressId = NzLong(GetWorkspaceStateValue(stateText, "address_id"), 0)
+
+    If addressId > 0 Then
+        RestoreCurrentAddressSelection addressId
+    End If
+
+    UpdateHeaderCaptionUi
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "RestoreWorkspaceState", Err
+End Sub
+
 Private Sub SetControlValueIfPresent(ByVal ControlName As String, ByVal ValueToSet As Variant)
     On Error GoTo SafeExit
 
@@ -717,8 +801,12 @@ Private Function HasControl(ByVal ControlName As String) As Boolean
 SafeExit:
 End Function
 
-Private Function SqlText(ByVal Value As String) As String
-    SqlText = "'" & Replace(NzString(Value), "'", "''") & "'"
+Public Function HasUnsavedChanges() As Boolean
+    On Error GoTo SafeExit
+
+    HasUnsavedChanges = Me.Dirty
+
+SafeExit:
 End Function
 
 Private Function NzString(ByVal Value As Variant, Optional ByVal DefaultValue As String = "") As String
@@ -726,6 +814,14 @@ Private Function NzString(ByVal Value As Variant, Optional ByVal DefaultValue As
         NzString = DefaultValue
     Else
         NzString = CStr(Value)
+    End If
+End Function
+
+Private Function NzLong(ByVal Value As Variant, Optional ByVal DefaultValue As Long = 0) As Long
+    If IsNull(Value) Or IsEmpty(Value) Or LenB(Trim$(CStr(Value))) = 0 Then
+        NzLong = DefaultValue
+    Else
+        NzLong = CLng(Value)
     End If
 End Function
 
@@ -748,6 +844,201 @@ Private Function NormalizePlaceName(ByVal Value As String) As String
     Next i
 
     NormalizePlaceName = Join(words, " ")
+End Function
+
+Private Function GetCurrentAddressId() As Long
+    On Error GoTo SafeExit
+
+    If Me.NewRecord Then
+        Exit Function
+    End If
+
+    If HasControl("txtAddressId") Then
+        GetCurrentAddressId = NzLong(Me!txtAddressId.Value, 0)
+    ElseIf HasControl("address_id") Then
+        GetCurrentAddressId = NzLong(Me!address_id.Value, 0)
+    ElseIf HasControl("AddressId") Then
+        GetCurrentAddressId = NzLong(Me!AddressId.Value, 0)
+    End If
+
+SafeExit:
+End Function
+
+Private Sub SaveCurrentRecord()
+    On Error GoTo ErrorHandler
+
+    If Me.Dirty Then
+        modAuditHelper.ApplyAuditFields Me
+        Me.Dirty = False
+    End If
+
+    UpdateHeaderCaptionUi
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".SaveCurrentRecord", _
+        "Address detail saved for address_id=" & CStr(GetCurrentAddressId()) & "."
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "SaveCurrentRecord", Err
+    MsgBox "Fehler beim Speichern der Adresse: " & Err.description, vbExclamation, MODULE_NAME
+End Sub
+
+Private Sub CancelCurrentEdit(Optional ByVal showConfirmation As Boolean = True)
+    On Error GoTo ErrorHandler
+
+    If Not HasUnsavedChanges() Then
+        Exit Sub
+    End If
+
+    If showConfirmation Then
+        If MsgBox( _
+            "Aenderungen verwerfen?", _
+            vbQuestion + vbYesNo + vbDefaultButton2, _
+            MODULE_NAME) <> vbYes Then
+            Exit Sub
+        End If
+    End If
+
+    Me.Undo
+    UpdateHeaderCaptionUi
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".CancelCurrentEdit", _
+        "Unsaved address changes were discarded."
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "CancelCurrentEdit", Err
+End Sub
+
+Private Sub RefreshCurrentRecord()
+    On Error GoTo ErrorHandler
+
+    If HasUnsavedChanges() Then
+        MsgBox "Bitte zuerst speichern oder abbrechen.", vbExclamation, MODULE_NAME
+        Exit Sub
+    End If
+
+    Me.Requery
+    UpdateHeaderCaptionUi
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".RefreshCurrentRecord", _
+        "Address detail requeried."
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "RefreshCurrentRecord", Err
+End Sub
+
+Private Sub RestoreCurrentAddressSelection(ByVal addressId As Long)
+    On Error GoTo ErrorHandler
+
+    Dim rs As DAO.Recordset
+
+    Set rs = Me.RecordsetClone
+    rs.FindFirst "[address_id]=" & CStr(addressId)
+
+    If Not rs.NoMatch Then
+        Me.Bookmark = rs.Bookmark
+    End If
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "RestoreCurrentAddressSelection", Err
+    Resume CleanExit
+End Sub
+
+Private Sub UpdateHeaderCaptionUi()
+    On Error GoTo SafeExit
+
+    Dim headerCaption As String
+    Dim displayName As String
+
+    headerCaption = "Neue Adresse"
+
+    If GetCurrentAddressId() > 0 Then
+        displayName = ResolveDisplayName()
+        If LenB(displayName) > 0 Then
+            headerCaption = "Adresse: " & displayName
+        Else
+            headerCaption = "Adresse: " & CStr(GetCurrentAddressId())
+        End If
+    End If
+
+    If HasControl("lblFormTitle") Then
+        Me!lblFormTitle.Caption = headerCaption
+    End If
+
+SafeExit:
+End Sub
+
+Private Function ResolveDisplayName() As String
+    Dim companyName As String
+    Dim personName As String
+
+    companyName = Trim$(GetControlTextValue("txtCompanyName", "company_name"))
+    If LenB(companyName) > 0 Then
+        ResolveDisplayName = companyName
+        Exit Function
+    End If
+
+    personName = Trim$(GetControlTextValue("txtLastName", "last_name"))
+    If LenB(personName) > 0 Then
+        ResolveDisplayName = personName
+    End If
+End Function
+
+Private Function AddWorkspaceStatePair( _
+    ByVal stateText As String, _
+    ByVal keyName As String, _
+    ByVal valueText As String) As String
+
+    If LenB(stateText) > 0 Then
+        stateText = stateText & ";"
+    End If
+
+    AddWorkspaceStatePair = stateText & keyName & "=" & EscapeWorkspaceStateValue(valueText)
+End Function
+
+Private Function EscapeWorkspaceStateValue(ByVal Value As String) As String
+    Value = Replace(NzString(Value), "%", "%25")
+    Value = Replace(Value, ";", "%3B")
+    Value = Replace(Value, "=", "%3D")
+    EscapeWorkspaceStateValue = Value
+End Function
+
+Private Function GetWorkspaceStateValue(ByVal stateText As String, ByVal keyName As String) As String
+    Dim parts() As String
+    Dim pairText As Variant
+    Dim separatorPosition As Long
+    Dim currentKey As String
+
+    If LenB(stateText) = 0 Then
+        Exit Function
+    End If
+
+    parts = Split(stateText, ";")
+    For Each pairText In parts
+        separatorPosition = InStr(1, CStr(pairText), "=", vbBinaryCompare)
+        If separatorPosition > 0 Then
+            currentKey = Left$(CStr(pairText), separatorPosition - 1)
+            If StrComp(currentKey, keyName, vbTextCompare) = 0 Then
+                GetWorkspaceStateValue = UnescapeWorkspaceStateValue(Mid$(CStr(pairText), separatorPosition + 1))
+                Exit Function
+            End If
+        End If
+    Next pairText
+End Function
+
+Private Function UnescapeWorkspaceStateValue(ByVal Value As String) As String
+    Value = Replace(Value, "%3D", "=")
+    Value = Replace(Value, "%3B", ";")
+    Value = Replace(Value, "%25", "%")
+    UnescapeWorkspaceStateValue = Value
 End Function
 
 Private Sub UpdateAddressingModeUi()

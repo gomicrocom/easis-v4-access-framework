@@ -318,11 +318,3 @@ Private Sub SetFieldIfExists(ByVal rs As DAO.Recordset, ByVal fieldName As Strin
         rs.Fields(fieldName).Value = Value
     End If
 End Sub
-
-Private Function SqlText(ByVal Value As Variant) As String
-    If IsNull(Value) Then
-        SqlText = "NULL"
-    Else
-        SqlText = "'" & Replace(CStr(Value), "'", "''") & "'"
-    End If
-End Function

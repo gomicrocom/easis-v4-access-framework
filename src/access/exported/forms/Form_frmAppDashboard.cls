@@ -5,7 +5,7 @@ Option Explicit
 ' Module    : Form_frmAppDashboard
 ' Purpose   : Lightweight dashboard for the application shell workspace.
 ' Author    : Codex
-' Version   : 0.1.0
+' Version   : 0.2.0
 '===============================================================================
 
 Private Const MODULE_NAME As String = "Form_frmAppDashboard"
@@ -14,6 +14,7 @@ Private Sub Form_Load()
     On Error GoTo ErrorHandler
 
     modFormRuntime.InitializeForm Me
+    modFwTranslationRuntime.ApplyTranslations Me
     modAppDashboardService.RefreshDashboard Me
     Exit Sub
 

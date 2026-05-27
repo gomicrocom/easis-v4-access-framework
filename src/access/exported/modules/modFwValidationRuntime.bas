@@ -242,20 +242,20 @@ Private Function GetControlDisplayName(ByVal ctl As Control) As String
     If ctl.ControlType = acCheckBox Then
         CaptionValue = GetCaptionPropertySafely(ctl)
         If LenB(CaptionValue) > 0 Then
-            GetControlDisplayName = ResolveDisplayCaption(CaptionValue)
+            GetControlDisplayName = ResolveDisplayCaption(CaptionValue, GetTagPropertySafely(ctl))
             Exit Function
         End If
     End If
 
     CaptionValue = GetAttachedLabelCaption(ctl)
     If LenB(CaptionValue) > 0 Then
-        GetControlDisplayName = ResolveDisplayCaption(CaptionValue)
+        GetControlDisplayName = ResolveDisplayCaption(CaptionValue, GetAttachedLabelTag(ctl))
         Exit Function
     End If
 
     CaptionValue = GetCaptionPropertySafely(ctl)
     If LenB(CaptionValue) > 0 Then
-        GetControlDisplayName = ResolveDisplayCaption(CaptionValue)
+        GetControlDisplayName = ResolveDisplayCaption(CaptionValue, GetTagPropertySafely(ctl))
         Exit Function
     End If
 
@@ -267,18 +267,17 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "GetControlDisplayName", Err
 End Function
 
-Private Function ResolveDisplayCaption(ByVal CaptionValue As String) As String
+Private Function ResolveDisplayCaption(ByVal CaptionValue As String, Optional ByVal tagText As String = "") As String
     CaptionValue = Trim$(NzString(CaptionValue))
 
     If LenB(CaptionValue) = 0 Then
         Exit Function
     End If
 
-    If StrComp(Left$(CaptionValue, 3), "TR:", vbTextCompare) = 0 Then
-        ResolveDisplayCaption = modFwTranslationRuntime.ResolveTranslation(CaptionValue, modFwTranslationRuntime.GetCurrentLanguageCode())
-    Else
-        ResolveDisplayCaption = CaptionValue
-    End If
+    ResolveDisplayCaption = modFwTranslationRuntime.ResolveCaptionText( _
+        CaptionValue, _
+        tagText, _
+        modFwTranslationRuntime.GetCurrentLanguageCode())
 End Function
 
 Private Function GetAttachedLabelCaption(ByVal ctl As Control) As String
@@ -297,6 +296,22 @@ SafeExit:
     GetAttachedLabelCaption = vbNullString
 End Function
 
+Private Function GetAttachedLabelTag(ByVal ctl As Control) As String
+    On Error GoTo SafeExit
+
+    If ctl Is Nothing Then
+        Exit Function
+    End If
+
+    If ctl.Controls.count > 0 Then
+        GetAttachedLabelTag = GetTagPropertySafely(ctl.Controls(0))
+    End If
+    Exit Function
+
+SafeExit:
+    GetAttachedLabelTag = vbNullString
+End Function
+
 Private Function GetCaptionPropertySafely(ByVal ctl As Control) As String
     On Error GoTo SafeExit
 
@@ -309,6 +324,20 @@ Private Function GetCaptionPropertySafely(ByVal ctl As Control) As String
 
 SafeExit:
     GetCaptionPropertySafely = vbNullString
+End Function
+
+Private Function GetTagPropertySafely(ByVal ctl As Control) As String
+    On Error GoTo SafeExit
+
+    If ctl Is Nothing Then
+        Exit Function
+    End If
+
+    GetTagPropertySafely = NzString(ctl.Properties("Tag").Value)
+    Exit Function
+
+SafeExit:
+    GetTagPropertySafely = vbNullString
 End Function
 
 Private Function ControlSupportsValidation(ByVal ctl As Control) As Boolean
