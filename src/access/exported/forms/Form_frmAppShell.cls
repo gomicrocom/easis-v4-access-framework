@@ -1,4 +1,13 @@
-﻿Option Compare Database
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "Form_frmAppShell"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = True
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = False
+Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -53,6 +62,84 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "cmdRefreshShell_Click", Err
 End Sub
 
+Private Sub txtShellSearch_AfterUpdate()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteShellListSearch Me, modDaoHelper.NzString(Me!txtShellSearch.Value)
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "txtShellSearch_AfterUpdate", Err
+End Sub
+
+Private Sub txtShellSearch_Change()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteShellListSearch Me, Nz(Me!txtShellSearch.text, vbNullString)
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "txtShellSearch_Change", Err
+End Sub
+
+Private Sub txtShellSearch_KeyDown(KeyCode As Integer, Shift As Integer)
+    On Error GoTo ErrorHandler
+
+    Select Case KeyCode
+        Case vbKeyReturn
+            modAppShell.ExecuteShellListSearch Me, modDaoHelper.NzString(Me!txtShellSearch.Value)
+            KeyCode = 0
+
+        Case vbKeyEscape
+            modAppShell.ExecuteShellListClearSearch Me
+            KeyCode = 0
+    End Select
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "txtShellSearch_KeyDown", Err
+End Sub
+
+Private Sub cmdShellClearSearch_Click()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteShellListClearSearch Me
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdShellClearSearch_Click", Err
+End Sub
+
+Private Sub cmdShellNew_Click()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteShellListNew Me
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdShellNew_Click", Err
+End Sub
+
+Private Sub cmdShellEdit_Click()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteShellListEdit Me
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdShellEdit_Click", Err
+End Sub
+
+Private Sub cmdShellRefresh_Click()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteShellListRefresh Me
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdShellRefresh_Click", Err
+End Sub
+
 Private Sub cmdHome_Click()
     On Error GoTo ErrorHandler
 
@@ -85,5 +172,7 @@ Private Sub Form_Unload(Cancel As Integer)
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "Form_Unload", Err
 End Sub
+
+
 
 

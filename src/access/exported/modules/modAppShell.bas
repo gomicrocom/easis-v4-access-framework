@@ -10,6 +10,7 @@ Option Explicit
 
 Private Const MODULE_NAME As String = "modAppShell"
 Private Const NAVIGATION_SUBFORM_CONTROL As String = "subNavigationHost"
+Private Const WORKSPACE_SUBFORM_CONTROL As String = "subWorkspaceHost"
 Private Const STATUS_APP_VERSION As String = "txtStatusAppVersion"
 Private Const STATUS_CURRENT_USER As String = "txtStatusCurrentUser"
 Private Const STATUS_CURRENT_TENANT As String = "txtStatusCurrentTenant"
@@ -24,6 +25,24 @@ Private Const LABEL_TENANT As String = "lblStatusTenant"
 Private Const LABEL_ROLE As String = "lblStatusRole"
 Private Const LABEL_ENVIRONMENT As String = "lblStatusEnvironment"
 Private Const LABEL_BACKEND As String = "lblStatusBackend"
+Private Const COMMAND_HOME As String = "cmdHome"
+Private Const LABEL_SHELL_SEARCH As String = "lblShellSearch"
+Private Const TEXT_SHELL_SEARCH As String = "txtShellSearch"
+Private Const COMMAND_SHELL_CLEAR_SEARCH As String = "cmdShellClearSearch"
+Private Const COMMAND_SHELL_NEW As String = "cmdShellNew"
+Private Const COMMAND_SHELL_EDIT As String = "cmdShellEdit"
+Private Const COMMAND_SHELL_REFRESH As String = "cmdShellRefresh"
+
+Private Const LIST_METHOD_SUPPORTS_BAR As String = "SupportsListCommandBar"
+Private Const LIST_METHOD_SUPPORTS_NEW As String = "SupportsListNew"
+Private Const LIST_METHOD_SUPPORTS_EDIT As String = "SupportsListEdit"
+Private Const LIST_METHOD_SEARCH As String = "ListSearch"
+Private Const LIST_METHOD_CLEAR_SEARCH As String = "ListClearSearch"
+Private Const LIST_METHOD_NEW As String = "ListNew"
+Private Const LIST_METHOD_EDIT As String = "ListEdit"
+Private Const LIST_METHOD_REFRESH As String = "ListRefresh"
+
+Private m_lastWorkspaceFormName As String
 
 Public Function InitializeAppShell(ByVal shellForm As Access.Form) As Boolean
     On Error GoTo ErrorHandler
@@ -79,6 +98,7 @@ Public Function RefreshShellStatus(ByVal shellForm As Access.Form) As Boolean
     SetDisplayValueIfPresent shellForm, STATUS_BACKEND, ResolveBackendStatusText()
     SetDisplayValueIfPresent shellForm, STATUS_ENVIRONMENT, ResolveEnvironmentText()
     SetControlEnabledIfPresent shellForm, COMMAND_BACK, modAppWorkspaceService.CanGoBack()
+    UpdateShellCommandBarState shellForm
 
     RefreshShellStatus = True
     Exit Function
@@ -87,6 +107,72 @@ ErrorHandler:
     RefreshShellStatus = False
     modErrorHandler.HandleError MODULE_NAME, "RefreshShellStatus", Err
 End Function
+
+Public Sub UpdateShellCommandBarState(ByVal shellForm As Access.Form)
+    On Error GoTo ErrorHandler
+
+    Dim workspaceForm As Access.Form
+    Dim supportsCommandBar As Boolean
+    Dim supportsNew As Boolean
+    Dim supportsEdit As Boolean
+    Dim currentWorkspaceFormName As String
+    Dim clearSearch As Boolean
+
+    Set workspaceForm = ResolveCurrentWorkspaceForm(shellForm)
+    supportsCommandBar = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_BAR, False)
+
+    If Not workspaceForm Is Nothing Then
+        currentWorkspaceFormName = workspaceForm.Name
+    End If
+
+    clearSearch = (StrComp(m_lastWorkspaceFormName, currentWorkspaceFormName, vbTextCompare) <> 0)
+    m_lastWorkspaceFormName = currentWorkspaceFormName
+
+    If supportsCommandBar Then
+        supportsNew = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_NEW, True)
+        supportsEdit = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_EDIT, True)
+
+        SetCommandBarVisible shellForm, True
+        SetControlEnabledIfPresent shellForm, LABEL_SHELL_SEARCH, True
+        SetControlEnabledIfPresent shellForm, TEXT_SHELL_SEARCH, True
+        SetControlEnabledIfPresent shellForm, COMMAND_SHELL_CLEAR_SEARCH, True
+        SetControlEnabledIfPresent shellForm, COMMAND_SHELL_NEW, supportsNew
+        SetControlEnabledIfPresent shellForm, COMMAND_SHELL_EDIT, supportsEdit
+        SetControlEnabledIfPresent shellForm, COMMAND_SHELL_REFRESH, True
+
+        If clearSearch Then
+            ClearShellSearchText shellForm
+        End If
+    Else
+        SetCommandBarVisible shellForm, False
+        ClearShellSearchText shellForm
+    End If
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "UpdateShellCommandBarState", Err
+End Sub
+
+Public Sub ExecuteShellListSearch(ByVal shellForm As Access.Form, ByVal searchText As String)
+    CallWorkspaceListMethodWithArg shellForm, LIST_METHOD_SEARCH, searchText
+End Sub
+
+Public Sub ExecuteShellListClearSearch(ByVal shellForm As Access.Form)
+    ClearShellSearchText shellForm
+    CallWorkspaceListMethodNoArg shellForm, LIST_METHOD_CLEAR_SEARCH
+End Sub
+
+Public Sub ExecuteShellListNew(ByVal shellForm As Access.Form)
+    CallWorkspaceListMethodNoArg shellForm, LIST_METHOD_NEW
+End Sub
+
+Public Sub ExecuteShellListEdit(ByVal shellForm As Access.Form)
+    CallWorkspaceListMethodNoArg shellForm, LIST_METHOD_EDIT
+End Sub
+
+Public Sub ExecuteShellListRefresh(ByVal shellForm As Access.Form)
+    CallWorkspaceListMethodNoArg shellForm, LIST_METHOD_REFRESH
+End Sub
 
 Public Function LoadDefaultWorkspace(ByVal shellForm As Access.Form) As Boolean
     On Error GoTo ErrorHandler
@@ -227,6 +313,13 @@ Private Sub ApplyShellStaticTranslations(ByVal shellForm As Access.Form)
 
     SetCaptionIfPresent shellForm, HEADER_TITLE, "FORM.FRMAPPSHELL.APP_TITLE", APP_NAME
     SetCaptionIfPresent shellForm, HEADER_SUBTITLE, "FORM.FRMAPPSHELL.APP_SUBTITLE", "Access Framework"
+    SetCaptionIfPresent shellForm, COMMAND_HOME, "COMMON.HOME", "Home"
+    SetCaptionIfPresent shellForm, COMMAND_BACK, "COMMON.BACK", "Zurueck"
+    SetCaptionIfPresent shellForm, LABEL_SHELL_SEARCH, "COMMON.SEARCH", "Suche"
+    SetCaptionIfPresent shellForm, COMMAND_SHELL_CLEAR_SEARCH, "COMMON.CLEAR_SEARCH", "Leeren"
+    SetCaptionIfPresent shellForm, COMMAND_SHELL_NEW, "COMMON.NEW", "Neu"
+    SetCaptionIfPresent shellForm, COMMAND_SHELL_EDIT, "COMMON.EDIT", "Bearbeiten"
+    SetCaptionIfPresent shellForm, COMMAND_SHELL_REFRESH, "COMMON.REFRESH", "Aktualisieren"
     SetCaptionIfPresent shellForm, LABEL_USER, "FORM.FRMAPPSHELL.USER", "Benutzer"
     SetCaptionIfPresent shellForm, LABEL_TENANT, "FORM.FRMAPPSHELL.TENANT", "Mandant"
     SetCaptionIfPresent shellForm, LABEL_ROLE, "FORM.FRMAPPSHELL.ROLE", "Rolle"
@@ -346,6 +439,181 @@ Private Sub SetControlEnabledIfPresent( _
     End If
 
     formInstance.Controls(ControlName).Enabled = isEnabled
+
+SafeExit:
+End Sub
+
+Private Sub SetControlVisibleIfPresent( _
+    ByVal formInstance As Access.Form, _
+    ByVal ControlName As String, _
+    ByVal isVisible As Boolean)
+    On Error GoTo SafeExit
+
+    If formInstance Is Nothing Then
+        Exit Sub
+    End If
+
+    If Not HasControl(formInstance, ControlName) Then
+        Exit Sub
+    End If
+
+    formInstance.Controls(ControlName).Visible = isVisible
+
+SafeExit:
+End Sub
+
+Private Sub SetCommandBarVisible(ByVal shellForm As Access.Form, ByVal isVisible As Boolean)
+    On Error GoTo SafeExit
+
+    SetControlVisibleIfPresent shellForm, LABEL_SHELL_SEARCH, isVisible
+    SetControlVisibleIfPresent shellForm, TEXT_SHELL_SEARCH, isVisible
+    SetControlVisibleIfPresent shellForm, COMMAND_SHELL_CLEAR_SEARCH, isVisible
+    SetControlVisibleIfPresent shellForm, COMMAND_SHELL_NEW, isVisible
+    SetControlVisibleIfPresent shellForm, COMMAND_SHELL_EDIT, isVisible
+    SetControlVisibleIfPresent shellForm, COMMAND_SHELL_REFRESH, isVisible
+
+    SetControlEnabledIfPresent shellForm, LABEL_SHELL_SEARCH, isVisible
+    SetControlEnabledIfPresent shellForm, TEXT_SHELL_SEARCH, isVisible
+    SetControlEnabledIfPresent shellForm, COMMAND_SHELL_CLEAR_SEARCH, isVisible
+    SetControlEnabledIfPresent shellForm, COMMAND_SHELL_NEW, isVisible
+    SetControlEnabledIfPresent shellForm, COMMAND_SHELL_EDIT, isVisible
+    SetControlEnabledIfPresent shellForm, COMMAND_SHELL_REFRESH, isVisible
+
+SafeExit:
+End Sub
+
+Private Sub ClearShellSearchText(ByVal shellForm As Access.Form)
+    On Error GoTo SafeExit
+
+    If shellForm Is Nothing Then
+        Exit Sub
+    End If
+
+    If HasControl(shellForm, TEXT_SHELL_SEARCH) Then
+        shellForm.Controls(TEXT_SHELL_SEARCH).Value = vbNullString
+    End If
+
+SafeExit:
+End Sub
+
+Private Function ResolveCurrentWorkspaceForm(ByVal shellForm As Access.Form) As Access.Form
+    On Error GoTo SafeExit
+
+    Dim workspaceHost As Control
+
+    If shellForm Is Nothing Then
+        Exit Function
+    End If
+
+    If Not HasControl(shellForm, WORKSPACE_SUBFORM_CONTROL) Then
+        Exit Function
+    End If
+
+    Set workspaceHost = shellForm.Controls(WORKSPACE_SUBFORM_CONTROL)
+    If LenB(Trim$(Nz(workspaceHost.SourceObject, vbNullString))) = 0 Then
+        Exit Function
+    End If
+
+    Set ResolveCurrentWorkspaceForm = workspaceHost.Form
+
+SafeExit:
+End Function
+
+Private Function ResolveWorkspaceBooleanCapability( _
+    ByVal workspaceForm As Access.Form, _
+    ByVal methodName As String, _
+    ByVal defaultValue As Boolean) As Boolean
+    On Error GoTo SafeExit
+
+    Dim formObject As Object
+
+    ResolveWorkspaceBooleanCapability = defaultValue
+
+    If workspaceForm Is Nothing Then
+        ResolveWorkspaceBooleanCapability = False
+        Exit Function
+    End If
+
+    Set formObject = workspaceForm
+    ResolveWorkspaceBooleanCapability = CBool(CallByName(formObject, methodName, VbMethod))
+    Exit Function
+
+SafeExit:
+    If Err.Number = 438 Then
+        ResolveWorkspaceBooleanCapability = defaultValue
+    ElseIf Not workspaceForm Is Nothing Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".ResolveWorkspaceBooleanCapability", _
+            "Capability '" & methodName & "' could not be resolved for form '" & workspaceForm.Name & "'."
+    End If
+End Function
+
+Private Sub CallWorkspaceListMethodNoArg(ByVal shellForm As Access.Form, ByVal methodName As String)
+    On Error GoTo ErrorHandler
+
+    Dim workspaceForm As Access.Form
+    Dim formObject As Object
+
+    Set workspaceForm = ResolveCurrentWorkspaceForm(shellForm)
+    If workspaceForm Is Nothing Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".CallWorkspaceListMethodNoArg", _
+            "No active workspace form is available for '" & methodName & "'."
+        Exit Sub
+    End If
+
+    Set formObject = workspaceForm
+    CallByName formObject, methodName, VbMethod
+    RefreshShellStatus shellForm
+    Exit Sub
+
+ErrorHandler:
+    HandleMissingWorkspaceListMethod shellForm, workspaceForm, methodName, Err
+End Sub
+
+Private Sub CallWorkspaceListMethodWithArg( _
+    ByVal shellForm As Access.Form, _
+    ByVal methodName As String, _
+    ByVal argText As String)
+    On Error GoTo ErrorHandler
+
+    Dim workspaceForm As Access.Form
+    Dim formObject As Object
+
+    Set workspaceForm = ResolveCurrentWorkspaceForm(shellForm)
+    If workspaceForm Is Nothing Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".CallWorkspaceListMethodWithArg", _
+            "No active workspace form is available for '" & methodName & "'."
+        Exit Sub
+    End If
+
+    Set formObject = workspaceForm
+    CallByName formObject, methodName, VbMethod, argText
+    RefreshShellStatus shellForm
+    Exit Sub
+
+ErrorHandler:
+    HandleMissingWorkspaceListMethod shellForm, workspaceForm, methodName, Err
+End Sub
+
+Private Sub HandleMissingWorkspaceListMethod( _
+    ByVal shellForm As Access.Form, _
+    ByVal workspaceForm As Access.Form, _
+    ByVal methodName As String, _
+    ByVal raisedError As ErrObject)
+    On Error GoTo SafeExit
+
+    If raisedError.Number = 438 Then
+        If Not workspaceForm Is Nothing Then
+            modLoggingHandler.LogWarning MODULE_NAME & ".HandleMissingWorkspaceListMethod", _
+                "Workspace form '" & workspaceForm.Name & "' does not implement '" & methodName & "'."
+        Else
+            modLoggingHandler.LogWarning MODULE_NAME & ".HandleMissingWorkspaceListMethod", _
+                "No workspace form available for '" & methodName & "'."
+        End If
+    Else
+        modErrorHandler.HandleError MODULE_NAME, methodName, raisedError
+    End If
+
+    RefreshShellStatus shellForm
 
 SafeExit:
 End Sub

@@ -278,6 +278,43 @@ Examples:
 
 The goal is that users continue working without losing context, search position, or list selection.
 
+### Detail Form Action Convention
+
+For workspace-hosted detail forms, the standard action convention is:
+
+- `Save`
+  - save the record
+  - return to the previous workspace or list
+- `Cancel`
+  - discard unsaved changes
+  - return to the previous workspace or list
+- `Apply` / `Uebernehmen`
+  - reserved for future complex forms
+  - save and keep the detail form open
+
+Current rule:
+
+- do not add `Apply` by default
+- use `modAppWorkspaceService.GoBack(...)` for the return flow
+- if no workspace history exists, the detail form may stay open safely
+
+### Future Address Direction
+
+`frmAddressDetail` is expected to evolve later into a customer account or action board.
+
+Planned direction only:
+
+- customer activity overview
+- contextual actions such as:
+  - new order
+  - documents
+  - invoices
+  - subscriptions
+  - communication
+  - history
+
+This is a future UX direction only and is not part of the current implementation pass.
+
 ## Navigation
 
 Navigation conventions:
@@ -292,12 +329,127 @@ Navigation conventions:
 - `open_mode=ADD` is the preferred shell-safe way to open "New ..." workspace forms
 - grouping is data-driven through `fw_navigation`
 - no Access report-style grouping is used
+- standard master-data object creation should come from `cmdNew` on the list form instead of separate shell navigation rows
 
 Navigation maintenance conventions:
 
 - use `frmFwNavigationAdmin` for controlled maintenance of `fw_navigation`
 - do not manually delete seeded rows
 - prefer `is_active` and `is_visible` flags over destructive cleanup
+
+### Shell Command Bar
+
+The experimental `sfrmFwListCommandBar` approach was replaced by a shell-owned command bar.
+
+Owner:
+
+- `frmAppShell`
+
+Official layout:
+
+- `[Home] [Zurueck] | [Suchen: __________] [Leeren] [Neu] [Bearbeiten] [Aktualisieren]`
+
+Purpose:
+
+- standardize list-local actions
+- reduce duplicated search and button implementations
+- keep shell navigation lean
+
+List-form contract:
+
+- `Public Function SupportsListCommandBar() As Boolean`
+- `Public Sub ListSearch(ByVal searchText As String)`
+- `Public Sub ListClearSearch()`
+- `Public Sub ListNew()`
+- `Public Sub ListEdit()`
+- `Public Sub ListRefresh()`
+
+Optional per-action support:
+
+- `Public Function SupportsListNew() As Boolean`
+- `Public Function SupportsListEdit() As Boolean`
+
+Current migrated list forms:
+
+- `frmArticleGroupList`
+- `frmAddressList`
+- `frmArticleList`
+- `frmFwTranslationAudit`
+
+## List Form Architecture
+
+List forms are now built around a shell-owned command surface rather than local duplicated search controls.
+
+Shell ownership:
+
+- `frmAppShell`
+  - owns `Home`
+  - owns `Zurueck`
+  - owns `Suche`
+  - owns `Leeren`
+  - owns `Neu`
+  - owns `Bearbeiten`
+  - owns `Aktualisieren`
+
+List-form contract:
+
+- `SupportsListCommandBar()`
+- `ListSearch(ByVal searchText As String)`
+- `ListClearSearch()`
+- `ListNew()`
+- `ListEdit()`
+- `ListRefresh()`
+
+Optional capability flags:
+
+- `SupportsListNew()`
+- `SupportsListEdit()`
+
+Search architecture:
+
+- list forms keep `Private m_currentSearchText As String`
+- the shell command bar supplies the current search text
+- local search textboxes are no longer required for migrated list forms
+- filters should operate on one dedicated search-index field per row source
+
+Standard search-index fields:
+
+- `address_search_text`
+- `article_group_search_text`
+- `article_search_text`
+
+Current note:
+
+- `frmAddressList` still exposes legacy `AddressSearchText`
+- this should be normalized to `address_search_text` in a later low-risk cleanup pass
+- `frmFwTranslationAudit`
+  - uses shell search for free-text filtering
+  - keeps local dropdown filters for:
+    - `scope`
+    - `language`
+    - `audit status`
+  - keeps local domain action:
+    - `Fehlende Eintraege erzeugen`
+
+Workspace interaction:
+
+- list forms store search and current-row state in `GetWorkspaceState()`
+- detail forms open through `modAppWorkspaceService.OpenWorkspaceForm(...)`
+- detail save and cancel return through workspace history
+
+Navigation philosophy:
+
+- navigation contains areas and worklists only
+- standard create actions belong to `Neu` in the shell command bar
+- standard master-data objects should not add separate `Neue ...` navigation entries
+
+### Lean Navigation Rule
+
+Shell navigation should remain lean:
+
+- navigation represents areas and worklists
+- standard object creation belongs to the shell command bar
+- standard master-data objects should not need separate `Neue ...` shell entries
 
 Navigation is intentionally lightweight and Access-safe.
 
@@ -381,9 +533,9 @@ whenever possible.
 
 ## Focus Management Notes
 
-Practical Access-specific focus issues:
+Practical Access-specific focus issues still matter for migrated list forms:
 
-- filtering or requerying while `txtSearch` has focus may raise `Err 2185`
+- filtering or requerying while a bound control has focus may raise `Err 2185`
 - workspace navigation can trigger focus transitions
 - embedded forms behave differently from standalone forms
 
@@ -392,19 +544,7 @@ Recommended pattern:
 - use hidden or lightweight focus sink controls when necessary
 - move focus before filter or requery operations
 - avoid `.Text` where possible
-
-Example pattern:
-
-```vb
-If HasControl("txtSearch") Then
-    Me!txtSearch.Value = searchText
-End If
-
-Me.Filter = filterExpression
-Me.FilterOn = True
-```
-
-This is generally safer than relying on `.Text` during requery-heavy workflows.
+- keep search state in form variables instead of local search controls
 
 ## Design Rules
 

@@ -18,6 +18,7 @@ Private Const FIELD_TRANSLATION_VALUE As String = "translation_value"
 Private Const TR_PREFIX As String = "TR:"
 Private Const DEFAULT_LANGUAGE_CODE As String = "DE-CH"
 Private Const FALLBACK_LANGUAGE_CODE As String = "EN"
+Private Const TENANT_PARAMETER_DEFAULT_LANGUAGE As String = "DEFAULT_LANGUAGE"
 
 Public Sub ApplyTranslations(ByVal TargetObject As Object)
     On Error GoTo ErrorHandler
@@ -239,12 +240,40 @@ End Function
 Public Function GetCurrentLanguageCode() As String
     On Error GoTo ErrorHandler
 
-    GetCurrentLanguageCode = DEFAULT_LANGUAGE_CODE
+    GetCurrentLanguageCode = ResolveCurrentLanguageCode()
     Exit Function
 
 ErrorHandler:
     GetCurrentLanguageCode = DEFAULT_LANGUAGE_CODE
     modErrorHandler.HandleError MODULE_NAME, "GetCurrentLanguageCode", Err
+End Function
+
+Public Function ResolveCurrentLanguageCode() As String
+    On Error GoTo ErrorHandler
+
+    Dim resolvedLanguageCode As String
+
+    resolvedLanguageCode = ResolveSupportedLanguageCode(ResolveCurrentUserLanguageCode())
+
+    If LenB(resolvedLanguageCode) = 0 Then
+        resolvedLanguageCode = ResolveSupportedLanguageCode( _
+            modTenantRepository.GetTenantParameter(TENANT_PARAMETER_DEFAULT_LANGUAGE, vbNullString))
+    End If
+
+    If LenB(resolvedLanguageCode) = 0 Then
+        resolvedLanguageCode = ResolveSupportedLanguageCode(ResolveIniLanguageCode())
+    End If
+
+    If LenB(resolvedLanguageCode) = 0 Then
+        resolvedLanguageCode = DEFAULT_LANGUAGE_CODE
+    End If
+
+    ResolveCurrentLanguageCode = resolvedLanguageCode
+    Exit Function
+
+ErrorHandler:
+    ResolveCurrentLanguageCode = DEFAULT_LANGUAGE_CODE
+    modErrorHandler.HandleError MODULE_NAME, "ResolveCurrentLanguageCode", Err
 End Function
 
 Public Function GetTranslationKeyFromTag(ByVal tagText As String) As String
@@ -397,6 +426,39 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
+Private Function ResolveCurrentUserLanguageCode() As String
+    On Error GoTo ErrorHandler
+
+    Dim userId As String
+
+    If Not modSessionContext.IsSessionInitialized Then
+        Exit Function
+    End If
+
+    userId = Trim$(modSessionContext.currentUserId)
+    If LenB(userId) = 0 Then
+        Exit Function
+    End If
+
+    ResolveCurrentUserLanguageCode = Trim$(modUserRepository.GetUserLanguageCode(userId, vbNullString))
+    Exit Function
+
+ErrorHandler:
+    ResolveCurrentUserLanguageCode = vbNullString
+    modErrorHandler.HandleError MODULE_NAME, "ResolveCurrentUserLanguageCode", Err
+End Function
+
+Private Function ResolveIniLanguageCode() As String
+    On Error GoTo ErrorHandler
+
+    ResolveIniLanguageCode = Trim$(modConfigIni.GetConfigValue(CONFIG_SECTION_APP, "Language", CurrentLanguage, ConfigFilePath))
+    Exit Function
+
+ErrorHandler:
+    ResolveIniLanguageCode = Trim$(CurrentLanguage)
+    modErrorHandler.HandleError MODULE_NAME, "ResolveIniLanguageCode", Err
+End Function
+
 Private Function ResolveTranslationKeyFromMetadata( _
     ByVal fallbackCaption As String, _
     ByVal tagText As String) As String
@@ -441,6 +503,23 @@ Private Function NormalizeLanguageCode(ByVal LanguageCode As String) As String
     Else
         NormalizeLanguageCode = UCase$(parts(0)) & "-" & UCase$(parts(1))
     End If
+End Function
+
+Private Function ResolveSupportedLanguageCode(ByVal LanguageCode As String) As String
+    Dim normalizedLanguageCode As String
+
+    normalizedLanguageCode = NormalizeLanguageCode(LanguageCode)
+
+    Select Case normalizedLanguageCode
+        Case "DE-CH", "EN-US", "FR-FR"
+            ResolveSupportedLanguageCode = normalizedLanguageCode
+        Case "DE"
+            ResolveSupportedLanguageCode = "DE-CH"
+        Case "EN"
+            ResolveSupportedLanguageCode = "EN-US"
+        Case "FR"
+            ResolveSupportedLanguageCode = "FR-FR"
+    End Select
 End Function
 
 Private Function GetBaseLanguageCode(ByVal LanguageCode As String) As String

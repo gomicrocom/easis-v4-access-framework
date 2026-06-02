@@ -1,11 +1,20 @@
-﻿Option Compare Database
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "Form_frmAddressList"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = True
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = False
+Option Compare Database
 Option Explicit
 
 '===============================================================================
 ' Module    : Form_frmAddressList
 ' Purpose   : Searchable address overview and workspace-aware workflow entry point.
 ' Author    : Codex
-' Version   : 0.3.0
+' Version   : 0.3.1
 '===============================================================================
 
 Private Const MODULE_NAME As String = "Form_frmAddressList"
@@ -23,9 +32,7 @@ Private Const FORM_ADDRESS_DETAIL As String = "frmAddressDetail"
 Private Const FORM_ORDER_LIST As String = "frmOrderList"
 Private Const FORM_ORDER_DETAIL As String = "frmOrderDetail"
 
-Private Sub cmdClearSearch_Click()
-    ClearSearchFilter
-End Sub
+Private m_currentSearchText As String
 
 Private Sub cmdEdit_Click()
     On Error GoTo ErrorHandler
@@ -91,19 +98,13 @@ End Sub
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
 
-    If HasControl("txtSearch") Then
-        Me!txtSearch.Value = vbNullString
-        Me.Filter = vbNullString
-        Me.FilterOn = False
-    End If
+    m_currentSearchText = vbNullString
+    Me.Filter = vbNullString
+    Me.FilterOn = False
 
     LoadActionMenu
     modFwTranslationRuntime.ApplyTranslations Me
     UpdateActionState
-
-    If HasControl("txtSearch") Then
-        Me!txtSearch.SetFocus
-    End If
 
     modLoggingHandler.LogInfo MODULE_NAME & ".Form_Load", _
         "Address list loaded."
@@ -114,53 +115,13 @@ ErrorHandler:
     MsgBox "Fehler beim Laden der Adressliste: " & Err.description, vbExclamation, MODULE_NAME
 End Sub
 
-Private Sub txtSearch_Change()
-    On Error GoTo ErrorHandler
-
-    ApplySearchFilter
-    Me!txtSearch.SetFocus
-    Me!txtSearch.SelStart = Len(Nz(Me!txtSearch.text, vbNullString))
-    Exit Sub
-
-ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "txtSearch_Change", Err
-End Sub
-
-Private Sub txtSearch_KeyDown(KeyCode As Integer, Shift As Integer)
-    On Error GoTo ErrorHandler
-
-    Select Case KeyCode
-        Case vbKeyEscape
-            ClearSearchFilter
-            KeyCode = 0
-
-        Case vbKeyReturn
-            ApplySearchFilter
-            KeyCode = 0
-    End Select
-
-    Exit Sub
-
-ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "txtSearch_KeyDown", Err
-End Sub
-
-Private Sub ApplySearchFilter()
+Private Sub ApplySearchFilter(Optional ByVal searchText As String = vbNullString)
     On Error GoTo ErrorHandler
 
     Dim filterExpression As String
-    Dim searchText As String
 
-    If Not HasControl("txtSearch") Then
-        Exit Sub
-    End If
-
-    searchText = Trim$(Nz(Me!txtSearch.Value, vbNullString))
-
-    ' Fokus von txtSearch wegnehmen, bevor Filter/Formulareigenschaften geändert werden.
-    If HasControl("txtFocusSink") Then
-        Me!txtFocusSink.SetFocus
-    End If
+    searchText = Trim$(Nz(searchText, vbNullString))
+    m_currentSearchText = searchText
 
     Me.FilterOn = False
 
@@ -174,12 +135,24 @@ Private Sub ApplySearchFilter()
 
     modLoggingHandler.LogInfo MODULE_NAME & ".ApplySearchFilter", _
         "Search filter updated."
-
     Exit Sub
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ApplySearchFilter", Err
 End Sub
+
+Private Sub ClearSearchFilter()
+    On Error GoTo ErrorHandler
+
+    m_currentSearchText = vbNullString
+    Me.Filter = vbNullString
+    Me.FilterOn = False
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ClearSearchFilter", Err
+End Sub
+
 Private Function BuildActionRowSource() As String
     Dim sqlStatement As String
 
@@ -213,6 +186,71 @@ Public Function GetCurrentWorkspaceRecordId() As Long
     GetCurrentWorkspaceRecordId = GetCurrentAddressId()
 End Function
 
+Public Function SupportsListCommandBar() As Boolean
+    SupportsListCommandBar = True
+End Function
+
+Public Function SupportsListNew() As Boolean
+    SupportsListNew = True
+End Function
+
+Public Function SupportsListEdit() As Boolean
+    SupportsListEdit = True
+End Function
+
+Public Sub ListSearch(ByVal searchText As String)
+    On Error GoTo ErrorHandler
+
+    m_currentSearchText = Trim$(Nz(searchText, vbNullString))
+    ApplySearchFilter m_currentSearchText
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ListSearch", Err
+End Sub
+
+Public Sub ListClearSearch()
+    On Error GoTo ErrorHandler
+
+    ClearSearchFilter
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ListClearSearch", Err
+End Sub
+
+Public Sub ListNew()
+    On Error GoTo ErrorHandler
+
+    ExecuteActionByCode ACTION_NEW
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ListNew", Err
+    Err.Raise Err.Number, Err.Source, Err.description
+End Sub
+
+Public Sub ListEdit()
+    On Error GoTo ErrorHandler
+
+    ExecuteActionByCode ACTION_EDIT
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ListEdit", Err
+    Err.Raise Err.Number, Err.Source, Err.description
+End Sub
+
+Public Sub ListRefresh()
+    On Error GoTo ErrorHandler
+
+    RefreshListData
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ListRefresh", Err
+End Sub
+
 Public Function GetWorkspaceState() As String
     Dim searchText As String
     Dim orderByText As String
@@ -242,11 +280,8 @@ Public Sub RestoreWorkspaceState(ByVal stateText As String)
     orderByText = GetWorkspaceStateValue(stateText, "order_by")
     addressId = NzLong(GetWorkspaceStateValue(stateText, "address_id"), 0)
 
-    If HasControl("txtSearch") Then
-        Me!txtSearch.Value = searchText
-    End If
-
-    ApplySearchFilter
+    m_currentSearchText = searchText
+    ApplySearchFilter m_currentSearchText
 
     Me.OrderBy = orderByText
     Me.OrderByOn = (LenB(orderByText) > 0)
@@ -258,20 +293,6 @@ Public Sub RestoreWorkspaceState(ByVal stateText As String)
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "RestoreWorkspaceState", Err
-End Sub
-
-Private Sub ClearSearchFilter()
-    On Error GoTo ErrorHandler
-
-    Me!txtSearch = vbNullString
-    Me.Filter = vbNullString
-    Me.FilterOn = False
-
-    Me!txtSearch.SetFocus
-    Exit Sub
-
-ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "ClearSearchFilter", Err
 End Sub
 
 Public Sub ExecuteSelectedAction()
@@ -442,7 +463,7 @@ Private Sub LoadActionMenu()
     End If
 
     Me!cboListAction.RowSourceType = "Table/Query"
-    Me!cboListAction.RowSource = BuildActionRowSource()
+    Me!cboListAction.rowSource = BuildActionRowSource()
     Me!cboListAction.BoundColumn = 1
     Me!cboListAction.ColumnCount = 4
     Me!cboListAction.ColumnWidths = "0cm;5cm;0cm;0cm"
@@ -566,15 +587,7 @@ SafeExit:
 End Function
 
 Private Function GetSearchTextValue() As String
-    On Error GoTo SafeExit
-
-    If Not HasControl("txtSearch") Then
-        Exit Function
-    End If
-
-    GetSearchTextValue = Trim$(Nz(Me!txtSearch.Value, vbNullString))
-
-SafeExit:
+    GetSearchTextValue = m_currentSearchText
 End Function
 
 Private Function GetWorkspaceStateValue(ByVal stateText As String, ByVal keyName As String) As String
@@ -633,7 +646,7 @@ Private Sub RestoreCurrentAddressSelection(ByVal addressId As Long)
 
     Dim rs As DAO.Recordset
 
-    Set rs = Me.RecordsetClone
+    Set rs = Me.recordsetClone
     rs.FindFirst "[address_id]=" & CStr(addressId)
 
     If Not rs.NoMatch Then

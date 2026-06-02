@@ -32,6 +32,8 @@ Public Const TENANT_KEY_ID As String = "TenantId"
 Public Const TENANT_KEY_CODE As String = "TenantCode"
 Public Const TENANT_KEY_NAME As String = "TenantName"
 Public Const TENANT_KEY_BACKEND_PATH As String = "BackendPath"
+Public Const TENANT_PARAMETER_DEEPL_API_KEY As String = "DEEPL_API_KEY"
+Public Const TENANT_PARAMETER_DEEPL_API_BASE_URL As String = "DEEPL_API_BASE_URL"
 
 ' Role codes
 Public Const ROLE_CODE_ADMIN As String = "ADMIN"

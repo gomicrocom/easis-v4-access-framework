@@ -13,6 +13,7 @@ Private Const TABLE_USR_USER As String = "usr_user"
 Private Const FIELD_USER_ID As String = "user_id"
 Private Const FIELD_USER_NAME As String = "user_name"
 Private Const FIELD_ROLE_CODE As String = "role_code"
+Private Const FIELD_LANGUAGE_CODE As String = "language_code"
 Private Const FIELD_IS_ACTIVE As String = "is_active"
 
 Public Function UserExists(ByVal UserId As String) As Boolean
@@ -227,4 +228,43 @@ Private Function ResolveUserFieldValue(ByVal rs As DAO.Recordset, ByVal UserId A
 ErrorHandler:
     ResolveUserFieldValue = DefaultValue
     modErrorHandler.HandleError MODULE_NAME, "ResolveUserFieldValue", Err
+End Function
+
+Public Function GetUserLanguageCode(ByVal UserId As String, Optional ByVal DefaultValue As String = "") As String
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+
+    If LenB(Trim$(UserId)) = 0 Then
+        GetUserLanguageCode = DefaultValue
+        Exit Function
+    End If
+
+    If Not CanReadUsers() Then
+        GetUserLanguageCode = DefaultValue
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_USR_USER & "];", dbOpenSnapshot)
+
+    If Not modDaoHelper.RecordsetHasField(rs, FIELD_LANGUAGE_CODE) Then
+        GetUserLanguageCode = DefaultValue
+        GoTo CleanExit
+    End If
+
+    GetUserLanguageCode = ResolveUserFieldValue(rs, UserId, FIELD_LANGUAGE_CODE, DefaultValue)
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    GetUserLanguageCode = DefaultValue
+    modErrorHandler.HandleError MODULE_NAME, "GetUserLanguageCode", Err
+    Resume CleanExit
 End Function

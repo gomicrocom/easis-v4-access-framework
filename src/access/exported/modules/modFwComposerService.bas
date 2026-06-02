@@ -117,6 +117,118 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
+Public Function GetFormControlMetadata( _
+    ByVal objectName As String, _
+    Optional ByVal includeHidden As Boolean = False) As Collection
+    On Error GoTo ErrorHandler
+
+    Dim result As Collection
+    Dim ctl As Control
+    Dim metadata As Object
+    Dim openedByService As Boolean
+    Dim isVisible As Boolean
+
+    Set result = New Collection
+
+    If IsComposerInternalObject(objectName) Then
+        Set GetFormControlMetadata = result
+        Exit Function
+    End If
+
+    openedByService = OpenObjectHiddenDesign(OBJECT_TYPE_FORM, objectName)
+
+    For Each ctl In Forms(objectName).Controls
+        isVisible = GetControlVisibleSafely(ctl)
+
+        If includeHidden Or isVisible Then
+            Set metadata = CreateObject("Scripting.Dictionary")
+            metadata.CompareMode = vbTextCompare
+            metadata("control_name") = ctl.Name
+            metadata("control_type_id") = ctl.ControlType
+            metadata("control_type") = ResolveControlTypeName(ctl.ControlType)
+            metadata("caption_value") = GetObjectPropertySafely(ctl, "Caption")
+            metadata("attached_label_caption") = GetAttachedLabelCaptionSafely(ctl)
+            metadata("source_text") = ResolveControlSourceText(ctl)
+            metadata("current_tag") = GetControlTagSafely(ctl)
+            metadata("current_translation_key") = modFwTranslationRuntime.GetTranslationKeyFromTag(CStr(metadata("current_tag")))
+            metadata("has_translation_marker") = (InStr(1, CStr(metadata("current_tag")), "TR:", vbTextCompare) > 0)
+            metadata("is_visible") = isVisible
+            result.Add metadata
+        End If
+    Next ctl
+
+CleanExit:
+    If openedByService Then
+        CloseObjectNoSave OBJECT_TYPE_FORM, objectName
+    End If
+
+    Set GetFormControlMetadata = result
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "GetFormControlMetadata", Err
+    Resume CleanExit
+End Function
+
+Public Function SaveControlTagsToObject( _
+    ByVal objectType As String, _
+    ByVal objectName As String, _
+    ByVal controlTagMap As Object, _
+    Optional ByRef updatedCount As Long = 0) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim normalizedObjectType As String
+    Dim controlName As Variant
+    Dim wasLoaded As Boolean
+    Dim wasVisible As Boolean
+    Dim openedByService As Boolean
+    Dim saveSucceeded As Boolean
+
+    normalizedObjectType = NormalizeObjectType(objectType)
+    objectName = Trim$(objectName)
+
+    If LenB(objectName) = 0 Then
+        Exit Function
+    End If
+
+    If controlTagMap Is Nothing Then
+        SaveControlTagsToObject = True
+        Exit Function
+    End If
+
+    wasLoaded = IsObjectLoaded(normalizedObjectType, objectName)
+    wasVisible = GetObjectVisible(normalizedObjectType, objectName)
+    openedByService = OpenObjectForUpdate(normalizedObjectType, objectName)
+
+    For Each controlName In controlTagMap.Keys
+        If SetControlTagForLoadedObject(normalizedObjectType, objectName, CStr(controlName), modDaoHelper.NzString(controlTagMap(controlName))) Then
+            updatedCount = updatedCount + 1
+        Else
+            modLoggingHandler.LogWarning MODULE_NAME & ".SaveControlTagsToObject", _
+                "Tag write skipped for " & normalizedObjectType & "." & objectName & "." & CStr(controlName) & "."
+        End If
+    Next controlName
+
+    If updatedCount > 0 Then
+        SaveOpenedObject normalizedObjectType, objectName
+    End If
+
+    saveSucceeded = True
+
+CleanExit:
+    On Error Resume Next
+    If openedByService Then
+        CloseObjectNoSave normalizedObjectType, objectName
+    End If
+    RestoreObjectState normalizedObjectType, objectName, wasLoaded, wasVisible
+    SaveControlTagsToObject = saveSucceeded
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "SaveControlTagsToObject", Err
+    Resume CleanExit
+End Function
+
 Public Function SuggestTranslationKey( _
     ByVal objectType As String, _
     ByVal objectName As String, _
@@ -854,6 +966,101 @@ Private Function GetControlCaptionForLoadedObject( _
 
 SafeExit:
     GetControlCaptionForLoadedObject = vbNullString
+End Function
+
+Private Function GetAttachedLabelCaptionSafely(ByVal ctl As Object) As String
+    On Error GoTo SafeExit
+
+    Dim attachedLabel As Object
+
+    If ctl Is Nothing Then
+        Exit Function
+    End If
+
+    Set attachedLabel = CallByName(ctl, "AttachedLabel", VbGet)
+    If attachedLabel Is Nothing Then
+        Exit Function
+    End If
+
+    GetAttachedLabelCaptionSafely = GetObjectPropertySafely(attachedLabel, "Caption")
+    Exit Function
+
+SafeExit:
+    GetAttachedLabelCaptionSafely = vbNullString
+End Function
+
+Private Function GetControlVisibleSafely(ByVal ctl As Control) As Boolean
+    On Error GoTo SafeExit
+
+    If ctl Is Nothing Then
+        Exit Function
+    End If
+
+    GetControlVisibleSafely = CBool(ctl.Properties("Visible").Value)
+    Exit Function
+
+SafeExit:
+    GetControlVisibleSafely = True
+End Function
+
+Private Function GetControlTagSafely(ByVal ctl As Control) As String
+    On Error GoTo SafeExit
+
+    If ctl Is Nothing Then
+        Exit Function
+    End If
+
+    GetControlTagSafely = GetObjectPropertySafely(ctl, "Tag")
+    Exit Function
+
+SafeExit:
+    GetControlTagSafely = vbNullString
+End Function
+
+Private Function ResolveControlSourceText(ByVal ctl As Control) As String
+    Dim captionValue As String
+    Dim attachedLabelCaption As String
+
+    captionValue = GetObjectPropertySafely(ctl, "Caption")
+    If LenB(Trim$(captionValue)) > 0 Then
+        ResolveControlSourceText = captionValue
+        Exit Function
+    End If
+
+    attachedLabelCaption = GetAttachedLabelCaptionSafely(ctl)
+    If LenB(Trim$(attachedLabelCaption)) > 0 Then
+        ResolveControlSourceText = attachedLabelCaption
+        Exit Function
+    End If
+
+    ResolveControlSourceText = ctl.Name
+End Function
+
+Private Function ResolveControlTypeName(ByVal controlTypeId As Long) As String
+    Select Case controlTypeId
+        Case acLabel
+            ResolveControlTypeName = "Label"
+        Case acCommandButton
+            ResolveControlTypeName = "CommandButton"
+        Case acPage
+            ResolveControlTypeName = "TabPage"
+        Case acOptionButton
+            ResolveControlTypeName = "OptionButton"
+        Case acCheckBox
+            ResolveControlTypeName = "CheckBox"
+        Case acToggleButton
+            ResolveControlTypeName = "ToggleButton"
+        Case acComboBox
+            ResolveControlTypeName = "ComboBox"
+        Case acListBox
+            ResolveControlTypeName = "ListBox"
+        Case acTextBox
+            ResolveControlTypeName = "TextBox"
+        Case acSubform
+            ResolveControlTypeName = "Subform"
+        Case Else
+            ResolveControlTypeName = "ControlType" & CStr(controlTypeId)
+    End Select
 End Function
 
 Private Function GetControlTagForLoadedObject( _

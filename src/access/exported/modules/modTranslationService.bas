@@ -208,12 +208,7 @@ Private Function ResolveDefaultLanguage() As String
 
     Dim resolvedLanguage As String
 
-    resolvedLanguage = vbNullString
-
-    If LenB(resolvedLanguage) = 0 Then
-        resolvedLanguage = NormalizeLanguageCode( _
-            modConfigIni.GetConfigValue(CONFIG_SECTION_APP, "Language", vbNullString, ConfigFilePath))
-    End If
+    resolvedLanguage = NormalizeLanguageCode(modFwTranslationRuntime.ResolveCurrentLanguageCode())
 
     If LenB(resolvedLanguage) = 0 Then
         resolvedLanguage = FALLBACK_LANGUAGE

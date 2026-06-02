@@ -27,6 +27,8 @@ Reference tables provide controlled reusable business values for the tenant appl
   - translated VAT code and VAT-rate definitions
 - `ref_unit`
   - translated quantity and unit definitions
+- `ref_article_type_code`
+  - translated article-type behavior codes for extensibility and runtime specialization
 - `fw_list_action`
   - configurable list navigation and action source for business UI flows
 
@@ -34,8 +36,8 @@ Reference tables provide controlled reusable business values for the tenant appl
 
 Master tables hold reusable business entities.
 
-- `tblAddresses`
-  - address and business partner master data
+- `adr_address`
+  - authoritative address and business partner master data
 - `art_product_group`
   - product and service grouping definitions
 - `art_article`
@@ -56,14 +58,15 @@ The exact physical field names may evolve by implementation detail, but the inte
 
 | Table | Primary Key |
 |---|---|
-| `tblAddresses` | `AddressID` |
+| `adr_address` | `address_id` |
 | `art_product_group` | `product_group_id` |
-| `art_article` | `ArticleID` |
-| `ord_order` | `OrderID` |
-| `ord_order_line` | `OrderLineID` |
+| `art_article` | `article_id` |
+| `ord_order` | `order_id` |
+| `ord_order_line` | `order_line_id` |
 | `ten_payment_term` | `payment_term_id` with unique `payment_term_code` + `language_code` |
 | `ref_vat_code` | `vat_code` |
 | `ref_unit` | `unit_code` |
+| `ref_article_type_code` | `article_type_code` |
 | `fw_list_action` | `action_id` |
 
 If a table uses a business code as a technical primary identifier, that code must remain stable and unique within the tenant backend.
@@ -75,11 +78,12 @@ The following business relationships are expected to be central:
 | Parent | Child | Purpose |
 |---|---|---|
 | `art_product_group` | `art_article` | article classification |
-| `tblAddresses` | `ord_order` | customer / invoice / delivery linkage |
+| `ref_article_type_code` | `art_article.article_type_code` | article behavior and future specialization |
+| `adr_address` | `ord_order.address_id` | customer / invoice / delivery linkage |
 | `ord_order` | `ord_order_line` | order header to line items |
 | `art_article` | `ord_order_line` | line-level article reference |
 | `ref_unit` | `art_article.unit_code` / `ord_order_line.unit_code` | unit standardization |
-| `ref_vat_code` | `art_product_group.vat_code` / `art_article.vat_code` / `ord_order_line.vat_code` | VAT assignment |
+| `ref_vat_code` | `art_article.vat_code` / `ord_order_line.vat_code` | VAT assignment |
 | `ten_payment_term` | `ord_order` | commercial payment handling via `payment_term_code` |
 | `fw_list_action` | `frm<Entity>List` | configurable navigation/action menu |
 
@@ -94,11 +98,6 @@ Typical tenant-business relationships include:
 ## Naming Conventions
 
 The repository currently contains two naming histories:
-
-### Historical / Transitional Tables
-
-- `tbl*`
-  - existing business tables in the first business application layer
 
 ### Framework and Backend Naming Direction
 
@@ -117,10 +116,9 @@ The repository currently contains two naming histories:
 
 Current rule:
 
-Business tables already introduced as `tbl*` remain valid as part of BasicModule v1. New design work should be explicit about whether a table is:
-
-- part of the established business module naming
-- or part of the newer framework/backend naming direction
+- `adr_address` is the authoritative address master table
+- `tblAddresses` is deprecated and must not be recreated by current setup paths
+- new design work must use the current physical tables and fields directly
 
 ## Business Module Interaction
 
@@ -141,7 +139,7 @@ The business layer interacts with the framework as follows:
 
 ## BasicModule v1 Table Roles
 
-### `tblAddresses`
+### `adr_address`
 
 Stores customer and address master data used in business documents and order processing.
 
@@ -164,13 +162,101 @@ established Easis business model:
 
 Stores sellable products and services, including business defaults such as unit and VAT context.
 
+Current physical field direction:
+
+- `article_id`
+- `article_no`
+- `article_name`
+- `product_group_id`
+- `article_type_code`
+- `unit_code`
+- `vat_code`
+- `purchase_price`
+- `sales_price`
+- `barcode`
+- `description_text`
+- `is_active`
+- `created_at`
+- `created_by`
+- `updated_at`
+- `updated_by`
+
+`product_group_id` links to `art_product_group.product_group_id`.
+`article_type_code` links to `ref_article_type_code.article_type_code`.
+Business article values remain language-neutral; only UI and output layers are localized.
+
+#### Product Group vs Article Type
+
+These are intentionally different concepts:
+
+- `product_group_id`
+  - business grouping for reporting, organization, and categorization
+- `article_type_code`
+  - behavior and specialization hook for future article extensions
+
+Examples:
+
+- product group
+  - Wine
+  - Furniture
+  - Services
+- article type
+  - `PRODUCT`
+  - `SERVICE`
+  - `SUBSCRIPTION`
+  - `FEE`
+  - `DISCOUNT`
+  - `WINE`
+  - `CUSTOM_SIZE`
+  - `APPAREL_SIZE`
+
+Future extension-table strategy:
+
+- `art_article`
+  - shared base article record
+- future extension tables
+  - `art_article_wine`
+  - `art_article_dimension`
+  - `art_article_apparel`
+  - `art_article_subscription`
+
+These extension tables are architectural targets only and are not implemented yet.
+
 ### `ord_order`
 
 Stores the commercial order header, customer linkage, status, date information, and later document-generation context.
 
+The current physical field set is:
+
+- `order_id`
+- `order_no`
+- `address_id`
+- `order_date`
+- `document_status_code`
+- `created_at`
+- `created_by`
+- `updated_at`
+- `updated_by`
+
 ### `ord_order_line`
 
 Stores quantity, article, pricing, and VAT-relevant transactional detail for each order position.
+
+The current physical field set is:
+
+- `order_line_id`
+- `order_id`
+- `article_id`
+- `line_no`
+- `quantity`
+- `unit_code`
+- `unit_price`
+- `vat_code`
+- `line_total`
+- `created_at`
+- `created_by`
+- `updated_at`
+- `updated_by`
 
 ### `ten_payment_term`
 
@@ -203,6 +289,24 @@ The current intended structure includes:
 
 - `unit_code`
 - `translation_key`
+- `sort_order`
+- `is_active`
+- `created_at`
+- `created_by`
+- `updated_at`
+- `updated_by`
+
+### `ref_article_type_code`
+
+Stores the translated article-type behavior definitions used to classify base
+article behavior independently from business grouping.
+
+Current intended structure includes:
+
+- `article_type_code`
+- `article_type_name`
+- `translation_key`
+- `description_text`
 - `sort_order`
 - `is_active`
 - `created_at`

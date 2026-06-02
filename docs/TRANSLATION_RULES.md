@@ -51,6 +51,91 @@ MsgBox modFwTranslationRuntime.ResolveText( _
 
 The fallback text must remain readable and safe if no translation exists.
 
+### New Translation Structure Standard
+
+All newly introduced translation structures must include at least:
+
+- `DE-CH`
+- `EN-US`
+- `FR-FR`
+
+This is now the framework minimum standard for new reference namespaces,
+framework UI structures, and newly introduced translation-backed concepts.
+
+## Translation Audit Responsibility
+
+Missing translations are primarily an audit problem, not a runtime problem.
+
+Runtime behavior:
+
+- runtime may continue to use fallback captions and fallback text
+- runtime warnings are still acceptable as a secondary safety net
+
+Audit responsibility:
+
+- expected translation keys must be collected deterministically
+- required languages must be checked centrally
+- missing, empty, and orphaned translation rows must be reported through audit data
+
+Required audit statuses:
+
+- `OK`
+- `MISSING_ROW`
+- `EMPTY_VALUE`
+- `ORPHAN`
+- `LEGACY_KEY`
+
+Meaning:
+
+- `OK`
+  - expected translation row exists and contains a value
+- `MISSING_ROW`
+  - expected translation row does not exist
+- `EMPTY_VALUE`
+  - translation row exists but has no text value
+- `ORPHAN`
+  - translation exists but the expected-source model is inconsistent
+- `LEGACY_KEY`
+  - historical translation exists, but no active expected-source reference is currently modeled
+
+Current audit MVP sources:
+
+- `fw_navigation.caption_key`
+- reference tables with `translation_key` fields:
+  - `ref_unit`
+  - `ref_vat_code`
+  - `ref_article_type_code`
+  - `ref_address_type`
+  - `ref_salutation`
+  - `ref_addressing_mode`
+  - `ref_contact_type`
+- form and control `Tag` values containing `TR:FORM.*`
+- `fw_translation_expected`
+  - authoritative registry for:
+    - `MSG.*`
+    - `STATUS.*`
+    - `COMMON.*`
+    - active legacy framework keys such as `MSG_*` and `ERR_*`
+    - future manually registered framework keys
+
+Current audit MVP limitation:
+
+- `REPORT.*` control-tag scanning is not implemented yet
+- VBA source parsing is intentionally not part of the audit design
+
+Why VBA parsing is avoided:
+
+- deterministic registry rows are easier to maintain and review
+- runtime message usage can evolve without making the audit brittle
+- framework keys such as `MSG.*`, `STATUS.*`, and `COMMON.*` remain centrally auditable without a code parser
+
+Legacy-key treatment:
+
+- historical translations are not deleted automatically
+- actively used legacy framework keys should be registered in `fw_translation_expected`
+- inactive historical keys should be classified as `LEGACY_KEY`
+- namespace migration can happen later without changing current runtime behavior
+
 ## Language-Neutral Business Data Policy
 
 Business, master, and reference table content is intentionally language-neutral.
@@ -83,6 +168,7 @@ These use translation namespaces such as:
 - `NAV.*`
 - `MSG.*`
 - `STATUS.*`
+- `COMMON.*`
 - `REPORT.*`
 
 Document output must later render in the correspondence language of the
@@ -246,6 +332,20 @@ Example:
 
 - `STATUS.READY`
 
+### `COMMON.*`
+
+Use for:
+
+- reusable standard UI actions
+- shared button captions
+- common list-form verbs
+
+Examples:
+
+- `COMMON.NEW`
+- `COMMON.EDIT`
+- `COMMON.REFRESH`
+
 ### `REPORT.*`
 
 Use for:
@@ -276,6 +376,7 @@ Use for:
 Reference-specific namespaces are also allowed and preferred where clearer:
 
 - `ADDRESS_TYPE.*`
+- `REF.ARTICLE_TYPE.*`
 - `SALUTATION.*`
 - `CONTACT_TYPE.*`
 - `UNIT.*`
@@ -462,3 +563,62 @@ Purpose:
 - avoids excessive missing-translation warnings for normal fallback usage
 
 Existing form validation and maintenance tools in `frmFwTranslations` can help identify missing translations over time, but this document does not require a full repository scanner in the current phase.
+
+## Translation Administration Workflow
+
+The framework now uses a focused administrator workflow:
+
+- `frmFwTranslationAudit`
+  - translation quality-control workspace
+  - shell-command-bar list form
+  - shell search handles free-text audit filtering
+  - local scope/language/status dropdowns remain audit-specific filters
+  - opens the focused edit workspace for one key
+- `frmFwTranslationEdit`
+  - edits exactly one `translation_key`
+  - shows the required language set together:
+    - `DE-CH`
+    - `EN-US`
+    - `FR-FR`
+  - saves values and returns to the previous workspace
+
+`frmFwTranslations` is deprecated. It may remain temporarily during the
+transition, but it must not be extended further.
+
+The intended workflow is:
+
+- open `frmFwTranslationAudit`
+- select one audit row / `translation_key`
+- open `frmFwTranslationEdit`
+- maintain the three required language values for that key
+
+Audit-list action model:
+
+- shell command bar
+  - `Search`
+  - `Clear Search`
+  - `Edit`
+  - `Refresh`
+- local audit form
+  - keeps domain-specific filters
+  - keeps domain-specific action `Fehlende Eintraege erzeugen`
+
+## DeepL Suggestion Rule
+
+`frmFwTranslationEdit` may request DeepL suggestions for missing language
+values, but this remains a review-first workflow.
+
+Rules:
+
+- DeepL fills suggestions only
+- existing values are not overwritten without confirmation
+- DeepL suggestions are never auto-saved
+- final persistence still happens only through `Speichern`
+
+Configuration:
+
+- `DEEPL_API_KEY`
+  - expected in tenant parameter `ten_parameter.param_key`
+- `DEEPL_API_BASE_URL`
+  - optional override in tenant parameter `ten_parameter.param_key`
+  - default is `https://api-free.deepl.com`

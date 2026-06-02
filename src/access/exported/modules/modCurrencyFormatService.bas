@@ -6,10 +6,17 @@ Option Explicit
 ' Purpose   : Provides centralized currency formatting based on ISO 4217
 '             reference data from sys_be.accdb.
 ' Author    : Codex
-' Version   : 0.1.1
+' Version   : 0.1.2
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modCurrencyFormatService"
+Private Const TABLE_REF_CURRENCY As String = "ref_currency"
+Private Const FIELD_CURRENCY_CODE As String = "currency_code"
+Private Const FIELD_MINOR_UNIT As String = "minor_unit"
+Private Const FIELD_CURRENCY_SYMBOL As String = "currency_symbol"
+Private Const FIELD_SYMBOL_POSITION As String = "symbol_position"
+Private Const FIELD_DECIMAL_SEPARATOR As String = "decimal_separator"
+Private Const FIELD_THOUSAND_SEPARATOR As String = "thousand_separator"
 
 Private Type tCurrencyFormat
     Symbol As String
@@ -71,21 +78,40 @@ Private Function GetCurrencyFormat(ByVal CurrencyCode As String) As tCurrencyFor
 
     Dim rs As DAO.Recordset
     Dim sql As String
+    Dim currentFieldName As String
 
     CurrencyCode = NormalizeCurrencyCode(CurrencyCode)
 
-    sql = "SELECT Symbol, SymbolPosition, DecimalSeparator, ThousandSeparator, MinorUnit " & _
-          "FROM ref_currency " & _
-          "WHERE CurrencyCode = '" & Replace(CurrencyCode, "'", "''") & "'"
+    sql = "SELECT " & _
+          FIELD_CURRENCY_SYMBOL & ", " & _
+          FIELD_SYMBOL_POSITION & ", " & _
+          FIELD_DECIMAL_SEPARATOR & ", " & _
+          FIELD_THOUSAND_SEPARATOR & ", " & _
+          FIELD_MINOR_UNIT & " " & _
+          "FROM " & TABLE_REF_CURRENCY & " " & _
+          "WHERE " & FIELD_CURRENCY_CODE & " = '" & Replace(CurrencyCode, "'", "''") & "'"
 
+    modLoggingHandler.LogInfo MODULE_NAME & ".GetCurrencyFormat", _
+        "Query table=" & TABLE_REF_CURRENCY & "; sql=" & sql
+
+    currentFieldName = "<openrecordset>"
     Set rs = CurrentDb.OpenRecordset(sql, dbOpenSnapshot)
 
     If Not rs.EOF Then
-        GetCurrencyFormat.Symbol = Nz(rs!Symbol, CurrencyCode)
-        GetCurrencyFormat.SymbolPosition = Nz(rs!SymbolPosition, "PREFIX")
-        GetCurrencyFormat.DecimalSeparator = Nz(rs!DecimalSeparator, ".")
-        GetCurrencyFormat.ThousandSeparator = Nz(rs!ThousandSeparator, ",")
-        GetCurrencyFormat.MinorUnit = CInt(Nz(rs!MinorUnit, 2))
+        currentFieldName = FIELD_CURRENCY_SYMBOL
+        GetCurrencyFormat.Symbol = Nz(rs.Fields(FIELD_CURRENCY_SYMBOL).Value, CurrencyCode)
+
+        currentFieldName = FIELD_SYMBOL_POSITION
+        GetCurrencyFormat.SymbolPosition = Nz(rs.Fields(FIELD_SYMBOL_POSITION).Value, "PREFIX")
+
+        currentFieldName = FIELD_DECIMAL_SEPARATOR
+        GetCurrencyFormat.DecimalSeparator = Nz(rs.Fields(FIELD_DECIMAL_SEPARATOR).Value, ".")
+
+        currentFieldName = FIELD_THOUSAND_SEPARATOR
+        GetCurrencyFormat.ThousandSeparator = Nz(rs.Fields(FIELD_THOUSAND_SEPARATOR).Value, ",")
+
+        currentFieldName = FIELD_MINOR_UNIT
+        GetCurrencyFormat.MinorUnit = CInt(Nz(rs.Fields(FIELD_MINOR_UNIT).Value, 2))
     Else
         GetCurrencyFormat = GetCurrencyFormatFallback(CurrencyCode)
     End If
@@ -106,7 +132,10 @@ ErrorHandler:
     GetCurrencyFormat = GetCurrencyFormatFallback(CurrencyCode)
 
     modLoggingHandler.LogError MODULE_NAME & ".GetCurrencyFormat", _
-        "Failed to read currency format. CurrencyCode=" & CurrencyCode, Err.Number
+        "Failed to read currency format. table=" & TABLE_REF_CURRENCY & _
+        "; sql=" & sql & _
+        "; field=" & currentFieldName & _
+        "; currency_code=" & CurrencyCode, Err.Number
     modErrorHandler.HandleError MODULE_NAME, "GetCurrencyFormat", Err
 End Function
 

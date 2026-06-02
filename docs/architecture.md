@@ -105,7 +105,7 @@ BasicModule v1 is the first module that uses these technical foundations to impl
 
 BasicModule v1 currently centers around the following tenant-backend tables:
 
-- `tblAddresses`
+- `adr_address`
   - address master data for customers, contacts, invoice addresses, and delivery addresses
 - `art_product_group`
   - tenant-specific article-group master data used for article classification and future business grouping
@@ -200,6 +200,36 @@ Implementation direction:
 - detail forms should use the shared helper instead of duplicating audit logic
 - forms without audit fields must continue to save safely without runtime errors
 
+### Schema Naming Convention
+
+Physical schema objects must follow the documented SQL naming rules:
+
+- table names use `snake_case`
+- field names use `snake_case`
+- no mixed-case field names
+- no hyphenated field names
+- no space-containing field names
+
+Examples of valid physical field names:
+
+- `order_no`
+- `address_id`
+- `document_status_code`
+- `line_total`
+
+Examples that must fail review if introduced into schema/code generation:
+
+- `OrderNo`
+- `Order-No`
+- `Order No`
+- `CustomerAddressId`
+
+Compatibility note:
+
+- `adr_address` is the authoritative address master table
+- `tblAddresses` is deprecated and must not be recreated by current setup paths
+- new field definitions inside schema creation must still use `snake_case`
+
 ### UI Form Architecture
 
 The business application layer now follows a standardized form naming convention.
@@ -261,6 +291,124 @@ The naming convention is not cosmetic only. It defines expected workflow roles:
 
 The framework is therefore designed around reusable workflow-oriented UI patterns instead of isolated one-off forms.
 
+### Shell-Owned List Command Bar
+
+The framework now standardizes list actions through the shell itself.
+
+Owner:
+
+- `frmAppShell`
+
+Shell command bar purpose:
+
+- standardize common list actions
+- reduce duplicated search and button wiring across list forms
+- keep list-specific business navigation in the active workspace form
+
+Standard layout:
+
+- `Home`
+- `Zurueck`
+- `Suchen`
+- `Leeren`
+- `Neu`
+- `Bearbeiten`
+- `Aktualisieren`
+
+List-form contract:
+
+- `Public Function SupportsListCommandBar() As Boolean`
+- `Public Sub ListSearch(ByVal searchText As String)`
+- `Public Sub ListClearSearch()`
+- `Public Sub ListNew()`
+- `Public Sub ListEdit()`
+- `Public Sub ListRefresh()`
+
+Optional per-action capability flags:
+
+- `Public Function SupportsListNew() As Boolean`
+- `Public Function SupportsListEdit() As Boolean`
+
+The shell command bar dispatches to the active workspace form through
+`subWorkspaceHost.Form` and should not know:
+
+- which detail form opens
+- which primary key is selected
+- which filters are applied
+- which workspace target should be loaded
+
+### List Form Architecture
+
+List forms now follow one shared shell-driven pattern.
+
+Ownership:
+
+- `frmAppShell`
+  - owns `Home`, `Zurueck`, `Suche`, `Leeren`, `Neu`, `Bearbeiten`, and `Aktualisieren`
+- workspace list forms
+  - own list-specific row sources, selected-record logic, workspace state, and detail-form targets
+
+Required contract:
+
+- `Public Function SupportsListCommandBar() As Boolean`
+- `Public Sub ListSearch(ByVal searchText As String)`
+- `Public Sub ListClearSearch()`
+- `Public Sub ListNew()`
+- `Public Sub ListEdit()`
+- `Public Sub ListRefresh()`
+
+Optional capability flags:
+
+- `Public Function SupportsListNew() As Boolean`
+- `Public Function SupportsListEdit() As Boolean`
+
+Search-state pattern:
+
+- `Private m_currentSearchText As String`
+- `ListSearch(...)`
+  - updates the current search text
+- `ListClearSearch()`
+  - clears the current search text
+- filter application
+  - is based on the list form's current search state
+  - is no longer driven by a local search textbox
+
+Search-index standard:
+
+- `address_search_text`
+- `article_group_search_text`
+- `article_search_text`
+
+Purpose:
+
+- provide one centralized searchable text field per list row source
+- keep filter expressions simple and Access-safe
+- avoid duplicating multi-column search logic inside forms
+
+Current note:
+
+- `frmAddressList` still filters on legacy `AddressSearchText`
+- this should be aligned to `address_search_text` in a future low-risk cleanup pass
+
+Workspace interaction:
+
+- list forms capture search and current-row context in `GetWorkspaceState()`
+- detail forms are opened through `modAppWorkspaceService.OpenWorkspaceForm(...)`
+- returning from detail uses workspace history and `RestoreWorkspaceState(...)`
+
+Navigation philosophy:
+
+- navigation contains areas and worklists only
+- creation actions belong to `frmAppShell -> Neu`
+- standard master-data objects should not add separate `Neue ...` navigation entries
+
+Examples:
+
+- `frmAddressList`
+- `frmArticleGroupList`
+- `frmArticleList`
+- `frmFwTranslationAudit`
+
 ### Application Shell
 
 The frontend now also includes a first application-shell pattern:
@@ -301,6 +449,12 @@ The preferred pattern is:
 
 This keeps business navigation extensible without adding many hard-coded per-row UI actions.
 
+Current direction:
+
+- the shell command bar is the default entry point for standard list actions
+- `fw_list_action` remains available for richer object-specific workflows such as Address follow-up actions
+- standard `New`, `Edit`, and `Refresh` behavior should not depend on `fw_list_action`
+
 ### Article Groups
 
 The first additional tenant master-data object after the initial shell and framework rollout is:
@@ -333,14 +487,101 @@ Navigation placement:
 
 - `Mandant`
   - `Artikelgruppen`
-  - `Neue Artikelgruppe`
 
 The implementation follows the established shell-aware list/detail workflow:
 
 - list form opens in the workspace
 - detail form opens in the workspace
-- add mode is driven by navigation `open_mode=ADD`
+- add mode is driven by the shell command bar `Neu`
 - back navigation restores the list state where possible
+
+### Articles
+
+The first article UI step is intentionally lightweight:
+
+- physical table
+  - `art_article`
+- UI form
+  - `frmArticleList`
+- service module
+  - `modArticleService`
+
+Physical linkage:
+
+- `art_article.product_group_id`
+  - links to `art_product_group.product_group_id`
+- `art_article.article_type_code`
+  - links to `ref_article_type_code.article_type_code`
+
+Current scope:
+
+- article master data is listed in the workspace shell
+- article detail maintenance is available through `frmArticleDetail`
+- product-group names are resolved through a simple join for display
+- shell command bar `Neu` and `Bearbeiten` are active for the article workflow
+- `article_no` is auto-generated for new records when empty, using the first simple pattern `ART-000001`
+- `article_type_code` remains a technical future-classification field and currently defaults to `ITEM`
+- article business values remain language-neutral
+- no inventory, stock tracking, variants, supplier logic, or complex pricing workflow is introduced yet
+
+### Article Type Concept
+
+Articles now distinguish between two independent concepts:
+
+- business grouping
+  - `product_group_id`
+- behavior and future specialization
+  - `article_type_code`
+
+Examples of business grouping:
+
+- Wine
+- Furniture
+- Services
+
+Examples of article type behavior:
+
+- `PRODUCT`
+- `SERVICE`
+- `SUBSCRIPTION`
+- `FEE`
+- `DISCOUNT`
+- `WINE`
+- `CUSTOM_SIZE`
+- `APPAREL_SIZE`
+
+This distinction is intentional:
+
+- `product_group_id`
+  - is used for business organization and reporting groups
+- `article_type_code`
+  - is reserved for runtime behavior, specialization, and future extensibility
+
+### Future Article Extension Strategy
+
+Future specialized article structures should extend `art_article` by article type, not by product group.
+
+Planned extension directions include:
+
+- `art_article_wine`
+- `art_article_dimension`
+- `art_article_apparel`
+- `art_article_subscription`
+
+These tables are not implemented yet.
+
+The architectural rule is:
+
+- `art_article`
+  - remains the shared base article record
+- future extension tables
+  - attach to the base article by `article_id`
+  - are activated or interpreted through `article_type_code`
+
+Navigation placement:
+
+- `Mandant`
+  - `Artikel`
 
 ---
 
@@ -348,7 +589,7 @@ The implementation follows the established shell-aware list/detail workflow:
 
 ### Master and Reference Scope
 
-- `tblAddresses`
+- `adr_address`
   - stores business partner and address master records
 - `art_product_group`
   - stores product or service grouping definitions
@@ -376,6 +617,17 @@ Orders are expected to become the operational basis for:
 - PDF output
 - email delivery
 - later business document lifecycles such as invoice, delivery note, and follow-up handling
+
+### Address Table Authority
+
+The address module now treats `adr_address` as the only authoritative address table.
+
+Rules:
+
+- current setup paths must not create `tblAddresses`
+- new code must not query `tblAddresses`
+- document and report joins must use `adr_address`
+- any remaining `tblAddresses` mention is deprecated historical context only
 
 ---
 
@@ -559,6 +811,123 @@ This is intentionally separate from `frmTagComposer`:
   - manages `FORM.*`, `NAV.*`, `MSG.*`, `STATUS.*`, and `REF.*`
 - `frmTagComposer`
   - manages validation, behavior, access, and other Tag metadata
+
+### Translation Audit
+
+Module:
+- `modFwTranslationAuditService`
+
+Purpose:
+- build deterministic translation audit work data
+- treat missing translations as an audit concern before they become a UI problem
+- compare expected translation keys against `fw_translation`
+
+Required languages:
+
+- `DE-CH`
+- `EN-US`
+- `FR-FR`
+
+Audit statuses:
+
+- `OK`
+- `MISSING_ROW`
+- `EMPTY_VALUE`
+- `ORPHAN`
+- `LEGACY_KEY`
+
+Current MVP expected-key sources:
+
+- `fw_navigation.caption_key`
+- reference tables with `translation_key` fields:
+  - `ref_unit`
+  - `ref_vat_code`
+  - `ref_article_type_code`
+  - `ref_address_type`
+  - `ref_salutation`
+  - `ref_addressing_mode`
+  - `ref_contact_type`
+- `FORM.*`
+  - discovered from form and control `Tag` values containing `TR:...`
+- registry-backed keys from `fw_translation_expected`
+  - authoritative source for:
+    - `MSG.*`
+    - `STATUS.*`
+    - `COMMON.*`
+    - active legacy framework keys such as `MSG_*` and `ERR_*`
+    - future manually registered framework keys
+
+Current MVP limitation:
+
+- report control scanning is not implemented yet
+- VBA source parsing is intentionally avoided
+
+Registry rationale:
+
+- runtime fallback and runtime logging are not enough to manage translation completeness
+- parsing VBA for `MSG.*` or `STATUS.*` usage would be fragile and expensive
+- `fw_translation_expected` provides one deterministic audit source for framework message and status namespaces
+
+Legacy translation treatment:
+
+- historical translation rows are not deleted automatically
+- actively referenced legacy framework keys should be registered in `fw_translation_expected`
+- inactive historical keys should be classified as `LEGACY_KEY`
+- true `ORPHAN` rows should represent audit-model inconsistency, not harmless historical leftovers
+
+Runtime vs audit rule:
+
+- runtime may keep using readable fallback text
+- translation completeness must be measured through audit data, not only through runtime warnings
+
+### Translation Workflow Split
+
+Translation administration is intentionally split into two focused workspaces:
+
+- `frmFwTranslationAudit`
+  - translation control center
+  - shell-command-bar list form
+  - shell search handles free-text audit filtering
+  - local dropdowns remain responsible for:
+    - `scope_code`
+    - `language_code`
+    - `audit_status`
+  - identifies completeness problems
+  - opens the focused edit workspace for one key
+  - keeps audit-specific action `Fehlende Eintraege erzeugen` local
+- `frmFwTranslationEdit`
+  - edits exactly one `translation_key`
+  - shows the required language set together:
+    - `DE-CH`
+    - `EN-US`
+    - `FR-FR`
+  - saves values and returns to the previous workspace
+
+`frmFwTranslations` is deprecated and should not be extended further. It may
+remain temporarily during the transition, but the primary workflow is now:
+
+`frmFwTranslationAudit` -> `frmFwTranslationEdit`
+
+### DeepL Suggestion Workflow
+
+`frmFwTranslationEdit` now supports a guided `DeepL Vorschlag` action.
+
+Rules:
+
+- DeepL provides suggestions only
+- suggested values are filled into empty language fields
+- existing non-empty target values are not overwritten without confirmation
+- DeepL suggestions are not saved automatically
+- the user must still review and click `Speichern`
+
+Configuration:
+
+- `DEEPL_API_KEY`
+  - tenant parameter in `ten_parameter`
+- `DEEPL_API_BASE_URL`
+  - optional tenant parameter in `ten_parameter`
+  - defaults to `https://api-free.deepl.com`
+  - may be overridden with `https://api.deepl.com`
 
 ---
 

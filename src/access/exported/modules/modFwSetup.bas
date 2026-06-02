@@ -6,8 +6,8 @@ Option Explicit
 ' Purpose   : Provides initialization and seeding routines for framework data
 '             such as translations, tag help definitions, and demo content.
 ' Author    : Codex
-' Version   : 1.6.0
-' Notes     : Safe to re-run. Existing data will be replaced.
+' Version   : 1.7.0
+' Notes     : Safe to re-run. Existing data is preserved by default.
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFwSetup"
@@ -17,8 +17,6 @@ Public Sub SeedTranslations()
 
     Dim db As DAO.Database
     Set db = CurrentDb
-
-    db.Execute "DELETE FROM fw_translation", dbFailOnError
 
     ' ===== EN =====
     InsertTranslation db, "EN", "MSG_REQUIRED_FIELDS_MISSING", "Please fill in all required fields.", True
@@ -70,7 +68,7 @@ Public Sub SeedTranslations()
     InsertVatCodeTranslations db
     InsertShellTranslations db
 
-    MsgBox "fw_translation wurde erfolgreich initialisiert.", vbInformation
+    MsgBox "fw_translation wurde erfolgreich ergaenzt.", vbInformation
     Exit Sub
 
 ErrorHandler:
@@ -99,8 +97,6 @@ Public Sub SeedVatCodeReference()
     Set db = CurrentDb
 
     db.Execute "DELETE FROM ref_vat_code", dbFailOnError
-    db.Execute "DELETE FROM fw_translation WHERE translation_key Like 'VAT.CH.*'", dbFailOnError
-
     InsertVatCode db, "CH_STANDARD", "VAT.CH.STANDARD", 7.7, "CH", #1/1/2018#, Null, 10, True
     InsertVatCode db, "CH_REDUCED", "VAT.CH.REDUCED", 2.5, "CH", #1/1/2018#, Null, 20, True
     InsertVatCode db, "CH_SPECIAL", "VAT.CH.SPECIAL", 3.7, "CH", #1/1/2018#, Null, 30, True
@@ -122,8 +118,6 @@ Public Sub SeedUnitReference()
     Set db = CurrentDb
 
     db.Execute "DELETE FROM ref_unit", dbFailOnError
-    db.Execute "DELETE FROM fw_translation WHERE translation_key Like 'UNIT.*'", dbFailOnError
-
     InsertUnit db, "PCS", "UNIT.PCS", 10, True
     InsertUnit db, "H", "UNIT.HOUR", 20, True
     InsertUnit db, "KG", "UNIT.KG", 30, True
@@ -147,8 +141,6 @@ Public Sub SeedAddressTypeReference()
     Set db = CurrentDb
 
     db.Execute "DELETE FROM ref_address_type", dbFailOnError
-    db.Execute "DELETE FROM fw_translation WHERE translation_key Like 'ADDRESS_TYPE.*'", dbFailOnError
-
     InsertAddressType db, "PRIVATE", "ADDRESS_TYPE.PRIVATE", 10, True
     InsertAddressType db, "COMPANY", "ADDRESS_TYPE.COMPANY", 20, True
     InsertAddressType db, "CUSTOMER", "ADDRESS_TYPE.CUSTOMER", 30, True
@@ -174,9 +166,6 @@ Public Sub SeedAddressPersonalizationReference()
 
     db.Execute "DELETE FROM ref_salutation", dbFailOnError
     db.Execute "DELETE FROM ref_addressing_mode", dbFailOnError
-    db.Execute "DELETE FROM fw_translation WHERE translation_key Like 'SALUTATION.*'", dbFailOnError
-    db.Execute "DELETE FROM fw_translation WHERE translation_key Like 'ADDRESSING_MODE.*'", dbFailOnError
-
     InsertSalutation db, "MR", "SALUTATION.MR", 10, True
     InsertSalutation db, "MS", "SALUTATION.MS", 20, True
     InsertSalutation db, "COMPANY", "SALUTATION.COMPANY", 30, True
@@ -202,8 +191,6 @@ Public Sub SeedContactTypeReference()
     Set db = CurrentDb
 
     db.Execute "DELETE FROM ref_contact_type", dbFailOnError
-    db.Execute "DELETE FROM fw_translation WHERE translation_key Like 'CONTACT_TYPE.*'", dbFailOnError
-
     InsertContactType db, "EMAIL", "CONTACT_TYPE.EMAIL", 10, True
     InsertContactType db, "PHONE", "CONTACT_TYPE.PHONE", 20, True
     InsertContactType db, "MOBILE", "CONTACT_TYPE.MOBILE", 30, True
@@ -231,6 +218,10 @@ Private Sub InsertTranslation( _
 
     Dim sqlStatement As String
 
+    If TranslationSeedExists(db, LanguageCode, translationKey) Then
+        Exit Sub
+    End If
+
     sqlStatement = "INSERT INTO fw_translation " & _
                    "(language_code, translation_key, translation_value, is_active, module_code, sort_order, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
@@ -243,6 +234,60 @@ Private Sub InsertTranslation( _
                    "Now(), 'SYSTEM', Now(), 'SYSTEM')"
 
     db.Execute sqlStatement, dbFailOnError
+End Sub
+
+Public Sub SeedArticleTypeReference()
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Set db = CurrentDb
+
+    EnsureArticleTypeSeed db, "PRODUCT", "Product", "REF.ARTICLE_TYPE.PRODUCT", "Standard article or physical product.", 10, True
+    EnsureArticleTypeSeed db, "SERVICE", "Service", "REF.ARTICLE_TYPE.SERVICE", "Service article without stock behavior.", 20, True
+    EnsureArticleTypeSeed db, "SUBSCRIPTION", "Subscription", "REF.ARTICLE_TYPE.SUBSCRIPTION", "Recurring service or subscription article.", 30, True
+    EnsureArticleTypeSeed db, "FEE", "Fee", "REF.ARTICLE_TYPE.FEE", "Fee article for fixed charges.", 40, True
+    EnsureArticleTypeSeed db, "DISCOUNT", "Discount", "REF.ARTICLE_TYPE.DISCOUNT", "Discount article for explicit reductions.", 50, True
+    EnsureArticleTypeSeed db, "WINE", "Wine", "REF.ARTICLE_TYPE.WINE", "Wine article prepared for future wine-specific extensions.", 60, True
+    EnsureArticleTypeSeed db, "CUSTOM_SIZE", "Custom Size", "REF.ARTICLE_TYPE.CUSTOM_SIZE", "Article with future dimensional specialization.", 70, True
+    EnsureArticleTypeSeed db, "APPAREL_SIZE", "Apparel Size", "REF.ARTICLE_TYPE.APPAREL_SIZE", "Article with future apparel size specialization.", 80, True
+
+    EnsureTranslationSeed db, "DE-CH", "REF.ARTICLE_TYPE.PRODUCT", "Produkt", "REF", 400
+    EnsureTranslationSeed db, "EN-US", "REF.ARTICLE_TYPE.PRODUCT", "Product", "REF", 400
+    EnsureTranslationSeed db, "FR-FR", "REF.ARTICLE_TYPE.PRODUCT", "Produit", "REF", 400
+
+    EnsureTranslationSeed db, "DE-CH", "REF.ARTICLE_TYPE.SERVICE", "Dienstleistung", "REF", 401
+    EnsureTranslationSeed db, "EN-US", "REF.ARTICLE_TYPE.SERVICE", "Service", "REF", 401
+    EnsureTranslationSeed db, "FR-FR", "REF.ARTICLE_TYPE.SERVICE", "Service", "REF", 401
+
+    EnsureTranslationSeed db, "DE-CH", "REF.ARTICLE_TYPE.SUBSCRIPTION", "Abonnement", "REF", 402
+    EnsureTranslationSeed db, "EN-US", "REF.ARTICLE_TYPE.SUBSCRIPTION", "Subscription", "REF", 402
+    EnsureTranslationSeed db, "FR-FR", "REF.ARTICLE_TYPE.SUBSCRIPTION", "Abonnement", "REF", 402
+
+    EnsureTranslationSeed db, "DE-CH", "REF.ARTICLE_TYPE.FEE", "Gebuehr", "REF", 403
+    EnsureTranslationSeed db, "EN-US", "REF.ARTICLE_TYPE.FEE", "Fee", "REF", 403
+    EnsureTranslationSeed db, "FR-FR", "REF.ARTICLE_TYPE.FEE", "Frais", "REF", 403
+
+    EnsureTranslationSeed db, "DE-CH", "REF.ARTICLE_TYPE.DISCOUNT", "Rabatt", "REF", 404
+    EnsureTranslationSeed db, "EN-US", "REF.ARTICLE_TYPE.DISCOUNT", "Discount", "REF", 404
+    EnsureTranslationSeed db, "FR-FR", "REF.ARTICLE_TYPE.DISCOUNT", "Remise", "REF", 404
+
+    EnsureTranslationSeed db, "DE-CH", "REF.ARTICLE_TYPE.WINE", "Wein", "REF", 405
+    EnsureTranslationSeed db, "EN-US", "REF.ARTICLE_TYPE.WINE", "Wine", "REF", 405
+    EnsureTranslationSeed db, "FR-FR", "REF.ARTICLE_TYPE.WINE", "Vin", "REF", 405
+
+    EnsureTranslationSeed db, "DE-CH", "REF.ARTICLE_TYPE.CUSTOM_SIZE", "Massanfertigung", "REF", 406
+    EnsureTranslationSeed db, "EN-US", "REF.ARTICLE_TYPE.CUSTOM_SIZE", "Custom Size", "REF", 406
+    EnsureTranslationSeed db, "FR-FR", "REF.ARTICLE_TYPE.CUSTOM_SIZE", "Sur mesure", "REF", 406
+
+    EnsureTranslationSeed db, "DE-CH", "REF.ARTICLE_TYPE.APPAREL_SIZE", "Kleidergroesse", "REF", 407
+    EnsureTranslationSeed db, "EN-US", "REF.ARTICLE_TYPE.APPAREL_SIZE", "Apparel Size", "REF", 407
+    EnsureTranslationSeed db, "FR-FR", "REF.ARTICLE_TYPE.APPAREL_SIZE", "Taille de vetement", "REF", 407
+
+    MsgBox "ref_article_type_code und ARTICLE_TYPE-Uebersetzungen wurden erfolgreich initialisiert.", vbInformation, MODULE_NAME
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Fehler beim Initialisieren von ref_article_type_code: " & Err.description, vbExclamation, MODULE_NAME
 End Sub
 
 Private Sub InsertAddressType( _
@@ -348,6 +393,66 @@ Private Sub InsertUnit( _
                    "Now(), 'SYSTEM', Now(), 'SYSTEM')"
 
     db.Execute sqlStatement, dbFailOnError
+End Sub
+
+Private Sub InsertArticleType( _
+    ByVal db As DAO.Database, _
+    ByVal articleTypeCode As String, _
+    ByVal articleTypeName As String, _
+    ByVal translationKey As String, _
+    ByVal descriptionText As String, _
+    ByVal sortOrder As Long, _
+    ByVal isActive As Boolean)
+
+    Dim sqlStatement As String
+
+    sqlStatement = "INSERT INTO ref_article_type_code " & _
+                   "(article_type_code, article_type_name, translation_key, description_text, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
+                   "VALUES (" & _
+                   SqlText(articleTypeCode) & ", " & _
+                   SqlText(articleTypeName) & ", " & _
+                   SqlText(translationKey) & ", " & _
+                   SqlNullableText(descriptionText) & ", " & _
+                   CStr(sortOrder) & ", " & _
+                   IIf(isActive, "True", "False") & ", " & _
+                   "Now(), 'SYSTEM', Now(), 'SYSTEM')"
+
+    db.Execute sqlStatement, dbFailOnError
+End Sub
+
+Private Sub EnsureArticleTypeSeed( _
+    ByVal db As DAO.Database, _
+    ByVal articleTypeCode As String, _
+    ByVal articleTypeName As String, _
+    ByVal translationKey As String, _
+    ByVal descriptionText As String, _
+    ByVal sortOrder As Long, _
+    ByVal isActive As Boolean)
+    On Error GoTo ErrorHandler
+
+    Dim criteria As String
+    Dim updateSql As String
+
+    criteria = "article_type_code = " & SqlText(articleTypeCode)
+
+    If DCount("*", "ref_article_type_code", criteria) > 0 Then
+        updateSql = "UPDATE ref_article_type_code SET " & _
+                    "article_type_name = " & SqlText(articleTypeName) & ", " & _
+                    "translation_key = " & SqlText(translationKey) & ", " & _
+                    "description_text = " & SqlNullableText(descriptionText) & ", " & _
+                    "sort_order = " & CStr(sortOrder) & ", " & _
+                    "is_active = " & IIf(isActive, "True", "False") & ", " & _
+                    "updated_at = Now(), " & _
+                    "updated_by = 'SYSTEM' " & _
+                    "WHERE " & criteria & ";"
+        db.Execute updateSql, dbFailOnError
+    Else
+        InsertArticleType db, articleTypeCode, articleTypeName, translationKey, descriptionText, sortOrder, isActive
+    End If
+    Exit Sub
+
+ErrorHandler:
+    Err.Raise Err.Number, MODULE_NAME & ".EnsureArticleTypeSeed", Err.description
 End Sub
 
 Private Sub InsertVatCode( _
@@ -600,10 +705,27 @@ Private Sub InsertShellTranslations(ByVal db As DAO.Database)
     EnsureTranslationSeed db, "EN-US", "NAV.ARTICLE_GROUPS", "Article groups", "NAVIGATION", 155
     EnsureTranslationSeed db, "DE-CH", "NAV.NEW_ARTICLE_GROUP", "Neue Artikelgruppe", "NAVIGATION", 156
     EnsureTranslationSeed db, "EN-US", "NAV.NEW_ARTICLE_GROUP", "New article group", "NAVIGATION", 156
+    EnsureTranslationSeed db, "DE-CH", "NAV.ARTICLES", "Artikel", "NAVIGATION", 157
+    EnsureTranslationSeed db, "EN-US", "NAV.ARTICLES", "Articles", "NAVIGATION", 157
     EnsureTranslationSeed db, "DE-CH", "NAV.GROUP.SYSTEM", "System", "NAVIGATION", 160
     EnsureTranslationSeed db, "EN-US", "NAV.GROUP.SYSTEM", "System", "NAVIGATION", 160
     EnsureTranslationSeed db, "DE-CH", "NAV.FW_NAVIGATION_ADMIN", "Navigation verwalten", "NAVIGATION", 170
     EnsureTranslationSeed db, "EN-US", "NAV.FW_NAVIGATION_ADMIN", "Manage navigation", "NAVIGATION", 170
+
+    EnsureTranslationSeed db, "DE-CH", "COMMON.NEW", "Neu", "COMMON", 171
+    EnsureTranslationSeed db, "EN-US", "COMMON.NEW", "New", "COMMON", 171
+    EnsureTranslationSeed db, "DE-CH", "COMMON.EDIT", "Bearbeiten", "COMMON", 172
+    EnsureTranslationSeed db, "EN-US", "COMMON.EDIT", "Edit", "COMMON", 172
+    EnsureTranslationSeed db, "DE-CH", "COMMON.REFRESH", "Aktualisieren", "COMMON", 173
+    EnsureTranslationSeed db, "EN-US", "COMMON.REFRESH", "Refresh", "COMMON", 173
+    EnsureTranslationSeed db, "DE-CH", "COMMON.SEARCH", "Suche", "COMMON", 174
+    EnsureTranslationSeed db, "EN-US", "COMMON.SEARCH", "Search", "COMMON", 174
+    EnsureTranslationSeed db, "DE-CH", "COMMON.CLEAR_SEARCH", "Leeren", "COMMON", 175
+    EnsureTranslationSeed db, "EN-US", "COMMON.CLEAR_SEARCH", "Clear", "COMMON", 175
+    EnsureTranslationSeed db, "DE-CH", "COMMON.HOME", "Home", "COMMON", 176
+    EnsureTranslationSeed db, "EN-US", "COMMON.HOME", "Home", "COMMON", 176
+    EnsureTranslationSeed db, "DE-CH", "COMMON.BACK", "Zurueck", "COMMON", 177
+    EnsureTranslationSeed db, "EN-US", "COMMON.BACK", "Back", "COMMON", 177
 
     EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPSHELL.APP_TITLE", "EASIS v4", "FORM", 10
     EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPSHELL.APP_TITLE", "EASIS v4", "FORM", 10
@@ -657,6 +779,56 @@ Private Sub InsertShellTranslations(ByVal db As DAO.Database)
     EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPLIST.REFRESH", "Aktualisieren", "FORM", 208
     EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPLIST.REFRESH", "Refresh", "FORM", 208
 
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLELIST.FORM_TITLE", "Artikel", "FORM", 2081
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLELIST.FORM_TITLE", "Articles", "FORM", 2081
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLELIST.SEARCH", "Suche", "FORM", 2082
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLELIST.SEARCH", "Search", "FORM", 2082
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLELIST.REFRESH", "Aktualisieren", "FORM", 2083
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLELIST.REFRESH", "Refresh", "FORM", 2083
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLELIST.ARTICLE_NO", "Artikel-Nr.", "FORM", 2084
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLELIST.ARTICLE_NO", "Article no.", "FORM", 2084
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLELIST.ARTICLE_NAME", "Artikelname", "FORM", 2085
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLELIST.ARTICLE_NAME", "Article name", "FORM", 2085
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLELIST.PRODUCT_GROUP", "Artikelgruppe", "FORM", 2086
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLELIST.PRODUCT_GROUP", "Product group", "FORM", 2086
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLELIST.UNIT_CODE", "Einheit", "FORM", 2087
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLELIST.UNIT_CODE", "Unit", "FORM", 2087
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLELIST.VAT_CODE", "MWST-Code", "FORM", 2088
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLELIST.VAT_CODE", "VAT code", "FORM", 2088
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLELIST.SALES_PRICE", "Verkaufspreis", "FORM", 2089
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLELIST.SALES_PRICE", "Sales price", "FORM", 2089
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLELIST.IS_ACTIVE", "Aktiv", "FORM", 2090
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLELIST.IS_ACTIVE", "Active", "FORM", 2090
+
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.FORM_TITLE", "Artikel", "FORM", 2091
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.FORM_TITLE", "Article", "FORM", 2091
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.ARTICLE_NO", "Artikel-Nr.", "FORM", 2092
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.ARTICLE_NO", "Article no.", "FORM", 2092
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.ARTICLE_NAME", "Artikelname", "FORM", 2093
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.ARTICLE_NAME", "Article name", "FORM", 2093
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.PRODUCT_GROUP", "Artikelgruppe", "FORM", 2094
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.PRODUCT_GROUP", "Product group", "FORM", 2094
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.ARTICLE_TYPE_CODE", "Artikeltyp", "FORM", 2095
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.ARTICLE_TYPE_CODE", "Article type", "FORM", 2095
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.UNIT_CODE", "Einheit", "FORM", 2096
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.UNIT_CODE", "Unit", "FORM", 2096
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.VAT_CODE", "MWST-Code", "FORM", 2097
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.VAT_CODE", "VAT code", "FORM", 2097
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.PURCHASE_PRICE", "Einkaufspreis", "FORM", 2098
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.PURCHASE_PRICE", "Purchase price", "FORM", 2098
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.SALES_PRICE", "Verkaufspreis", "FORM", 2099
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.SALES_PRICE", "Sales price", "FORM", 2099
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.BARCODE", "Barcode", "FORM", 2100
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.BARCODE", "Barcode", "FORM", 2100
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.DESCRIPTION_TEXT", "Beschreibung", "FORM", 2101
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.DESCRIPTION_TEXT", "Description", "FORM", 2101
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.IS_ACTIVE", "Aktiv", "FORM", 2102
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.IS_ACTIVE", "Active", "FORM", 2102
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.SAVE", "Speichern", "FORM", 2103
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.SAVE", "Save", "FORM", 2103
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEDETAIL.CANCEL", "Abbrechen", "FORM", 2104
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEDETAIL.CANCEL", "Cancel", "FORM", 2104
+
     EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPDETAIL.FORM_TITLE", "Artikelgruppe", "FORM", 209
     EnsureTranslationSeed db, "EN-US", "FORM.FRMARTICLEGROUPDETAIL.FORM_TITLE", "Article group", "FORM", 209
     EnsureTranslationSeed db, "DE-CH", "FORM.FRMARTICLEGROUPDETAIL.PRODUCT_GROUP_CODE", "Artikelgruppen-Code", "FORM", 210
@@ -700,9 +872,239 @@ Private Sub InsertShellTranslations(ByVal db As DAO.Database)
     EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_GROUP_DETAIL_LOAD_ERROR", "Error loading the article group details.", "MSG", 226
     EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_GROUP_SAVE_ERROR", "Fehler beim Speichern der Artikelgruppe.", "MSG", 227
     EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_GROUP_SAVE_ERROR", "Error saving the article group.", "MSG", 227
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_LIST_LOAD_ERROR", "Fehler beim Laden der Artikelliste.", "MSG", 228
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_LIST_LOAD_ERROR", "Error loading the article list.", "MSG", 228
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_NO_REQUIRED", "Artikel-Nr. ist erforderlich.", "MSG", 229
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_NO_REQUIRED", "Article no. is required.", "MSG", 229
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_NAME_REQUIRED", "Artikelname ist erforderlich.", "MSG", 230
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_NAME_REQUIRED", "Article name is required.", "MSG", 230
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_GROUP_REQUIRED", "Artikelgruppe ist erforderlich.", "MSG", 231
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_GROUP_REQUIRED", "Product group is required.", "MSG", 231
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_UNIT_REQUIRED", "Einheit ist erforderlich.", "MSG", 232
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_UNIT_REQUIRED", "Unit is required.", "MSG", 232
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_VAT_REQUIRED", "MWST-Code ist erforderlich.", "MSG", 233
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_VAT_REQUIRED", "VAT code is required.", "MSG", 233
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_SALES_PRICE_REQUIRED", "Verkaufspreis ist erforderlich.", "MSG", 234
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_SALES_PRICE_REQUIRED", "Sales price is required.", "MSG", 234
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_DUPLICATE_NO", "Artikel-Nr. existiert bereits.", "MSG", 235
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_DUPLICATE_NO", "Article no. already exists.", "MSG", 235
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_SAVE_ERROR", "Fehler beim Speichern des Artikels.", "MSG", 236
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_SAVE_ERROR", "Error saving the article.", "MSG", 236
+    EnsureTranslationSeed db, "DE-CH", "MSG.ARTICLE_CANCEL_CONFIRM", "Aenderungen verwerfen?", "MSG", 237
+    EnsureTranslationSeed db, "EN-US", "MSG.ARTICLE_CANCEL_CONFIRM", "Discard changes?", "MSG", 237
 
-    EnsureTranslationSeed db, "DE-CH", "STATUS.READY", "Bereit", "STATUS", 230
-    EnsureTranslationSeed db, "EN-US", "STATUS.READY", "Ready", "STATUS", 230
+    EnsureTranslationSeed db, "DE-CH", "STATUS.READY", "Bereit", "STATUS", 238
+    EnsureTranslationSeed db, "EN-US", "STATUS.READY", "Ready", "STATUS", 238
+    EnsureTranslationSeed db, "FR-FR", "STATUS.READY", "Pret", "STATUS", 238
+
+    EnsureTranslationSeed db, "DE-CH", "COMMON.ALL", "Alle", "COMMON", 239
+    EnsureTranslationSeed db, "EN-US", "COMMON.ALL", "All", "COMMON", 239
+    EnsureTranslationSeed db, "FR-FR", "COMMON.ALL", "Tous", "COMMON", 239
+
+    EnsureTranslationSeed db, "DE-CH", "NAV.FW_TRANSLATION_AUDIT", "Uebersetzungs-Audit", "NAVIGATION", 240
+    EnsureTranslationSeed db, "EN-US", "NAV.FW_TRANSLATION_AUDIT", "Translation audit", "NAVIGATION", 240
+    EnsureTranslationSeed db, "FR-FR", "NAV.FW_TRANSLATION_AUDIT", "Audit des traductions", "NAVIGATION", 240
+    EnsureTranslationSeed db, "DE-CH", "NAV.FW_TRANSLATION_TAG_GENERATOR", "Translation-Tags", "NAVIGATION", 240
+    EnsureTranslationSeed db, "EN-US", "NAV.FW_TRANSLATION_TAG_GENERATOR", "Translation tags", "NAVIGATION", 240
+    EnsureTranslationSeed db, "FR-FR", "NAV.FW_TRANSLATION_TAG_GENERATOR", "Balises de traduction", "NAVIGATION", 240
+
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONAUDIT.FORM_TITLE", "Uebersetzungs-Audit", "FORM", 241
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONAUDIT.FORM_TITLE", "Translation audit", "FORM", 241
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONAUDIT.FORM_TITLE", "Audit des traductions", "FORM", 241
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONAUDIT.SCOPE_CODE", "Bereich", "FORM", 242
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONAUDIT.SCOPE_CODE", "Scope", "FORM", 242
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONAUDIT.SCOPE_CODE", "Portee", "FORM", 242
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONAUDIT.LANGUAGE_CODE", "Sprache", "FORM", 243
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONAUDIT.LANGUAGE_CODE", "Language", "FORM", 243
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONAUDIT.LANGUAGE_CODE", "Langue", "FORM", 243
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONAUDIT.AUDIT_STATUS", "Audit-Status", "FORM", 244
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONAUDIT.AUDIT_STATUS", "Audit status", "FORM", 244
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONAUDIT.AUDIT_STATUS", "Statut d'audit", "FORM", 244
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONAUDIT.SEARCH", "Suche", "FORM", 245
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONAUDIT.SEARCH", "Search", "FORM", 245
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONAUDIT.SEARCH", "Recherche", "FORM", 245
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONAUDIT.COVERAGE_SUMMARY", "Abdeckungsuebersicht", "FORM", 246
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONAUDIT.COVERAGE_SUMMARY", "Coverage summary", "FORM", 246
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONAUDIT.COVERAGE_SUMMARY", "Resume de couverture", "FORM", 246
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONAUDIT.REFRESH_AUDIT", "Audit pruefen", "FORM", 247
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONAUDIT.REFRESH_AUDIT", "Run audit", "FORM", 247
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONAUDIT.REFRESH_AUDIT", "Verifier l'audit", "FORM", 247
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONAUDIT.CREATE_MISSING_ROWS", "Fehlende Eintraege erzeugen", "FORM", 248
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONAUDIT.CREATE_MISSING_ROWS", "Create missing rows", "FORM", 248
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONAUDIT.CREATE_MISSING_ROWS", "Creer les lignes manquantes", "FORM", 248
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONAUDIT.OPEN_TRANSLATION", "Uebersetzung oeffnen", "FORM", 249
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONAUDIT.OPEN_TRANSLATION", "Open translation", "FORM", 249
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONAUDIT.OPEN_TRANSLATION", "Ouvrir la traduction", "FORM", 249
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONAUDIT.CLEAR_FILTERS", "Filter loeschen", "FORM", 250
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONAUDIT.CLEAR_FILTERS", "Clear filters", "FORM", 250
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONAUDIT.CLEAR_FILTERS", "Effacer les filtres", "FORM", 250
+
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_AUDIT_LOAD_ERROR", "Fehler beim Laden des Uebersetzungs-Audits.", "MSG", 251
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_AUDIT_LOAD_ERROR", "Error loading the translation audit.", "MSG", 251
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_AUDIT_LOAD_ERROR", "Erreur lors du chargement de l'audit des traductions.", "MSG", 251
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_AUDIT_REFRESH_ERROR", "Fehler beim Aktualisieren des Uebersetzungs-Audits.", "MSG", 252
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_AUDIT_REFRESH_ERROR", "Error refreshing the translation audit.", "MSG", 252
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_AUDIT_REFRESH_ERROR", "Erreur lors de l'actualisation de l'audit des traductions.", "MSG", 252
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_AUDIT_CREATE_MISSING_ERROR", "Fehler beim Erzeugen fehlender Uebersetzungseintraege.", "MSG", 253
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_AUDIT_CREATE_MISSING_ERROR", "Error creating missing translation rows.", "MSG", 253
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_AUDIT_CREATE_MISSING_ERROR", "Erreur lors de la creation des lignes de traduction manquantes.", "MSG", 253
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_AUDIT_OPEN_ERROR", "Fehler beim Oeffnen der Uebersetzung.", "MSG", 254
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_AUDIT_OPEN_ERROR", "Error opening the translation.", "MSG", 254
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_AUDIT_OPEN_ERROR", "Erreur lors de l'ouverture de la traduction.", "MSG", 254
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_AUDIT_SELECT_FIRST", "Bitte zuerst einen Uebersetzungseintrag auswaehlen.", "MSG", 255
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_AUDIT_SELECT_FIRST", "Please select a translation entry first.", "MSG", 255
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_AUDIT_SELECT_FIRST", "Veuillez d'abord selectionner une entree de traduction.", "MSG", 255
+
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.FORM_TITLE", "Uebersetzung bearbeiten", "FORM", 256
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.FORM_TITLE", "Edit translation", "FORM", 256
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.FORM_TITLE", "Modifier la traduction", "FORM", 256
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.TRANSLATION_KEY", "Uebersetzungsschluessel", "FORM", 257
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.TRANSLATION_KEY", "Translation key", "FORM", 257
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.TRANSLATION_KEY", "Cle de traduction", "FORM", 257
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.SCOPE_CODE", "Bereich", "FORM", 258
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.SCOPE_CODE", "Scope", "FORM", 258
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.SCOPE_CODE", "Portee", "FORM", 258
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.AUDIT_STATUS", "Audit-Status", "FORM", 259
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.AUDIT_STATUS", "Audit status", "FORM", 259
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.AUDIT_STATUS", "Statut d'audit", "FORM", 259
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.SOURCE_TYPE", "Quelltyp", "FORM", 260
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.SOURCE_TYPE", "Source type", "FORM", 260
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.SOURCE_TYPE", "Type de source", "FORM", 260
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.SOURCE_OBJECT", "Quellobjekt", "FORM", 261
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.SOURCE_OBJECT", "Source object", "FORM", 261
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.SOURCE_OBJECT", "Objet source", "FORM", 261
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.SOURCE_CONTROL", "Quellsteuerelement", "FORM", 262
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.SOURCE_CONTROL", "Source control", "FORM", 262
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.SOURCE_CONTROL", "Controle source", "FORM", 262
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.FALLBACK_TEXT", "Fallback-Text", "FORM", 263
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.FALLBACK_TEXT", "Fallback text", "FORM", 263
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.FALLBACK_TEXT", "Texte de secours", "FORM", 263
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.DE_CH", "Deutsch (Schweiz)", "FORM", 264
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.DE_CH", "German (Switzerland)", "FORM", 264
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.DE_CH", "Allemand (Suisse)", "FORM", 264
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.EN_US", "Englisch (USA)", "FORM", 265
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.EN_US", "English (US)", "FORM", 265
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.EN_US", "Anglais (Etats-Unis)", "FORM", 265
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.FR_FR", "Franzoesisch (Frankreich)", "FORM", 266
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.FR_FR", "French (France)", "FORM", 266
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.FR_FR", "Francais (France)", "FORM", 266
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.SAVE", "Speichern", "FORM", 267
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.SAVE", "Save", "FORM", 267
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.SAVE", "Enregistrer", "FORM", 267
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.CANCEL", "Abbrechen", "FORM", 268
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.CANCEL", "Cancel", "FORM", 268
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.CANCEL", "Annuler", "FORM", 268
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONEDIT.DEEPL_SUGGESTION", "DeepL Vorschlag", "FORM", 269
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONEDIT.DEEPL_SUGGESTION", "DeepL suggestion", "FORM", 269
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONEDIT.DEEPL_SUGGESTION", "Suggestion DeepL", "FORM", 269
+
+    EnsureTranslationSeed db, "DE-CH", "MSG.TRANSLATION_KEY_REQUIRED", "Uebersetzungsschluessel ist erforderlich.", "MSG", 270
+    EnsureTranslationSeed db, "EN-US", "MSG.TRANSLATION_KEY_REQUIRED", "Translation key is required.", "MSG", 270
+    EnsureTranslationSeed db, "FR-FR", "MSG.TRANSLATION_KEY_REQUIRED", "La cle de traduction est obligatoire.", "MSG", 270
+    EnsureTranslationSeed db, "DE-CH", "MSG.TRANSLATION_EDIT_LOAD_ERROR", "Fehler beim Laden der Uebersetzung.", "MSG", 271
+    EnsureTranslationSeed db, "EN-US", "MSG.TRANSLATION_EDIT_LOAD_ERROR", "Error loading the translation.", "MSG", 271
+    EnsureTranslationSeed db, "FR-FR", "MSG.TRANSLATION_EDIT_LOAD_ERROR", "Erreur lors du chargement de la traduction.", "MSG", 271
+    EnsureTranslationSeed db, "DE-CH", "MSG.TRANSLATION_EDIT_SAVE_ERROR", "Fehler beim Speichern der Uebersetzung.", "MSG", 272
+    EnsureTranslationSeed db, "EN-US", "MSG.TRANSLATION_EDIT_SAVE_ERROR", "Error saving the translation.", "MSG", 272
+    EnsureTranslationSeed db, "FR-FR", "MSG.TRANSLATION_EDIT_SAVE_ERROR", "Erreur lors de l'enregistrement de la traduction.", "MSG", 272
+    EnsureTranslationSeed db, "DE-CH", "MSG.TRANSLATION_EDIT_CANCEL_CONFIRM", "Ungespeicherte Aenderungen verwerfen?", "MSG", 273
+    EnsureTranslationSeed db, "EN-US", "MSG.TRANSLATION_EDIT_CANCEL_CONFIRM", "Discard unsaved changes?", "MSG", 273
+    EnsureTranslationSeed db, "FR-FR", "MSG.TRANSLATION_EDIT_CANCEL_CONFIRM", "Ignorer les modifications non enregistrees ?", "MSG", 273
+    EnsureTranslationSeed db, "DE-CH", "MSG.DEEPL_API_KEY_MISSING", "DeepL API-Schluessel ist nicht konfiguriert.", "MSG", 274
+    EnsureTranslationSeed db, "EN-US", "MSG.DEEPL_API_KEY_MISSING", "DeepL API key is not configured.", "MSG", 274
+    EnsureTranslationSeed db, "FR-FR", "MSG.DEEPL_API_KEY_MISSING", "La cle API DeepL n'est pas configuree.", "MSG", 274
+    EnsureTranslationSeed db, "DE-CH", "MSG.TRANSLATION_EDIT_DEEPL_ERROR", "Fehler beim Abrufen der DeepL-Vorschlaege.", "MSG", 275
+    EnsureTranslationSeed db, "EN-US", "MSG.TRANSLATION_EDIT_DEEPL_ERROR", "Error retrieving DeepL suggestions.", "MSG", 275
+    EnsureTranslationSeed db, "FR-FR", "MSG.TRANSLATION_EDIT_DEEPL_ERROR", "Erreur lors de la recuperation des suggestions DeepL.", "MSG", 275
+    EnsureTranslationSeed db, "DE-CH", "MSG.TRANSLATION_EDIT_DEEPL_SOURCE_REQUIRED", "Bitte zuerst einen DE-CH Ausgangstext erfassen.", "MSG", 276
+    EnsureTranslationSeed db, "EN-US", "MSG.TRANSLATION_EDIT_DEEPL_SOURCE_REQUIRED", "Please enter a DE-CH source text first.", "MSG", 276
+    EnsureTranslationSeed db, "FR-FR", "MSG.TRANSLATION_EDIT_DEEPL_SOURCE_REQUIRED", "Veuillez d'abord saisir un texte source DE-CH.", "MSG", 276
+    EnsureTranslationSeed db, "DE-CH", "MSG.TRANSLATION_EDIT_DEEPL_OVERWRITE_CONFIRM", "Bestehende Zieltexte mit DeepL-Vorschlaegen ersetzen?", "MSG", 277
+    EnsureTranslationSeed db, "EN-US", "MSG.TRANSLATION_EDIT_DEEPL_OVERWRITE_CONFIRM", "Replace existing target texts with DeepL suggestions?", "MSG", 277
+    EnsureTranslationSeed db, "FR-FR", "MSG.TRANSLATION_EDIT_DEEPL_OVERWRITE_CONFIRM", "Remplacer les textes cibles existants par des suggestions DeepL ?", "MSG", 277
+
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_TITLE", "Translation-Tag-Generator", "FORM", 278
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_TITLE", "Translation tag generator", "FORM", 278
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_TITLE", "Generateur de balises de traduction", "FORM", 278
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_NAME", "Formular", "FORM", 279
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_NAME", "Form", "FORM", 279
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_NAME", "Formulaire", "FORM", 279
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.INCLUDE_HIDDEN", "Versteckte Controls einschliessen", "FORM", 280
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.INCLUDE_HIDDEN", "Include hidden controls", "FORM", 280
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.INCLUDE_HIDDEN", "Inclure les controles masques", "FORM", 280
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SHOW_ALL_CONTROLS", "Alle Controls anzeigen", "FORM", 281
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SHOW_ALL_CONTROLS", "Show all controls", "FORM", 281
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SHOW_ALL_CONTROLS", "Afficher tous les controles", "FORM", 281
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.LOAD_FORM", "Formular laden", "FORM", 282
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.LOAD_FORM", "Load form", "FORM", 282
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.LOAD_FORM", "Charger le formulaire", "FORM", 282
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.GENERATE_SUGGESTIONS", "Vorschlaege generieren", "FORM", 283
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.GENERATE_SUGGESTIONS", "Generate suggestions", "FORM", 283
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.GENERATE_SUGGESTIONS", "Generer les propositions", "FORM", 283
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_MISSING_KEYS", "Fehlende Keys setzen", "FORM", 284
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_MISSING_KEYS", "Set missing keys", "FORM", 284
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_MISSING_KEYS", "Definir les cles manquantes", "FORM", 284
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_SELECTED_KEY", "Key fuer Control setzen", "FORM", 285
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_SELECTED_KEY", "Set key for control", "FORM", 285
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_SELECTED_KEY", "Definir la cle pour le controle", "FORM", 285
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.REMOVE_SELECTED_KEY", "Key fuer Control entfernen", "FORM", 286
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.REMOVE_SELECTED_KEY", "Remove key from control", "FORM", 286
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.REMOVE_SELECTED_KEY", "Supprimer la cle du controle", "FORM", 286
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SAVE", "Aenderungen speichern", "FORM", 287
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SAVE", "Save changes", "FORM", 287
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SAVE", "Enregistrer les modifications", "FORM", 287
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CANCEL", "Schliessen / verwerfen", "FORM", 288
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CANCEL", "Close / discard", "FORM", 288
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CANCEL", "Fermer / abandonner", "FORM", 288
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_NAME", "Control-Name", "FORM", 289
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_NAME", "Control name", "FORM", 289
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_NAME", "Nom du controle", "FORM", 289
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_TYPE", "Control-Typ", "FORM", 290
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_TYPE", "Control type", "FORM", 290
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_TYPE", "Type de controle", "FORM", 290
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SOURCE_TEXT", "Quelltext", "FORM", 291
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SOURCE_TEXT", "Source text", "FORM", 291
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SOURCE_TEXT", "Texte source", "FORM", 291
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TAG", "Aktueller Tag", "FORM", 292
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TAG", "Current tag", "FORM", 292
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TAG", "Balise actuelle", "FORM", 292
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TRANSLATION_KEY", "Vorhandener Translation-Key", "FORM", 293
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TRANSLATION_KEY", "Existing translation key", "FORM", 293
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TRANSLATION_KEY", "Cle de traduction existante", "FORM", 293
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SUGGESTED_TRANSLATION_KEY", "Vorgeschlagener Translation-Key", "FORM", 294
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SUGGESTED_TRANSLATION_KEY", "Suggested translation key", "FORM", 294
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SUGGESTED_TRANSLATION_KEY", "Cle de traduction proposee", "FORM", 294
+    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.TAG_STATUS", "Tag-Status", "FORM", 295
+    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.TAG_STATUS", "Tag status", "FORM", 295
+    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.TAG_STATUS", "Statut de balise", "FORM", 295
+
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_ERROR", "Fehler beim Laden des Translation-Tag-Generators.", "MSG", 295
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_ERROR", "Error loading the translation tag generator.", "MSG", 295
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_ERROR", "Erreur lors du chargement du generateur de balises de traduction.", "MSG", 295
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_FORM_ERROR", "Fehler beim Laden des ausgewaehlten Formulars.", "MSG", 296
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_FORM_ERROR", "Error loading the selected form.", "MSG", 296
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_FORM_ERROR", "Erreur lors du chargement du formulaire selectionne.", "MSG", 296
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_FORM_REQUIRED", "Bitte zuerst ein Formular auswaehlen.", "MSG", 297
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_FORM_REQUIRED", "Please select a form first.", "MSG", 297
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_FORM_REQUIRED", "Veuillez d'abord selectionner un formulaire.", "MSG", 297
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_SELECT_CONTROL", "Bitte zuerst ein Control auswaehlen.", "MSG", 298
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_SELECT_CONTROL", "Please select a control first.", "MSG", 298
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_SELECT_CONTROL", "Veuillez d'abord selectionner un controle.", "MSG", 298
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_NOT_TRANSLATABLE", "Das markierte Control ist nicht fuer einen Translation-Key geeignet.", "MSG", 299
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_NOT_TRANSLATABLE", "The selected control is not suitable for a translation key.", "MSG", 299
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_NOT_TRANSLATABLE", "Le controle selectionne ne convient pas pour une cle de traduction.", "MSG", 299
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_NO_MISSING_KEYS", "Keine fehlenden Translation-Keys zum Setzen gefunden.", "MSG", 300
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_NO_MISSING_KEYS", "No missing translation keys were found to set.", "MSG", 300
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_NO_MISSING_KEYS", "Aucune cle de traduction manquante a definir n'a ete trouvee.", "MSG", 300
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_SUCCESS", "Translation-Tags wurden gespeichert.", "MSG", 301
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_SUCCESS", "Translation tags were saved.", "MSG", 301
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_SUCCESS", "Les balises de traduction ont ete enregistrees.", "MSG", 301
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_ERROR", "Fehler beim Speichern der Translation-Tags.", "MSG", 302
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_ERROR", "Error saving the translation tags.", "MSG", 302
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_ERROR", "Erreur lors de l'enregistrement des balises de traduction.", "MSG", 302
+    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_DISCARD_CONFIRM", "Ungespeicherte Tag-Aenderungen verwerfen?", "MSG", 303
+    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_DISCARD_CONFIRM", "Discard unsaved tag changes?", "MSG", 303
+    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_DISCARD_CONFIRM", "Abandonner les modifications de balises non enregistrees ?", "MSG", 303
 End Sub
 
 Private Sub EnsureTranslationSeed( _
@@ -716,6 +1118,30 @@ Private Sub EnsureTranslationSeed( _
     If Not TranslationSeedExists(db, LanguageCode, translationKey) Then
         InsertTranslation db, LanguageCode, translationKey, TranslationValue, True, moduleCode, sortOrder
     End If
+End Sub
+
+Private Sub UpdateTranslationSeed( _
+    ByVal db As DAO.Database, _
+    ByVal LanguageCode As String, _
+    ByVal translationKey As String, _
+    ByVal TranslationValue As String, _
+    ByVal isActive As Boolean, _
+    ByVal moduleCode As String, _
+    ByVal sortOrder As Long)
+
+    Dim sqlStatement As String
+
+    sqlStatement = "UPDATE fw_translation SET " & _
+                   "translation_value = " & SqlText(TranslationValue) & ", " & _
+                   "is_active = " & IIf(isActive, "True", "False") & ", " & _
+                   "module_code = " & SqlNullableText(moduleCode) & ", " & _
+                   "sort_order = " & CStr(sortOrder) & ", " & _
+                   "updated_at = Now(), " & _
+                   "updated_by = 'SYSTEM' " & _
+                   "WHERE language_code = " & SqlText(LanguageCode) & " " & _
+                   "AND translation_key = " & SqlText(translationKey) & ";"
+
+    db.Execute sqlStatement, dbFailOnError
 End Sub
 
 Private Function TranslationSeedExists( _

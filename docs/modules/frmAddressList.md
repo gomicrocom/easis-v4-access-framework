@@ -25,15 +25,18 @@ This keeps the list compact and avoids:
 
 The form therefore separates responsibilities into:
 
-- search and selection
+- shell-driven search and selection
 - address list display
 - selected-address action execution
 
 ## Search Model
 
-The address list should expose a technical search field:
+The address list should expose one technical search field:
 
-- `AddressSearchText`
+- preferred standard
+  - `address_search_text`
+- current legacy alias
+  - `AddressSearchText`
 
 This field is intended for broad free-text filtering and should concatenate relevant address data without spaces.
 
@@ -76,7 +79,7 @@ The design should therefore avoid hard-coding the search concept to only company
 
 Recommended direction:
 
-- keep `AddressSearchText` as one expandable search source
+- keep one expandable search source only
 - allow future query/service logic to append business-context fields without changing the form concept
 
 ## UI Structure
@@ -85,8 +88,7 @@ The preferred layout is:
 
 ### Header Area
 
-- `txtSearch`
-  - free-text search input
+- shell-owned command bar search
 - optional result summary
   - count of matching addresses
 - action menu host
@@ -193,7 +195,7 @@ Usage notes:
 
 ### Search Change
 
-- apply filter using `txtSearch` against `AddressSearchText`
+- apply filter using the shell command bar search text against the technical search field
 - keep current row selection stable where possible
 
 ### Address Selection Change

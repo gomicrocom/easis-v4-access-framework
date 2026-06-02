@@ -62,7 +62,7 @@ The current repository state supports the first business phase through:
 
 BasicModule v1 database scope is now explicitly active in the tenant backend through:
 
-- `tblAddresses`
+- `adr_address`
 - `art_product_group`
 - `art_article`
 - `ord_order`

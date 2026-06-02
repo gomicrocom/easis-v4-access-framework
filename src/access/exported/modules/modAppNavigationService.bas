@@ -62,9 +62,6 @@ Public Function SeedDefaultNavigation() As Boolean
     EnsureNavigationEntry _
         addressGroupId, "Adressen", "NAV.ADDRESS_LIST", "Adressliste", "frmAddressList", TYPE_FORM, OPEN_MODE_NORMAL, 10, False, True, True, createdCount, updatedCount
 
-    EnsureNavigationEntry _
-        addressGroupId, "Adressen", "NAV.NEW_ADDRESS", "Neue Adresse", "frmAddressDetail", TYPE_FORM, OPEN_MODE_ADD, 20, False, True, True, createdCount, updatedCount
-
     documentGroupId = EnsureNavigationEntry( _
         0, "Dokumente", "NAV.GROUP.DOCUMENTS", "Dokumente", vbNullString, TYPE_GROUP, OPEN_MODE_NORMAL, 20, False, True, True, createdCount, updatedCount)
 
@@ -78,7 +75,7 @@ Public Function SeedDefaultNavigation() As Boolean
         tenantGroupId, "Mandant", "NAV.ARTICLE_GROUPS", "Artikelgruppen", "frmArticleGroupList", TYPE_FORM, OPEN_MODE_NORMAL, 10, False, True, True, createdCount, updatedCount
 
     EnsureNavigationEntry _
-        tenantGroupId, "Mandant", "NAV.NEW_ARTICLE_GROUP", "Neue Artikelgruppe", "frmArticleGroupDetail", TYPE_FORM, OPEN_MODE_ADD, 20, False, True, True, createdCount, updatedCount
+        tenantGroupId, "Mandant", "NAV.ARTICLES", "Artikel", "frmArticleList", TYPE_FORM, OPEN_MODE_NORMAL, 30, False, True, True, createdCount, updatedCount
 
     frameworkGroupId = EnsureNavigationEntry( _
         0, "Framework", "NAV.GROUP.FRAMEWORK", "Framework", vbNullString, TYPE_GROUP, OPEN_MODE_NORMAL, 90, False, True, True, createdCount, updatedCount)
@@ -90,13 +87,19 @@ Public Function SeedDefaultNavigation() As Boolean
         frameworkGroupId, "Framework", "NAV.FW_TRANSLATIONS", "Uebersetzungen pflegen", "frmFwTranslations", TYPE_FORM, OPEN_MODE_NORMAL, 20, False, True, True, createdCount, updatedCount
 
     EnsureNavigationEntry _
-        frameworkGroupId, "Framework", "NAV.LOCALISATION", "Lokalisierung", "frmLocalisation", TYPE_FORM, OPEN_MODE_NORMAL, 30, False, True, True, createdCount, updatedCount
+        frameworkGroupId, "Framework", "NAV.FW_TRANSLATION_AUDIT", "Uebersetzungs-Audit", "frmFwTranslationAudit", TYPE_FORM, OPEN_MODE_NORMAL, 30, False, True, True, createdCount, updatedCount
 
     EnsureNavigationEntry _
-        frameworkGroupId, "Framework", "NAV.TAGS", "Tags", "frmTagComposer", TYPE_FORM, OPEN_MODE_NORMAL, 40, False, True, True, createdCount, updatedCount
+        frameworkGroupId, "Framework", "NAV.FW_TRANSLATION_TAG_GENERATOR", "Translation-Tags", "frmFwTranslationTagGenerator", TYPE_FORM, OPEN_MODE_NORMAL, 40, False, True, True, createdCount, updatedCount
 
     EnsureNavigationEntry _
-        frameworkGroupId, "Framework", "NAV.TAG_HELP", "Tag-Hilfe", "frmTagHelp", TYPE_FORM, OPEN_MODE_NORMAL, 50, False, True, True, createdCount, updatedCount
+        frameworkGroupId, "Framework", "NAV.LOCALISATION", "Lokalisierung", "frmLocalisation", TYPE_FORM, OPEN_MODE_NORMAL, 50, False, True, True, createdCount, updatedCount
+
+    EnsureNavigationEntry _
+        frameworkGroupId, "Framework", "NAV.TAGS", "Tags", "frmTagComposer", TYPE_FORM, OPEN_MODE_NORMAL, 60, False, True, True, createdCount, updatedCount
+
+    EnsureNavigationEntry _
+        frameworkGroupId, "Framework", "NAV.TAG_HELP", "Tag-Hilfe", "frmTagHelp", TYPE_FORM, OPEN_MODE_NORMAL, 70, False, True, True, createdCount, updatedCount
 
     systemGroupId = EnsureNavigationEntry( _
         0, "System", "NAV.GROUP.SYSTEM", "System", vbNullString, TYPE_GROUP, OPEN_MODE_NORMAL, 100, False, True, True, createdCount, updatedCount)
@@ -445,8 +448,17 @@ Private Function EnsureNavigationEntry( _
 
     Dim sqlStatement As String
     Dim existingId As Long
+    Dim normalizedObjectType As String
+    Dim normalizedOpenMode As String
 
-    existingId = LookupNavigationId(captionKey, objectType, objectName, fallbackCaption)
+    captionKey = Trim$(modDaoHelper.NzString(captionKey))
+    fallbackCaption = Trim$(modDaoHelper.NzString(fallbackCaption))
+    objectName = Trim$(modDaoHelper.NzString(objectName))
+    navigationGroup = Trim$(modDaoHelper.NzString(navigationGroup))
+    normalizedObjectType = UCase$(Trim$(modDaoHelper.NzString(objectType)))
+    normalizedOpenMode = NormalizeOpenMode(openMode)
+
+    existingId = LookupNavigationId(captionKey, normalizedObjectType, objectName, fallbackCaption)
 
     If existingId <= 0 Then
         sqlStatement = "INSERT INTO " & TABLE_NAVIGATION & " (" & _
@@ -458,8 +470,8 @@ Private Function EnsureNavigationEntry( _
                        SqlText(captionKey) & ", " & _
                        SqlText(fallbackCaption) & ", " & _
                        SqlNullableText(objectName) & ", " & _
-                       SqlText(UCase$(Trim$(objectType))) & ", " & _
-                       SqlText(NormalizeOpenMode(openMode)) & ", Null, " & _
+                       SqlText(normalizedObjectType) & ", " & _
+                       SqlText(normalizedOpenMode) & ", Null, " & _
                        CStr(sortOrder) & ", " & _
                        SqlBoolean(isActive) & ", " & _
                        SqlBoolean(isExpanded) & ", " & _
@@ -467,27 +479,21 @@ Private Function EnsureNavigationEntry( _
                        "Now(), 'SYSTEM', Now(), 'SYSTEM');"
         ExecuteSql sqlStatement
         createdCount = createdCount + 1
-    Else
-        sqlStatement = "UPDATE " & TABLE_NAVIGATION & " SET " & _
-                       "parent_navigation_id = " & SqlLongOrNull(parentNavigationId) & ", " & _
-                       "navigation_group = " & SqlText(navigationGroup) & ", " & _
-                       "caption_key = " & SqlText(captionKey) & ", " & _
-                       "fallback_caption = " & SqlText(fallbackCaption) & ", " & _
-                       "object_name = " & SqlNullableText(objectName) & ", " & _
-                       "object_type = " & SqlText(UCase$(Trim$(objectType))) & ", " & _
-                       "open_mode = " & SqlText(NormalizeOpenMode(openMode)) & ", " & _
-                       "sort_order = " & CStr(sortOrder) & ", " & _
-                       "updated_at = Now(), " & _
-                       "updated_by = 'SYSTEM' " & _
-                       "WHERE navigation_id = " & CStr(existingId) & ";"
-        ExecuteSql sqlStatement
-        updatedCount = updatedCount + 1
     End If
 
-    EnsureNavigationEntry = LookupNavigationId(captionKey, objectType, objectName, fallbackCaption)
+    EnsureNavigationEntry = LookupNavigationId(captionKey, normalizedObjectType, objectName, fallbackCaption)
     Exit Function
 
 ErrorHandler:
+    If Err.Number = 3022 Then
+        EnsureNavigationEntry = LookupNavigationId(captionKey, normalizedObjectType, objectName, fallbackCaption)
+        If EnsureNavigationEntry > 0 Then
+            modLoggingHandler.LogInfo MODULE_NAME & ".EnsureNavigationEntry", _
+                "Navigation entry already exists, skipped. caption_key='" & captionKey & "'; object_type='" & normalizedObjectType & "'; object_name='" & objectName & "'."
+            Exit Function
+        End If
+    End If
+
     modErrorHandler.HandleError MODULE_NAME, "EnsureNavigationEntry", Err
 End Function
 
@@ -531,23 +537,28 @@ Private Function LookupNavigationId( _
     Dim criteria As String
 
     criteria = BuildNavigationLookupCriteria(captionKey, objectType, objectName)
-    lookupValue = DLookup("navigation_id", TABLE_NAVIGATION, criteria)
-    LookupNavigationId = modDaoHelper.NzLong(lookupValue, 0)
+    LookupNavigationId = LookupNavigationIdByCriteria(criteria)
 
     If LookupNavigationId > 0 Then
         Exit Function
     End If
 
+    If LenB(Trim$(captionKey)) > 0 Then
+        criteria = "UCase(Trim(Nz(caption_key,''))) = " & SqlText(UCase$(Trim$(captionKey)))
+        LookupNavigationId = LookupNavigationIdByCriteria(criteria)
+        If LookupNavigationId > 0 Then
+            Exit Function
+        End If
+    End If
+
     If LenB(Trim$(objectName)) > 0 Then
-        criteria = "object_type = " & SqlText(UCase$(Trim$(objectType))) & " " & _
-                   "AND object_name = " & SqlText(objectName)
-        lookupValue = DLookup("navigation_id", TABLE_NAVIGATION, criteria)
-        LookupNavigationId = modDaoHelper.NzLong(lookupValue, 0)
+        criteria = "UCase(Trim(Nz(object_type,''))) = " & SqlText(UCase$(Trim$(objectType))) & " " & _
+                   "AND UCase(Trim(Nz(object_name,''))) = " & SqlText(UCase$(Trim$(objectName)))
+        LookupNavigationId = LookupNavigationIdByCriteria(criteria)
     ElseIf UCase$(Trim$(objectType)) = TYPE_GROUP Then
-        criteria = "object_type = " & SqlText(TYPE_GROUP) & " " & _
-                   "AND fallback_caption = " & SqlText(fallbackCaption)
-        lookupValue = DLookup("navigation_id", TABLE_NAVIGATION, criteria)
-        LookupNavigationId = modDaoHelper.NzLong(lookupValue, 0)
+        criteria = "UCase(Trim(Nz(object_type,''))) = " & SqlText(TYPE_GROUP) & " " & _
+                   "AND UCase(Trim(Nz(fallback_caption,''))) = " & SqlText(UCase$(Trim$(fallbackCaption)))
+        LookupNavigationId = LookupNavigationIdByCriteria(criteria)
     End If
 
     Exit Function
@@ -557,20 +568,42 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "LookupNavigationId", Err
 End Function
 
+Private Function LookupNavigationIdByCriteria(ByVal criteria As String) As Long
+    On Error GoTo ErrorHandler
+
+    Dim lookupValue As Variant
+
+    If LenB(Trim$(criteria)) = 0 Then
+        Exit Function
+    End If
+
+    lookupValue = DLookup("navigation_id", TABLE_NAVIGATION, criteria)
+    LookupNavigationIdByCriteria = modDaoHelper.NzLong(lookupValue, 0)
+    Exit Function
+
+ErrorHandler:
+    LookupNavigationIdByCriteria = 0
+    modErrorHandler.HandleError MODULE_NAME, "LookupNavigationIdByCriteria", Err
+End Function
+
 Private Function BuildNavigationLookupCriteria( _
     ByVal captionKey As String, _
     ByVal objectType As String, _
     ByVal objectName As String) As String
 
-    BuildNavigationLookupCriteria = "caption_key = " & SqlText(captionKey) & " " & _
-                                    "AND object_type = " & SqlText(UCase$(Trim$(objectType))) & " "
+    captionKey = Trim$(modDaoHelper.NzString(captionKey))
+    objectType = UCase$(Trim$(modDaoHelper.NzString(objectType)))
+    objectName = Trim$(modDaoHelper.NzString(objectName))
 
-    If LenB(Trim$(objectName)) > 0 Then
+    BuildNavigationLookupCriteria = "UCase(Trim(Nz(caption_key,''))) = " & SqlText(UCase$(captionKey)) & " " & _
+                                    "AND UCase(Trim(Nz(object_type,''))) = " & SqlText(objectType) & " "
+
+    If LenB(objectName) > 0 Then
         BuildNavigationLookupCriteria = BuildNavigationLookupCriteria & _
-                                        "AND object_name = " & SqlText(objectName)
+                                        "AND UCase(Trim(Nz(object_name,''))) = " & SqlText(UCase$(objectName))
     Else
         BuildNavigationLookupCriteria = BuildNavigationLookupCriteria & _
-                                        "AND (object_name Is Null OR object_name = '')"
+                                        "AND Len(Trim(Nz(object_name,''))) = 0"
     End If
 End Function
 

@@ -83,9 +83,7 @@ Public Function OpenWorkspaceForm( _
     ApplyWorkspaceFormState workspaceHost.Form, where_condition, data_mode
 
     If LenB(Trim$(open_args)) > 0 Then
-        modLoggingHandler.LogInfo MODULE_NAME & ".OpenWorkspaceForm", _
-            "OpenArgs '" & open_args & "' were requested for '" & form_name & _
-            "' but are not propagated to embedded workspace forms in this phase."
+        ApplyWorkspaceOpenArgs workspaceHost.Form, open_args, form_name
     End If
 
     SetWorkspaceFocus workspaceHost
@@ -93,6 +91,8 @@ Public Function OpenWorkspaceForm( _
     If LenB(historyItemText) > 0 Then
         AppendHistoryItem historyItemText
     End If
+
+    modAppShell.RefreshShellStatus hostForm
 
     OpenWorkspaceForm = True
     modLoggingHandler.LogInfo MODULE_NAME & ".OpenWorkspaceForm", _
@@ -168,6 +168,8 @@ Public Function GoBack(ByVal shellForm As Access.Form) As Boolean
         RestoreWorkspaceHistoryState workspaceHost.Form, historyItemText
     End If
 
+    modAppShell.RefreshShellStatus hostForm
+
     GoBack = True
 
     modLoggingHandler.LogInfo MODULE_NAME & ".GoBack", _
@@ -199,6 +201,31 @@ Public Function PeekWorkspaceHistory() As String
         PeekWorkspaceHistory = m_workspaceHistory(m_workspaceHistory.count)
     End If
 End Function
+
+Private Sub ApplyWorkspaceOpenArgs(ByVal workspaceForm As Access.Form, ByVal openArgs As String, ByVal formName As String)
+    On Error GoTo ErrorHandler
+
+    Dim formObject As Object
+
+    If workspaceForm Is Nothing Then
+        Exit Sub
+    End If
+
+    Set formObject = workspaceForm
+    CallByName formObject, "ApplyWorkspaceOpenArgs", VbMethod, openArgs
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".ApplyWorkspaceOpenArgs", _
+        "Applied workspace OpenArgs to '" & formName & "'."
+    Exit Sub
+
+ErrorHandler:
+    If Err.Number = 438 Then
+        modLoggingHandler.LogInfo MODULE_NAME & ".ApplyWorkspaceOpenArgs", _
+            "Workspace form '" & formName & "' does not implement ApplyWorkspaceOpenArgs."
+    Else
+        modErrorHandler.HandleError MODULE_NAME, "ApplyWorkspaceOpenArgs", Err
+    End If
+End Sub
 
 Private Function CanReplaceWorkspaceContent(ByVal workspaceHost As Control) As Boolean
     On Error GoTo SafeExit
@@ -286,6 +313,7 @@ Public Function ClearWorkspace(ByVal shellForm As Access.Form) As Boolean
     End If
 
     workspaceHost.SourceObject = vbNullString
+    modAppShell.RefreshShellStatus hostForm
     ClearWorkspace = True
 
     modLoggingHandler.LogInfo MODULE_NAME & ".ClearWorkspace", _

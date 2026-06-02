@@ -736,7 +736,7 @@ Public Function CanLeaveWorkspace() As Boolean
         "Ungespeicherte Aenderungen verwerfen?", _
         vbQuestion + vbYesNo + vbDefaultButton2, _
         MODULE_NAME) = vbYes Then
-        CancelCurrentEdit False
+        CancelCurrentEdit False, False
         CanLeaveWorkspace = True
     End If
     Exit Function
@@ -876,6 +876,8 @@ Private Sub SaveCurrentRecord()
 
     modLoggingHandler.LogInfo MODULE_NAME & ".SaveCurrentRecord", _
         "Address detail saved for address_id=" & CStr(GetCurrentAddressId()) & "."
+
+    ReturnToPreviousWorkspace "SaveCurrentRecord"
     Exit Sub
 
 ErrorHandler:
@@ -883,10 +885,15 @@ ErrorHandler:
     MsgBox "Fehler beim Speichern der Adresse: " & Err.description, vbExclamation, MODULE_NAME
 End Sub
 
-Private Sub CancelCurrentEdit(Optional ByVal showConfirmation As Boolean = True)
+Private Sub CancelCurrentEdit( _
+    Optional ByVal showConfirmation As Boolean = True, _
+    Optional ByVal navigateBack As Boolean = True)
     On Error GoTo ErrorHandler
 
     If Not HasUnsavedChanges() Then
+        If navigateBack Then
+            ReturnToPreviousWorkspace "CancelCurrentEdit"
+        End If
         Exit Sub
     End If
 
@@ -904,6 +911,10 @@ Private Sub CancelCurrentEdit(Optional ByVal showConfirmation As Boolean = True)
 
     modLoggingHandler.LogInfo MODULE_NAME & ".CancelCurrentEdit", _
         "Unsaved address changes were discarded."
+
+    If navigateBack Then
+        ReturnToPreviousWorkspace "CancelCurrentEdit"
+    End If
     Exit Sub
 
 ErrorHandler:
@@ -1040,6 +1051,19 @@ Private Function UnescapeWorkspaceStateValue(ByVal Value As String) As String
     Value = Replace(Value, "%25", "%")
     UnescapeWorkspaceStateValue = Value
 End Function
+
+Private Sub ReturnToPreviousWorkspace(ByVal callerName As String)
+    On Error GoTo ErrorHandler
+
+    If Not modAppWorkspaceService.GoBack(Me.Parent) Then
+        modLoggingHandler.LogWarning MODULE_NAME & "." & callerName, _
+            "Workspace history was not available after detail action. Detail form remains open."
+    End If
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, callerName & ".ReturnToPreviousWorkspace", Err
+End Sub
 
 Private Sub UpdateAddressingModeUi()
 

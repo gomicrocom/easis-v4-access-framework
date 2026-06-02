@@ -3,7 +3,8 @@ Option Explicit
 
 '===============================================================================
 ' Module    : Form_frmFwTranslations
-' Purpose   : Translation maintenance for FORM, NAV, MSG, STATUS, and REF keys.
+' Purpose   : Deprecated broad translation maintenance form retained only during
+'             the transition to frmFwTranslationAudit + frmFwTranslationEdit.
 ' Author    : Codex
 ' Version   : 0.3.0
 '===============================================================================
@@ -248,6 +249,36 @@ Public Function NextSortOrderForCurrentScope() As Long
         NextSortOrderForCurrentScope = CLng(maxSortOrder) + 10
     End If
 End Function
+
+Public Sub FocusTranslationKey(ByVal translationKey As String)
+    On Error GoTo ErrorHandler
+
+    Dim scopeValue As String
+
+    translationKey = Trim$(Nz(translationKey, vbNullString))
+    If LenB(translationKey) = 0 Then
+        Exit Sub
+    End If
+
+    scopeValue = ResolveScopeFromTranslationKey(translationKey)
+
+    If HasControl("cboTranslationScope") Then
+        Me!cboTranslationScope = scopeValue
+    End If
+
+    RefreshTranslationScopeUi
+
+    If HasControl("txtSuggestedTranslationKey") Then
+        Me!txtSuggestedTranslationKey = translationKey
+    End If
+
+    ApplyTranslationFilter translationKey
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "FocusTranslationKey", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
 
 Private Sub PopulateTranslationScopeCombo()
     If Not HasControl("cboTranslationScope") Then
@@ -593,6 +624,38 @@ Private Function NormalizeScopeValue(ByVal scopeValue As String) As String
             NormalizeScopeValue = scopeValue
         Case Else
             NormalizeScopeValue = SCOPE_FORM
+    End Select
+End Function
+
+Private Function ResolveScopeFromTranslationKey(ByVal translationKey As String) As String
+    Dim uppercaseKey As String
+
+    uppercaseKey = UCase$(Trim$(translationKey))
+
+    Select Case True
+        Case Left$(uppercaseKey, 5) = "FORM."
+            ResolveScopeFromTranslationKey = SCOPE_FORM
+        Case Left$(uppercaseKey, 4) = "NAV."
+            ResolveScopeFromTranslationKey = SCOPE_NAV
+        Case Left$(uppercaseKey, 4) = "MSG." Or Left$(uppercaseKey, 4) = "MSG_" Or Left$(uppercaseKey, 4) = "ERR_"
+            ResolveScopeFromTranslationKey = SCOPE_MSG
+        Case Left$(uppercaseKey, 7) = "STATUS."
+            ResolveScopeFromTranslationKey = SCOPE_STATUS
+        Case Left$(uppercaseKey, 7) = "REPORT."
+            ResolveScopeFromTranslationKey = SCOPE_REPORT
+        Case Left$(uppercaseKey, 9) = "DOCUMENT."
+            ResolveScopeFromTranslationKey = SCOPE_DOCUMENT
+        Case Left$(uppercaseKey, 13) = "ADDRESS_TYPE." Or _
+             Left$(uppercaseKey, 11) = "SALUTATION." Or _
+             Left$(uppercaseKey, 13) = "CONTACT_TYPE." Or _
+             Left$(uppercaseKey, 5) = "UNIT." Or _
+             Left$(uppercaseKey, 4) = "VAT." Or _
+             Left$(uppercaseKey, 4) = "REF."
+            ResolveScopeFromTranslationKey = SCOPE_REF
+        Case Left$(uppercaseKey, 7) = "COMMON."
+            ResolveScopeFromTranslationKey = SCOPE_ALL
+        Case Else
+            ResolveScopeFromTranslationKey = SCOPE_ALL
     End Select
 End Function
 

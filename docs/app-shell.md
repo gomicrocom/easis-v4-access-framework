@@ -244,6 +244,21 @@ Maintenance rules:
 - setup may create missing default rows and update structural fields
 - setup should not reactivate or re-show rows that were manually disabled or hidden
 
+### Lean Navigation Rule
+
+Shell navigation should stay as lean as possible:
+
+- navigation represents areas and worklists
+- standard object creation belongs to the list form, not to a separate shell entry
+- standard master-data objects should normally expose `New`, `Edit`, and `Refresh` as local list actions
+
+Examples:
+
+- keep `Adressliste`
+- keep `Artikelgruppen`
+- keep `Artikel`
+- do not add separate `Neue ...` shell entries for standard list/detail master-data flows
+
 ### Navigation Click Flow
 
 - clicking a `GROUP` row toggles `is_expanded`
@@ -259,6 +274,104 @@ Maintenance rules:
 - `frmAppShell` hosts workspace content in `subWorkspaceHost`
 - forms are loaded into `subWorkspaceHost` through `SourceObject`
 - reports open in preview mode
+
+## List Action Convention
+
+`frmAppShell` owns the central Shell Command Bar.
+
+Standard shell list actions:
+
+- `txtShellSearch`
+- `cmdShellClearSearch`
+- `cmdShellNew`
+- `cmdShellEdit`
+- `cmdShellRefresh`
+
+Meaning:
+
+- `Search`
+  - calls the active workspace form's `ListSearch(...)`
+- `Clear`
+  - calls `ListClearSearch()`
+- `New`
+  - calls `ListNew()`
+- `Edit`
+  - calls `ListEdit()`
+- `Refresh`
+  - calls `ListRefresh()`
+
+The shell dispatches these actions through `subWorkspaceHost.Form`.
+
+Required list-form contract:
+
+- `SupportsListCommandBar()`
+- `ListSearch(ByVal searchText As String)`
+- `ListClearSearch()`
+- `ListNew()`
+- `ListEdit()`
+- `ListRefresh()`
+
+Optional capability flags:
+
+- `SupportsListNew()`
+- `SupportsListEdit()`
+
+The earlier `sfrmFwListCommandBar` experiment is no longer the preferred architecture.
+
+## List Form Architecture
+
+The shell command bar is now the official list-action surface for the application shell.
+
+Ownership:
+
+- `frmAppShell`
+  - owns `Home`, `Zurueck`, `Suche`, `Leeren`, `Neu`, `Bearbeiten`, and `Aktualisieren`
+- workspace list forms
+  - own search-state storage, row-source filtering, current-record selection, and detail-form navigation targets
+
+Required list-form contract:
+
+- `SupportsListCommandBar()`
+- `ListSearch(ByVal searchText As String)`
+- `ListClearSearch()`
+- `ListNew()`
+- `ListEdit()`
+- `ListRefresh()`
+
+Optional capability flags:
+
+- `SupportsListNew()`
+- `SupportsListEdit()`
+
+Search architecture:
+
+- list forms use `Private m_currentSearchText As String`
+- shell search updates that state through `ListSearch(...)`
+- shell clear resets that state through `ListClearSearch()`
+- row-source filters should operate on one dedicated search-index field only
+
+Standard search-index fields:
+
+- `address_search_text`
+- `article_group_search_text`
+- `article_search_text`
+
+Current note:
+
+- `frmAddressList` still uses legacy `AddressSearchText`
+- the shell-driven behavior is already correct, but the alias should be normalized later
+
+Navigation philosophy:
+
+- shell navigation contains areas and worklists only
+- creation belongs to `Neu` in the shell command bar
+- `Neue ...` entries are not the default pattern for standard master-data objects
+
+Examples:
+
+- `Adressen`
+- `Artikelgruppen`
+- `Artikel`
 
 ## Shell Translation Strategy
 
