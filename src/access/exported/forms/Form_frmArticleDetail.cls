@@ -18,6 +18,7 @@ Private Sub Form_Load()
     modArticleService.ConfigureArticleDetailCombos Me
     modArticleService.ApplyDefaultValues Me
     UpdateHeaderCaptionUi
+    UpdateLocalCommandButtons
 
     modLoggingHandler.LogInfo MODULE_NAME & ".Form_Load", _
         "Article detail loaded."
@@ -32,6 +33,7 @@ Private Sub Form_Current()
     On Error GoTo ErrorHandler
 
     UpdateHeaderCaptionUi
+    UpdateLocalCommandButtons
     Exit Sub
 
 ErrorHandler:
@@ -67,7 +69,7 @@ End Sub
 Private Sub cmdSave_Click()
     On Error GoTo ErrorHandler
 
-    SaveCurrentRecord
+    DetailSave
     Exit Sub
 
 ErrorHandler:
@@ -77,7 +79,7 @@ End Sub
 Private Sub cmdCancel_Click()
     On Error GoTo ErrorHandler
 
-    CancelCurrentEdit
+    DetailCancel
     Exit Sub
 
 ErrorHandler:
@@ -101,6 +103,48 @@ Public Function CanLeaveWorkspace() As Boolean
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "CanLeaveWorkspace", Err
 End Function
+
+Public Function SupportsWorkspaceCommandBar() As Boolean
+    SupportsWorkspaceCommandBar = True
+End Function
+
+Public Function GetWorkspaceCommandBarConfig() As Object
+    Dim cfg As Object
+
+    Set cfg = CreateObject("Scripting.Dictionary")
+    cfg.CompareMode = vbTextCompare
+
+    cfg("search.visible") = False
+    cfg("search.enabled") = False
+
+    cfg("R2.visible") = True
+    cfg("R2.enabled") = True
+    cfg("R2.caption") = modFwTranslationRuntime.ResolveText("COMMON.CANCEL", "Abbrechen")
+    cfg("R2.command") = modAppShell.WCMD_DETAIL_CANCEL
+
+    cfg("R1.visible") = True
+    cfg("R1.enabled") = True
+    cfg("R1.caption") = modFwTranslationRuntime.ResolveText("COMMON.SAVE", "Speichern")
+    cfg("R1.command") = modAppShell.WCMD_DETAIL_SAVE
+
+    Set GetWorkspaceCommandBarConfig = cfg
+End Function
+
+Public Function CanExecuteWorkspaceCommand(ByVal commandKey As String) As Boolean
+    Select Case UCase$(Trim$(commandKey))
+        Case modAppShell.WCMD_DETAIL_SAVE, modAppShell.WCMD_DETAIL_CANCEL
+            CanExecuteWorkspaceCommand = True
+    End Select
+End Function
+
+Public Sub ExecuteWorkspaceCommand(ByVal commandKey As String, Optional ByVal commandValue As String = "")
+    Select Case UCase$(Trim$(commandKey))
+        Case modAppShell.WCMD_DETAIL_SAVE
+            DetailSave
+        Case modAppShell.WCMD_DETAIL_CANCEL
+            DetailCancel
+    End Select
+End Sub
 
 Public Function GetCurrentWorkspaceRecordId() As Long
     GetCurrentWorkspaceRecordId = GetCurrentArticleId()
@@ -141,6 +185,14 @@ Public Function HasUnsavedChanges() As Boolean
 
 SafeExit:
 End Function
+
+Public Sub DetailSave()
+    SaveCurrentRecord
+End Sub
+
+Public Sub DetailCancel()
+    CancelCurrentEdit
+End Sub
 
 Private Sub SaveCurrentRecord()
     On Error GoTo ErrorHandler
@@ -219,6 +271,20 @@ Private Sub UpdateHeaderCaptionUi()
         Me!lblFormTitle.Caption = headerCaption
     ElseIf HasControl("txtFormTitle") Then
         Me!txtFormTitle.Value = headerCaption
+    End If
+
+SafeExit:
+End Sub
+
+Private Sub UpdateLocalCommandButtons()
+    On Error GoTo SafeExit
+
+    If HasControl("cmdSave") Then
+        Me!cmdSave.Visible = False
+    End If
+
+    If HasControl("cmdCancel") Then
+        Me!cmdCancel.Visible = False
     End If
 
 SafeExit:

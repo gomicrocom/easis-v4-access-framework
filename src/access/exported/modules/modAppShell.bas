@@ -151,6 +151,7 @@ Public Function RefreshWorkspaceCommandBar(ByVal shellForm As Access.Form) As Bo
     Dim config As Object
     Dim currentWorkspaceFormName As String
     Dim clearSearch As Boolean
+    Dim supportsWorkspaceBar As Boolean
 
     Set workspaceForm = ResolveCurrentWorkspaceForm(shellForm)
     If Not workspaceForm Is Nothing Then
@@ -162,7 +163,8 @@ Public Function RefreshWorkspaceCommandBar(ByVal shellForm As Access.Form) As Bo
 
     ResetWorkspaceCommandBarUi shellForm
 
-    Set config = ResolveWorkspaceCommandBarConfig(workspaceForm)
+    supportsWorkspaceBar = SupportsWorkspaceCommandBarApi(workspaceForm)
+    Set config = ResolveWorkspaceCommandBarConfig(workspaceForm, supportsWorkspaceBar)
     If config Is Nothing Then
         ClearQuickSearchText shellForm
         RefreshWorkspaceCommandBar = True
@@ -620,7 +622,9 @@ Private Sub ResetCommandBarSlot(ByVal shellForm As Access.Form, ByVal slotName A
 SafeExit:
 End Sub
 
-Private Function ResolveWorkspaceCommandBarConfig(ByVal workspaceForm As Access.Form) As Object
+Private Function ResolveWorkspaceCommandBarConfig( _
+    ByVal workspaceForm As Access.Form, _
+    ByVal supportsWorkspaceBar As Boolean) As Object
     On Error GoTo SafeExit
 
     Dim formObject As Object
@@ -629,7 +633,7 @@ Private Function ResolveWorkspaceCommandBarConfig(ByVal workspaceForm As Access.
         Exit Function
     End If
 
-    If ResolveWorkspaceBooleanCapability(workspaceForm, METHOD_SUPPORTS_WORKSPACE_BAR, False) Then
+    If supportsWorkspaceBar Then
         Set formObject = workspaceForm
         Set ResolveWorkspaceCommandBarConfig = CallByName(formObject, METHOD_GET_WORKSPACE_BAR_CONFIG, VbMethod)
         Exit Function
@@ -655,12 +659,12 @@ Private Function BuildLegacyListCommandBarConfig(ByVal workspaceForm As Access.F
         Exit Function
     End If
 
-    If Not ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_BAR, False) Then
+    If Not ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_BAR, False, True) Then
         Exit Function
     End If
 
-    supportsNew = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_NEW, True)
-    supportsEdit = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_EDIT, True)
+    supportsNew = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_NEW, True, True)
+    supportsEdit = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_EDIT, True, True)
 
     Set cfg = CreateObject("Scripting.Dictionary")
     cfg.CompareMode = vbTextCompare
@@ -812,7 +816,7 @@ Private Function WorkspaceCanExecuteCommand(ByVal workspaceForm As Access.Form, 
         Exit Function
     End If
 
-    If Not ResolveWorkspaceBooleanCapability(workspaceForm, METHOD_SUPPORTS_WORKSPACE_BAR, False) Then
+    If Not SupportsWorkspaceCommandBarApi(workspaceForm) Then
         WorkspaceCanExecuteCommand = ResolveLegacyCommandAvailability(workspaceForm, commandKey)
         Exit Function
     End If
@@ -832,9 +836,9 @@ End Function
 Private Function ResolveLegacyCommandAvailability(ByVal workspaceForm As Access.Form, ByVal commandKey As String) As Boolean
     Select Case UCase$(Trim$(commandKey))
         Case WCMD_LIST_NEW
-            ResolveLegacyCommandAvailability = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_NEW, True)
+            ResolveLegacyCommandAvailability = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_NEW, True, True)
         Case WCMD_LIST_EDIT
-            ResolveLegacyCommandAvailability = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_EDIT, True)
+            ResolveLegacyCommandAvailability = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_EDIT, True, True)
         Case WCMD_LIST_SEARCH, WCMD_LIST_CLEAR_SEARCH, WCMD_LIST_REFRESH
             ResolveLegacyCommandAvailability = True
         Case Else
@@ -858,7 +862,7 @@ Private Sub ExecuteWorkspaceCommandByKey( _
         Exit Sub
     End If
 
-    If ResolveWorkspaceBooleanCapability(workspaceForm, METHOD_SUPPORTS_WORKSPACE_BAR, False) Then
+    If SupportsWorkspaceCommandBarApi(workspaceForm) Then
         If WorkspaceCanExecuteCommand(workspaceForm, commandKey) Then
             Set formObject = workspaceForm
             CallByName formObject, METHOD_EXECUTE_WORKSPACE_COMMAND, VbMethod, commandKey, commandValue
@@ -874,6 +878,10 @@ Private Sub ExecuteWorkspaceCommandByKey( _
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ExecuteWorkspaceCommandByKey", Err
 End Sub
+
+Private Function SupportsWorkspaceCommandBarApi(ByVal workspaceForm As Access.Form) As Boolean
+    SupportsWorkspaceCommandBarApi = ResolveWorkspaceBooleanCapability(workspaceForm, METHOD_SUPPORTS_WORKSPACE_BAR, False, True)
+End Function
 
 Private Sub ExecuteLegacyWorkspaceCommand( _
     ByVal shellForm As Access.Form, _
@@ -1052,7 +1060,8 @@ End Function
 Private Function ResolveWorkspaceBooleanCapability( _
     ByVal workspaceForm As Access.Form, _
     ByVal methodName As String, _
-    ByVal defaultValue As Boolean) As Boolean
+    ByVal defaultValue As Boolean, _
+    Optional ByVal suppressWarningLog As Boolean = False) As Boolean
     On Error GoTo SafeExit
 
     Dim formObject As Object
@@ -1071,7 +1080,7 @@ Private Function ResolveWorkspaceBooleanCapability( _
 SafeExit:
     If Err.Number = 438 Then
         ResolveWorkspaceBooleanCapability = defaultValue
-    ElseIf Not workspaceForm Is Nothing Then
+    ElseIf Not suppressWarningLog And Not workspaceForm Is Nothing Then
         modLoggingHandler.LogWarning MODULE_NAME & ".ResolveWorkspaceBooleanCapability", _
             "Capability '" & methodName & "' could not be resolved for form '" & workspaceForm.Name & "'."
     End If
