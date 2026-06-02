@@ -33,6 +33,21 @@ Private Const COMMAND_SHELL_NEW As String = "cmdShellNew"
 Private Const COMMAND_SHELL_EDIT As String = "cmdShellEdit"
 Private Const COMMAND_SHELL_REFRESH As String = "cmdShellRefresh"
 
+Private Const COMMAND_BAR_L1 As String = "cmdL1"
+Private Const COMMAND_BAR_L2 As String = "cmdL2"
+Private Const COMMAND_BAR_L3 As String = "cmdL3"
+Private Const COMMAND_BAR_R5 As String = "cmdR5"
+Private Const COMMAND_BAR_R4 As String = "cmdR4"
+Private Const COMMAND_BAR_R3 As String = "cmdR3"
+Private Const COMMAND_BAR_R2 As String = "cmdR2"
+Private Const COMMAND_BAR_R1 As String = "cmdR1"
+Private Const TEXT_QUICK_SEARCH As String = "txtQuickSearch"
+Private Const COMMAND_QUICK_SEARCH_CLEAR As String = "cmdQuickSearchClear"
+
+Private Const METHOD_SUPPORTS_WORKSPACE_BAR As String = "SupportsWorkspaceCommandBar"
+Private Const METHOD_GET_WORKSPACE_BAR_CONFIG As String = "GetWorkspaceCommandBarConfig"
+Private Const METHOD_CAN_EXECUTE_WORKSPACE_COMMAND As String = "CanExecuteWorkspaceCommand"
+Private Const METHOD_EXECUTE_WORKSPACE_COMMAND As String = "ExecuteWorkspaceCommand"
 Private Const LIST_METHOD_SUPPORTS_BAR As String = "SupportsListCommandBar"
 Private Const LIST_METHOD_SUPPORTS_NEW As String = "SupportsListNew"
 Private Const LIST_METHOD_SUPPORTS_EDIT As String = "SupportsListEdit"
@@ -41,6 +56,23 @@ Private Const LIST_METHOD_CLEAR_SEARCH As String = "ListClearSearch"
 Private Const LIST_METHOD_NEW As String = "ListNew"
 Private Const LIST_METHOD_EDIT As String = "ListEdit"
 Private Const LIST_METHOD_REFRESH As String = "ListRefresh"
+
+Public Const WCMD_LIST_SEARCH As String = "LIST_SEARCH"
+Public Const WCMD_LIST_CLEAR_SEARCH As String = "LIST_CLEAR_SEARCH"
+Public Const WCMD_LIST_NEW As String = "LIST_NEW"
+Public Const WCMD_LIST_EDIT As String = "LIST_EDIT"
+Public Const WCMD_LIST_REFRESH As String = "LIST_REFRESH"
+Public Const WCMD_DETAIL_SAVE As String = "DETAIL_SAVE"
+Public Const WCMD_DETAIL_CANCEL As String = "DETAIL_CANCEL"
+
+Public Const WSLOT_L1 As String = "L1"
+Public Const WSLOT_L2 As String = "L2"
+Public Const WSLOT_L3 As String = "L3"
+Public Const WSLOT_R5 As String = "R5"
+Public Const WSLOT_R4 As String = "R4"
+Public Const WSLOT_R3 As String = "R3"
+Public Const WSLOT_R2 As String = "R2"
+Public Const WSLOT_R1 As String = "R1"
 
 Private m_lastWorkspaceFormName As String
 
@@ -98,7 +130,7 @@ Public Function RefreshShellStatus(ByVal shellForm As Access.Form) As Boolean
     SetDisplayValueIfPresent shellForm, STATUS_BACKEND, ResolveBackendStatusText()
     SetDisplayValueIfPresent shellForm, STATUS_ENVIRONMENT, ResolveEnvironmentText()
     SetControlEnabledIfPresent shellForm, COMMAND_BACK, modAppWorkspaceService.CanGoBack()
-    UpdateShellCommandBarState shellForm
+    RefreshWorkspaceCommandBar shellForm
 
     RefreshShellStatus = True
     Exit Function
@@ -109,18 +141,18 @@ ErrorHandler:
 End Function
 
 Public Sub UpdateShellCommandBarState(ByVal shellForm As Access.Form)
+    RefreshWorkspaceCommandBar shellForm
+End Sub
+
+Public Function RefreshWorkspaceCommandBar(ByVal shellForm As Access.Form) As Boolean
     On Error GoTo ErrorHandler
 
     Dim workspaceForm As Access.Form
-    Dim supportsCommandBar As Boolean
-    Dim supportsNew As Boolean
-    Dim supportsEdit As Boolean
+    Dim config As Object
     Dim currentWorkspaceFormName As String
     Dim clearSearch As Boolean
 
     Set workspaceForm = ResolveCurrentWorkspaceForm(shellForm)
-    supportsCommandBar = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_BAR, False)
-
     If Not workspaceForm Is Nothing Then
         currentWorkspaceFormName = workspaceForm.Name
     End If
@@ -128,50 +160,99 @@ Public Sub UpdateShellCommandBarState(ByVal shellForm As Access.Form)
     clearSearch = (StrComp(m_lastWorkspaceFormName, currentWorkspaceFormName, vbTextCompare) <> 0)
     m_lastWorkspaceFormName = currentWorkspaceFormName
 
-    If supportsCommandBar Then
-        supportsNew = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_NEW, True)
-        supportsEdit = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_EDIT, True)
+    ResetWorkspaceCommandBarUi shellForm
 
-        SetCommandBarVisible shellForm, True
-        SetControlEnabledIfPresent shellForm, LABEL_SHELL_SEARCH, True
-        SetControlEnabledIfPresent shellForm, TEXT_SHELL_SEARCH, True
-        SetControlEnabledIfPresent shellForm, COMMAND_SHELL_CLEAR_SEARCH, True
-        SetControlEnabledIfPresent shellForm, COMMAND_SHELL_NEW, supportsNew
-        SetControlEnabledIfPresent shellForm, COMMAND_SHELL_EDIT, supportsEdit
-        SetControlEnabledIfPresent shellForm, COMMAND_SHELL_REFRESH, True
-
-        If clearSearch Then
-            ClearShellSearchText shellForm
-        End If
-    Else
-        SetCommandBarVisible shellForm, False
-        ClearShellSearchText shellForm
+    Set config = ResolveWorkspaceCommandBarConfig(workspaceForm)
+    If config Is Nothing Then
+        ClearQuickSearchText shellForm
+        RefreshWorkspaceCommandBar = True
+        Exit Function
     End If
+
+    If clearSearch Then
+        ClearQuickSearchText shellForm
+    End If
+
+    ApplyWorkspaceCommandBarConfig shellForm, workspaceForm, config
+    RefreshWorkspaceCommandBar = True
+    Exit Function
+
+ErrorHandler:
+    RefreshWorkspaceCommandBar = False
+    modErrorHandler.HandleError MODULE_NAME, "RefreshWorkspaceCommandBar", Err
+End Function
+
+Public Sub ExecuteWorkspaceCommandBarSlot(ByVal shellForm As Access.Form, ByVal slotName As String)
+    On Error GoTo ErrorHandler
+
+    Dim commandKey As String
+
+    commandKey = ResolveSlotCommandKey(shellForm, slotName)
+    If LenB(commandKey) = 0 Then
+        Exit Sub
+    End If
+
+    ExecuteWorkspaceCommandByKey shellForm, commandKey
     Exit Sub
 
 ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "UpdateShellCommandBarState", Err
+    modErrorHandler.HandleError MODULE_NAME, "ExecuteWorkspaceCommandBarSlot", Err
+End Sub
+
+Public Sub ExecuteWorkspaceQuickSearch(ByVal shellForm As Access.Form, ByVal searchText As String)
+    On Error GoTo ErrorHandler
+
+    Dim commandKey As String
+
+    commandKey = ResolveQuickSearchCommandKey(shellForm, False)
+    If LenB(commandKey) = 0 Then
+        commandKey = WCMD_LIST_SEARCH
+    End If
+
+    ExecuteWorkspaceCommandByKey shellForm, commandKey, searchText
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ExecuteWorkspaceQuickSearch", Err
+End Sub
+
+Public Sub ClearWorkspaceQuickSearch(ByVal shellForm As Access.Form)
+    On Error GoTo ErrorHandler
+
+    Dim commandKey As String
+
+    ClearQuickSearchText shellForm
+
+    commandKey = ResolveQuickSearchCommandKey(shellForm, True)
+    If LenB(commandKey) = 0 Then
+        commandKey = WCMD_LIST_CLEAR_SEARCH
+    End If
+
+    ExecuteWorkspaceCommandByKey shellForm, commandKey
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ClearWorkspaceQuickSearch", Err
 End Sub
 
 Public Sub ExecuteShellListSearch(ByVal shellForm As Access.Form, ByVal searchText As String)
-    CallWorkspaceListMethodWithArg shellForm, LIST_METHOD_SEARCH, searchText
+    ExecuteWorkspaceQuickSearch shellForm, searchText
 End Sub
 
 Public Sub ExecuteShellListClearSearch(ByVal shellForm As Access.Form)
-    ClearShellSearchText shellForm
-    CallWorkspaceListMethodNoArg shellForm, LIST_METHOD_CLEAR_SEARCH
+    ClearWorkspaceQuickSearch shellForm
 End Sub
 
 Public Sub ExecuteShellListNew(ByVal shellForm As Access.Form)
-    CallWorkspaceListMethodNoArg shellForm, LIST_METHOD_NEW
+    ExecuteWorkspaceCommandByKey shellForm, WCMD_LIST_NEW
 End Sub
 
 Public Sub ExecuteShellListEdit(ByVal shellForm As Access.Form)
-    CallWorkspaceListMethodNoArg shellForm, LIST_METHOD_EDIT
+    ExecuteWorkspaceCommandByKey shellForm, WCMD_LIST_EDIT
 End Sub
 
 Public Sub ExecuteShellListRefresh(ByVal shellForm As Access.Form)
-    CallWorkspaceListMethodNoArg shellForm, LIST_METHOD_REFRESH
+    ExecuteWorkspaceCommandByKey shellForm, WCMD_LIST_REFRESH
 End Sub
 
 Public Function LoadDefaultWorkspace(ByVal shellForm As Access.Form) As Boolean
@@ -487,6 +568,455 @@ Private Sub ClearShellSearchText(ByVal shellForm As Access.Form)
 
     If shellForm Is Nothing Then
         Exit Sub
+    End If
+
+    If HasControl(shellForm, TEXT_SHELL_SEARCH) Then
+        shellForm.Controls(TEXT_SHELL_SEARCH).Value = vbNullString
+    End If
+
+SafeExit:
+End Sub
+
+Private Sub ResetWorkspaceCommandBarUi(ByVal shellForm As Access.Form)
+    On Error GoTo SafeExit
+
+    ResetCommandBarSlot shellForm, WSLOT_L1
+    ResetCommandBarSlot shellForm, WSLOT_L2
+    ResetCommandBarSlot shellForm, WSLOT_L3
+    ResetCommandBarSlot shellForm, WSLOT_R5
+    ResetCommandBarSlot shellForm, WSLOT_R4
+    ResetCommandBarSlot shellForm, WSLOT_R3
+    ResetCommandBarSlot shellForm, WSLOT_R2
+    ResetCommandBarSlot shellForm, WSLOT_R1
+
+    SetControlVisibleIfPresent shellForm, TEXT_QUICK_SEARCH, False
+    SetControlEnabledIfPresent shellForm, TEXT_QUICK_SEARCH, False
+    SetControlVisibleIfPresent shellForm, COMMAND_QUICK_SEARCH_CLEAR, False
+    SetControlEnabledIfPresent shellForm, COMMAND_QUICK_SEARCH_CLEAR, False
+    ClearQuickSearchText shellForm
+
+SafeExit:
+End Sub
+
+Private Sub ResetCommandBarSlot(ByVal shellForm As Access.Form, ByVal slotName As String)
+    On Error GoTo SafeExit
+
+    Dim controlName As String
+
+    controlName = ResolveSlotControlName(slotName)
+    If LenB(controlName) = 0 Then
+        Exit Sub
+    End If
+
+    If Not HasControl(shellForm, controlName) Then
+        Exit Sub
+    End If
+
+    shellForm.Controls(controlName).Visible = False
+    shellForm.Controls(controlName).Enabled = False
+    shellForm.Controls(controlName).Caption = vbNullString
+    shellForm.Controls(controlName).Tag = vbNullString
+
+SafeExit:
+End Sub
+
+Private Function ResolveWorkspaceCommandBarConfig(ByVal workspaceForm As Access.Form) As Object
+    On Error GoTo SafeExit
+
+    Dim formObject As Object
+
+    If workspaceForm Is Nothing Then
+        Exit Function
+    End If
+
+    If ResolveWorkspaceBooleanCapability(workspaceForm, METHOD_SUPPORTS_WORKSPACE_BAR, False) Then
+        Set formObject = workspaceForm
+        Set ResolveWorkspaceCommandBarConfig = CallByName(formObject, METHOD_GET_WORKSPACE_BAR_CONFIG, VbMethod)
+        Exit Function
+    End If
+
+    Set ResolveWorkspaceCommandBarConfig = BuildLegacyListCommandBarConfig(workspaceForm)
+    Exit Function
+
+SafeExit:
+    If Err.Number <> 0 And Err.Number <> 438 Then
+        modErrorHandler.HandleError MODULE_NAME, "ResolveWorkspaceCommandBarConfig", Err
+    End If
+End Function
+
+Private Function BuildLegacyListCommandBarConfig(ByVal workspaceForm As Access.Form) As Object
+    On Error GoTo SafeExit
+
+    Dim cfg As Object
+    Dim supportsNew As Boolean
+    Dim supportsEdit As Boolean
+
+    If workspaceForm Is Nothing Then
+        Exit Function
+    End If
+
+    If Not ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_BAR, False) Then
+        Exit Function
+    End If
+
+    supportsNew = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_NEW, True)
+    supportsEdit = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_EDIT, True)
+
+    Set cfg = CreateObject("Scripting.Dictionary")
+    cfg.CompareMode = vbTextCompare
+
+    cfg("search.visible") = True
+    cfg("search.enabled") = True
+    cfg("search.command_change") = WCMD_LIST_SEARCH
+    cfg("search.command_clear") = WCMD_LIST_CLEAR_SEARCH
+
+    cfg(WSLOT_L1 & ".visible") = True
+    cfg(WSLOT_L1 & ".enabled") = supportsNew
+    cfg(WSLOT_L1 & ".caption") = ResolveShellText("COMMON.NEW", "Neu")
+    cfg(WSLOT_L1 & ".command") = WCMD_LIST_NEW
+
+    cfg(WSLOT_R3 & ".visible") = True
+    cfg(WSLOT_R3 & ".enabled") = True
+    cfg(WSLOT_R3 & ".caption") = ResolveShellText("COMMON.CLEAR_SEARCH", "Leeren")
+    cfg(WSLOT_R3 & ".command") = WCMD_LIST_CLEAR_SEARCH
+
+    cfg(WSLOT_R2 & ".visible") = True
+    cfg(WSLOT_R2 & ".enabled") = supportsEdit
+    cfg(WSLOT_R2 & ".caption") = ResolveShellText("COMMON.EDIT", "Bearbeiten")
+    cfg(WSLOT_R2 & ".command") = WCMD_LIST_EDIT
+
+    cfg(WSLOT_R1 & ".visible") = True
+    cfg(WSLOT_R1 & ".enabled") = True
+    cfg(WSLOT_R1 & ".caption") = ResolveShellText("COMMON.REFRESH", "Aktualisieren")
+    cfg(WSLOT_R1 & ".command") = WCMD_LIST_REFRESH
+
+    Set BuildLegacyListCommandBarConfig = cfg
+    Exit Function
+
+SafeExit:
+    If Err.Number <> 0 Then
+        modErrorHandler.HandleError MODULE_NAME, "BuildLegacyListCommandBarConfig", Err
+    End If
+End Function
+
+Private Sub ApplyWorkspaceCommandBarConfig( _
+    ByVal shellForm As Access.Form, _
+    ByVal workspaceForm As Access.Form, _
+    ByVal config As Object)
+    On Error GoTo SafeExit
+
+    If shellForm Is Nothing Then
+        Exit Sub
+    End If
+
+    If config Is Nothing Then
+        Exit Sub
+    End If
+
+    ApplyCommandBarSlot shellForm, workspaceForm, config, WSLOT_L1
+    ApplyCommandBarSlot shellForm, workspaceForm, config, WSLOT_L2
+    ApplyCommandBarSlot shellForm, workspaceForm, config, WSLOT_L3
+    ApplyCommandBarSlot shellForm, workspaceForm, config, WSLOT_R5
+    ApplyCommandBarSlot shellForm, workspaceForm, config, WSLOT_R4
+    ApplyCommandBarSlot shellForm, workspaceForm, config, WSLOT_R3
+    ApplyCommandBarSlot shellForm, workspaceForm, config, WSLOT_R2
+    ApplyCommandBarSlot shellForm, workspaceForm, config, WSLOT_R1
+
+    ApplyQuickSearchConfig shellForm, config
+
+SafeExit:
+End Sub
+
+Private Sub ApplyCommandBarSlot( _
+    ByVal shellForm As Access.Form, _
+    ByVal workspaceForm As Access.Form, _
+    ByVal config As Object, _
+    ByVal slotName As String)
+    On Error GoTo SafeExit
+
+    Dim controlName As String
+    Dim isVisible As Boolean
+    Dim isEnabled As Boolean
+    Dim captionText As String
+    Dim commandKey As String
+
+    controlName = ResolveSlotControlName(slotName)
+    If LenB(controlName) = 0 Or Not HasControl(shellForm, controlName) Then
+        Exit Sub
+    End If
+
+    isVisible = GetConfigBoolean(config, slotName & ".visible", False)
+    commandKey = Trim$(GetConfigString(config, slotName & ".command", vbNullString))
+    captionText = GetConfigString(config, slotName & ".caption", vbNullString)
+
+    shellForm.Controls(controlName).Visible = isVisible
+    shellForm.Controls(controlName).Tag = BuildControlCommandTag(commandKey)
+
+    If Not isVisible Then
+        shellForm.Controls(controlName).Enabled = False
+        shellForm.Controls(controlName).Caption = vbNullString
+        Exit Sub
+    End If
+
+    isEnabled = GetConfigBoolean(config, slotName & ".enabled", True)
+    If LenB(commandKey) > 0 Then
+        isEnabled = isEnabled And WorkspaceCanExecuteCommand(workspaceForm, commandKey)
+    End If
+
+    shellForm.Controls(controlName).Enabled = isEnabled
+    shellForm.Controls(controlName).Caption = captionText
+
+SafeExit:
+End Sub
+
+Private Sub ApplyQuickSearchConfig(ByVal shellForm As Access.Form, ByVal config As Object)
+    On Error GoTo SafeExit
+
+    Dim isVisible As Boolean
+    Dim isEnabled As Boolean
+    Dim currentValue As String
+    Dim commandKey As String
+
+    isVisible = GetConfigBoolean(config, "search.visible", False)
+    isEnabled = GetConfigBoolean(config, "search.enabled", False)
+    currentValue = GetConfigString(config, "search.value", vbNullString)
+    commandKey = GetConfigString(config, "search.command_change", WCMD_LIST_SEARCH)
+
+    If HasControl(shellForm, TEXT_QUICK_SEARCH) Then
+        shellForm.Controls(TEXT_QUICK_SEARCH).Visible = isVisible
+        shellForm.Controls(TEXT_QUICK_SEARCH).Enabled = isVisible And isEnabled
+        shellForm.Controls(TEXT_QUICK_SEARCH).Tag = BuildControlCommandTag(commandKey)
+        If LenB(currentValue) > 0 Then
+            shellForm.Controls(TEXT_QUICK_SEARCH).Value = currentValue
+        End If
+    End If
+
+    If HasControl(shellForm, COMMAND_QUICK_SEARCH_CLEAR) Then
+        shellForm.Controls(COMMAND_QUICK_SEARCH_CLEAR).Visible = isVisible
+        shellForm.Controls(COMMAND_QUICK_SEARCH_CLEAR).Enabled = isVisible And isEnabled
+        shellForm.Controls(COMMAND_QUICK_SEARCH_CLEAR).Tag = BuildControlCommandTag(GetConfigString(config, "search.command_clear", WCMD_LIST_CLEAR_SEARCH))
+    End If
+
+SafeExit:
+End Sub
+
+Private Function WorkspaceCanExecuteCommand(ByVal workspaceForm As Access.Form, ByVal commandKey As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim formObject As Object
+
+    WorkspaceCanExecuteCommand = True
+
+    If workspaceForm Is Nothing Then
+        WorkspaceCanExecuteCommand = False
+        Exit Function
+    End If
+
+    If Not ResolveWorkspaceBooleanCapability(workspaceForm, METHOD_SUPPORTS_WORKSPACE_BAR, False) Then
+        WorkspaceCanExecuteCommand = ResolveLegacyCommandAvailability(workspaceForm, commandKey)
+        Exit Function
+    End If
+
+    Set formObject = workspaceForm
+    WorkspaceCanExecuteCommand = CBool(CallByName(formObject, METHOD_CAN_EXECUTE_WORKSPACE_COMMAND, VbMethod, commandKey))
+    Exit Function
+
+SafeExit:
+    If Err.Number = 438 Then
+        WorkspaceCanExecuteCommand = True
+    Else
+        WorkspaceCanExecuteCommand = False
+    End If
+End Function
+
+Private Function ResolveLegacyCommandAvailability(ByVal workspaceForm As Access.Form, ByVal commandKey As String) As Boolean
+    Select Case UCase$(Trim$(commandKey))
+        Case WCMD_LIST_NEW
+            ResolveLegacyCommandAvailability = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_NEW, True)
+        Case WCMD_LIST_EDIT
+            ResolveLegacyCommandAvailability = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_EDIT, True)
+        Case WCMD_LIST_SEARCH, WCMD_LIST_CLEAR_SEARCH, WCMD_LIST_REFRESH
+            ResolveLegacyCommandAvailability = True
+        Case Else
+            ResolveLegacyCommandAvailability = False
+    End Select
+End Function
+
+Private Sub ExecuteWorkspaceCommandByKey( _
+    ByVal shellForm As Access.Form, _
+    ByVal commandKey As String, _
+    Optional ByVal commandValue As String = "")
+    On Error GoTo ErrorHandler
+
+    Dim workspaceForm As Access.Form
+    Dim formObject As Object
+
+    Set workspaceForm = ResolveCurrentWorkspaceForm(shellForm)
+    If workspaceForm Is Nothing Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".ExecuteWorkspaceCommandByKey", _
+            "No active workspace form is available for command '" & commandKey & "'."
+        Exit Sub
+    End If
+
+    If ResolveWorkspaceBooleanCapability(workspaceForm, METHOD_SUPPORTS_WORKSPACE_BAR, False) Then
+        If WorkspaceCanExecuteCommand(workspaceForm, commandKey) Then
+            Set formObject = workspaceForm
+            CallByName formObject, METHOD_EXECUTE_WORKSPACE_COMMAND, VbMethod, commandKey, commandValue
+        End If
+    Else
+        ExecuteLegacyWorkspaceCommand shellForm, workspaceForm, commandKey, commandValue
+        Exit Sub
+    End If
+
+    RefreshShellStatus shellForm
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ExecuteWorkspaceCommandByKey", Err
+End Sub
+
+Private Sub ExecuteLegacyWorkspaceCommand( _
+    ByVal shellForm As Access.Form, _
+    ByVal workspaceForm As Access.Form, _
+    ByVal commandKey As String, _
+    ByVal commandValue As String)
+    Select Case UCase$(Trim$(commandKey))
+        Case WCMD_LIST_SEARCH
+            CallWorkspaceListMethodWithArg shellForm, LIST_METHOD_SEARCH, commandValue
+        Case WCMD_LIST_CLEAR_SEARCH
+            CallWorkspaceListMethodNoArg shellForm, LIST_METHOD_CLEAR_SEARCH
+        Case WCMD_LIST_NEW
+            CallWorkspaceListMethodNoArg shellForm, LIST_METHOD_NEW
+        Case WCMD_LIST_EDIT
+            CallWorkspaceListMethodNoArg shellForm, LIST_METHOD_EDIT
+        Case WCMD_LIST_REFRESH
+            CallWorkspaceListMethodNoArg shellForm, LIST_METHOD_REFRESH
+    End Select
+End Sub
+
+Private Function ResolveSlotCommandKey(ByVal shellForm As Access.Form, ByVal slotName As String) As String
+    Dim controlName As String
+
+    controlName = ResolveSlotControlName(slotName)
+    If LenB(controlName) = 0 Then
+        Exit Function
+    End If
+
+    If HasControl(shellForm, controlName) Then
+        ResolveSlotCommandKey = ParseCommandKeyFromTag(modDaoHelper.NzString(shellForm.Controls(controlName).Tag))
+    End If
+End Function
+
+Private Function ResolveQuickSearchCommandKey(ByVal shellForm As Access.Form, ByVal isClearCommand As Boolean) As String
+    If isClearCommand Then
+        If HasControl(shellForm, COMMAND_QUICK_SEARCH_CLEAR) Then
+            ResolveQuickSearchCommandKey = ParseCommandKeyFromTag(modDaoHelper.NzString(shellForm.Controls(COMMAND_QUICK_SEARCH_CLEAR).Tag))
+        End If
+    Else
+        If HasControl(shellForm, TEXT_QUICK_SEARCH) Then
+            ResolveQuickSearchCommandKey = ParseCommandKeyFromTag(modDaoHelper.NzString(shellForm.Controls(TEXT_QUICK_SEARCH).Tag))
+        End If
+    End If
+End Function
+
+Private Function ResolveSlotControlName(ByVal slotName As String) As String
+    Select Case UCase$(Trim$(slotName))
+        Case WSLOT_L1
+            ResolveSlotControlName = COMMAND_BAR_L1
+        Case WSLOT_L2
+            ResolveSlotControlName = COMMAND_BAR_L2
+        Case WSLOT_L3
+            ResolveSlotControlName = COMMAND_BAR_L3
+        Case WSLOT_R5
+            ResolveSlotControlName = COMMAND_BAR_R5
+        Case WSLOT_R4
+            ResolveSlotControlName = COMMAND_BAR_R4
+        Case WSLOT_R3
+            ResolveSlotControlName = COMMAND_BAR_R3
+        Case WSLOT_R2
+            ResolveSlotControlName = COMMAND_BAR_R2
+        Case WSLOT_R1
+            ResolveSlotControlName = COMMAND_BAR_R1
+    End Select
+End Function
+
+Private Function BuildControlCommandTag(ByVal commandKey As String) As String
+    commandKey = Trim$(commandKey)
+    If LenB(commandKey) = 0 Then
+        Exit Function
+    End If
+
+    BuildControlCommandTag = "WCMD=" & commandKey
+End Function
+
+Private Function ParseCommandKeyFromTag(ByVal tagValue As String) As String
+    Dim parts() As String
+    Dim partText As Variant
+    Dim separatorPosition As Long
+
+    If LenB(tagValue) = 0 Then
+        Exit Function
+    End If
+
+    parts = Split(tagValue, ";")
+    For Each partText In parts
+        separatorPosition = InStr(1, CStr(partText), "=", vbBinaryCompare)
+        If separatorPosition > 0 Then
+            If StrComp(Left$(CStr(partText), separatorPosition - 1), "WCMD", vbTextCompare) = 0 Then
+                ParseCommandKeyFromTag = Trim$(Mid$(CStr(partText), separatorPosition + 1))
+                Exit Function
+            End If
+        End If
+    Next partText
+End Function
+
+Private Function GetConfigBoolean(ByVal config As Object, ByVal keyName As String, ByVal defaultValue As Boolean) As Boolean
+    On Error GoTo SafeExit
+
+    If config Is Nothing Then
+        GetConfigBoolean = defaultValue
+        Exit Function
+    End If
+
+    If config.Exists(keyName) Then
+        GetConfigBoolean = CBool(config(keyName))
+    Else
+        GetConfigBoolean = defaultValue
+    End If
+    Exit Function
+
+SafeExit:
+    GetConfigBoolean = defaultValue
+End Function
+
+Private Function GetConfigString(ByVal config As Object, ByVal keyName As String, ByVal defaultValue As String) As String
+    On Error GoTo SafeExit
+
+    If config Is Nothing Then
+        GetConfigString = defaultValue
+        Exit Function
+    End If
+
+    If config.Exists(keyName) Then
+        GetConfigString = Trim$(modDaoHelper.NzString(config(keyName), defaultValue))
+    Else
+        GetConfigString = defaultValue
+    End If
+    Exit Function
+
+SafeExit:
+    GetConfigString = defaultValue
+End Function
+
+Private Sub ClearQuickSearchText(ByVal shellForm As Access.Form)
+    On Error GoTo SafeExit
+
+    If shellForm Is Nothing Then
+        Exit Sub
+    End If
+
+    If HasControl(shellForm, TEXT_QUICK_SEARCH) Then
+        shellForm.Controls(TEXT_QUICK_SEARCH).Value = vbNullString
     End If
 
     If HasControl(shellForm, TEXT_SHELL_SEARCH) Then

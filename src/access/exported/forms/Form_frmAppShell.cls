@@ -62,6 +62,106 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "cmdRefreshShell_Click", Err
 End Sub
 
+Private Sub txtQuickSearch_AfterUpdate()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteWorkspaceQuickSearch Me, modDaoHelper.NzString(Me!txtQuickSearch.Value)
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "txtQuickSearch_AfterUpdate", Err
+End Sub
+
+Private Sub cmdQuickSearchClear_Click()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ClearWorkspaceQuickSearch Me
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdQuickSearchClear_Click", Err
+End Sub
+
+Private Sub cmdL1_Click()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteWorkspaceCommandBarSlot Me, "L1"
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdL1_Click", Err
+End Sub
+
+Private Sub cmdL2_Click()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteWorkspaceCommandBarSlot Me, "L2"
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdL2_Click", Err
+End Sub
+
+Private Sub cmdL3_Click()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteWorkspaceCommandBarSlot Me, "L3"
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdL3_Click", Err
+End Sub
+
+Private Sub cmdR5_Click()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteWorkspaceCommandBarSlot Me, "R5"
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdR5_Click", Err
+End Sub
+
+Private Sub cmdR4_Click()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteWorkspaceCommandBarSlot Me, "R4"
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdR4_Click", Err
+End Sub
+
+Private Sub cmdR3_Click()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteWorkspaceCommandBarSlot Me, "R3"
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdR3_Click", Err
+End Sub
+
+Private Sub cmdR2_Click()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteWorkspaceCommandBarSlot Me, "R2"
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdR2_Click", Err
+End Sub
+
+Private Sub cmdR1_Click()
+    On Error GoTo ErrorHandler
+
+    modAppShell.ExecuteWorkspaceCommandBarSlot Me, "R1"
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdR1_Click", Err
+End Sub
+
 Private Sub txtShellSearch_AfterUpdate()
     On Error GoTo ErrorHandler
 
