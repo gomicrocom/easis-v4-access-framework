@@ -163,6 +163,117 @@ Public Function SupportsListCommandBar() As Boolean
     SupportsListCommandBar = True
 End Function
 
+Public Function SupportsWorkspaceCommandBar() As Boolean
+    SupportsWorkspaceCommandBar = True
+End Function
+
+Public Function GetWorkspaceCommandBarConfig() As Object
+    On Error GoTo ErrorHandler
+
+    Dim cfg As Object
+    Dim shellForm As Access.Form
+    Dim hasShellHost As Boolean
+
+    Set cfg = CreateObject("Scripting.Dictionary")
+    cfg.CompareMode = vbTextCompare
+    Set shellForm = ResolveHostingShellForm()
+    hasShellHost = Not shellForm Is Nothing
+
+    cfg("search.visible") = True
+    cfg("search.enabled") = True
+    cfg("search.value") = m_currentSearchText
+    cfg("search.command_change") = modAppShell.WCMD_LIST_SEARCH
+    cfg("search.command_clear") = modAppShell.WCMD_LIST_CLEAR_SEARCH
+
+    cfg(modAppShell.WSLOT_L1 & ".visible") = True
+    cfg(modAppShell.WSLOT_L1 & ".enabled") = hasShellHost
+    cfg(modAppShell.WSLOT_L1 & ".caption") = modFwTranslationRuntime.ResolveText("COMMON.HOME", "Home")
+    cfg(modAppShell.WSLOT_L1 & ".command") = modAppShell.WCMD_NAV_HOME
+
+    cfg(modAppShell.WSLOT_L2 & ".visible") = True
+    cfg(modAppShell.WSLOT_L2 & ".enabled") = hasShellHost And modAppWorkspaceService.CanGoBack()
+    cfg(modAppShell.WSLOT_L2 & ".caption") = modFwTranslationRuntime.ResolveText("COMMON.BACK", "Zurueck")
+    cfg(modAppShell.WSLOT_L2 & ".command") = modAppShell.WCMD_NAV_BACK
+
+    cfg(modAppShell.WSLOT_L3 & ".visible") = True
+    cfg(modAppShell.WSLOT_L3 & ".enabled") = True
+    cfg(modAppShell.WSLOT_L3 & ".caption") = modFwTranslationRuntime.ResolveText("COMMON.REFRESH", "Aktualisieren")
+    cfg(modAppShell.WSLOT_L3 & ".command") = modAppShell.WCMD_LIST_REFRESH
+
+    cfg(modAppShell.WSLOT_R3 & ".visible") = True
+    cfg(modAppShell.WSLOT_R3 & ".enabled") = True
+    cfg(modAppShell.WSLOT_R3 & ".caption") = modFwTranslationRuntime.ResolveText("FORM.FRMFWTRANSLATIONAUDIT.CLEAR_FILTERS", "Filter loeschen")
+    cfg(modAppShell.WSLOT_R3 & ".command") = modAppShell.WCMD_LIST_CLEAR_SEARCH
+
+    cfg(modAppShell.WSLOT_R2 & ".visible") = True
+    cfg(modAppShell.WSLOT_R2 & ".enabled") = HasCurrentAuditRow()
+    cfg(modAppShell.WSLOT_R2 & ".caption") = modFwTranslationRuntime.ResolveText("COMMON.EDIT", "Bearbeiten")
+    cfg(modAppShell.WSLOT_R2 & ".command") = modAppShell.WCMD_LIST_EDIT
+
+    cfg(modAppShell.WSLOT_R1 & ".visible") = True
+    cfg(modAppShell.WSLOT_R1 & ".enabled") = True
+    cfg(modAppShell.WSLOT_R1 & ".caption") = modFwTranslationRuntime.ResolveText("COMMON.REFRESH", "Aktualisieren")
+    cfg(modAppShell.WSLOT_R1 & ".command") = modAppShell.WCMD_LIST_REFRESH
+
+    Set GetWorkspaceCommandBarConfig = cfg
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "GetWorkspaceCommandBarConfig", Err
+End Function
+
+Public Function CanExecuteWorkspaceCommand(ByVal commandKey As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim shellForm As Access.Form
+
+    Set shellForm = ResolveHostingShellForm()
+
+    Select Case UCase$(Trim$(commandKey))
+        Case modAppShell.WCMD_NAV_HOME
+            CanExecuteWorkspaceCommand = Not shellForm Is Nothing
+        Case modAppShell.WCMD_NAV_BACK
+            CanExecuteWorkspaceCommand = (Not shellForm Is Nothing) And modAppWorkspaceService.CanGoBack()
+        Case modAppShell.WCMD_LIST_SEARCH
+            CanExecuteWorkspaceCommand = True
+        Case modAppShell.WCMD_LIST_CLEAR_SEARCH
+            CanExecuteWorkspaceCommand = True
+        Case modAppShell.WCMD_LIST_EDIT
+            CanExecuteWorkspaceCommand = HasCurrentAuditRow()
+        Case modAppShell.WCMD_LIST_REFRESH
+            CanExecuteWorkspaceCommand = True
+        Case Else
+            CanExecuteWorkspaceCommand = False
+    End Select
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "CanExecuteWorkspaceCommand", Err
+End Function
+
+Public Sub ExecuteWorkspaceCommand(ByVal commandKey As String, Optional ByVal commandValue As String = "")
+    On Error GoTo ErrorHandler
+
+    Select Case UCase$(Trim$(commandKey))
+        Case modAppShell.WCMD_NAV_HOME
+            NavigateHome
+        Case modAppShell.WCMD_NAV_BACK
+            NavigateBack
+        Case modAppShell.WCMD_LIST_SEARCH
+            ListSearch commandValue
+        Case modAppShell.WCMD_LIST_CLEAR_SEARCH
+            ClearAllFilters
+        Case modAppShell.WCMD_LIST_EDIT
+            OpenSelectedTranslation
+        Case modAppShell.WCMD_LIST_REFRESH
+            RefreshAuditData
+    End Select
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ExecuteWorkspaceCommand", Err
+End Sub
+
 Public Function SupportsListNew() As Boolean
     SupportsListNew = False
 End Function
@@ -396,6 +507,11 @@ Private Sub ResetFilters()
     SyncLocalSearchControl
 End Sub
 
+Private Sub ClearAllFilters()
+    ResetFilters
+    ApplyAuditFilter
+End Sub
+
 Private Function ApplyAuditFilter() As Boolean
     On Error GoTo ErrorHandler
 
@@ -588,6 +704,45 @@ Private Sub RefreshShellStatusIfHosted()
     End If
 
 SafeExit:
+End Sub
+
+Private Sub NavigateHome()
+    On Error GoTo ErrorHandler
+
+    Dim shellForm As Access.Form
+
+    Set shellForm = ResolveHostingShellForm()
+    If shellForm Is Nothing Then
+        Exit Sub
+    End If
+
+    modAppShell.LoadDefaultWorkspace shellForm
+    modAppShell.RefreshShellStatus shellForm
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "NavigateHome", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
+
+Private Sub NavigateBack()
+    On Error GoTo ErrorHandler
+
+    Dim shellForm As Access.Form
+
+    Set shellForm = ResolveHostingShellForm()
+    If shellForm Is Nothing Then
+        Exit Sub
+    End If
+
+    If modAppWorkspaceService.GoBack(shellForm) Then
+        modAppShell.RefreshShellStatus shellForm
+    End If
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "NavigateBack", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Sub
 
 Private Function ResolveHostingShellForm() As Access.Form

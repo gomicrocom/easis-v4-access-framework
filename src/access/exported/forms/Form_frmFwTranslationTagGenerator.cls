@@ -20,6 +20,7 @@ Option Explicit
 
 Private Const MODULE_NAME As String = "Form_frmFwTranslationTagGenerator"
 Private Const WORK_TABLE As String = "tmp_fw_translation_tag_generator"
+Private Const EXCLUDED_FORM_NAME As String = "frmFwTranslationTagGenerator"
 
 Private m_sessionId As String
 Private m_currentFormName As String
@@ -295,10 +296,16 @@ Private Sub PopulateFormCombo()
     Set formNames = modFwComposerService.GetComposerObjectList(modFwComposerService.OBJECT_TYPE_FORM)
 
     For Each formName In formNames
+        If StrComp(CStr(formName), EXCLUDED_FORM_NAME, vbTextCompare) = 0 Then
+            GoTo NextFormName
+        End If
+
         If LenB(rowSource) > 0 Then
             rowSource = rowSource & ";"
         End If
         rowSource = rowSource & Replace(CStr(formName), ";", ",")
+
+NextFormName:
     Next formName
 
     Me!cboFormName.RowSourceType = "Value List"

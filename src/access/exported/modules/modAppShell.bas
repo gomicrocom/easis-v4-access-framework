@@ -62,6 +62,8 @@ Public Const WCMD_LIST_CLEAR_SEARCH As String = "LIST_CLEAR_SEARCH"
 Public Const WCMD_LIST_NEW As String = "LIST_NEW"
 Public Const WCMD_LIST_EDIT As String = "LIST_EDIT"
 Public Const WCMD_LIST_REFRESH As String = "LIST_REFRESH"
+Public Const WCMD_NAV_HOME As String = "NAV_HOME"
+Public Const WCMD_NAV_BACK As String = "NAV_BACK"
 Public Const WCMD_DETAIL_SAVE As String = "DETAIL_SAVE"
 Public Const WCMD_DETAIL_CANCEL As String = "DETAIL_CANCEL"
 
@@ -835,6 +837,8 @@ End Function
 
 Private Function ResolveLegacyCommandAvailability(ByVal workspaceForm As Access.Form, ByVal commandKey As String) As Boolean
     Select Case UCase$(Trim$(commandKey))
+        Case WCMD_NAV_HOME, WCMD_NAV_BACK
+            ResolveLegacyCommandAvailability = True
         Case WCMD_LIST_NEW
             ResolveLegacyCommandAvailability = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_NEW, True, True)
         Case WCMD_LIST_EDIT
@@ -889,6 +893,10 @@ Private Sub ExecuteLegacyWorkspaceCommand( _
     ByVal commandKey As String, _
     ByVal commandValue As String)
     Select Case UCase$(Trim$(commandKey))
+        Case WCMD_NAV_HOME
+            LoadDefaultWorkspace shellForm
+        Case WCMD_NAV_BACK
+            Call modAppWorkspaceService.GoBack(shellForm)
         Case WCMD_LIST_SEARCH
             CallWorkspaceListMethodWithArg shellForm, LIST_METHOD_SEARCH, commandValue
         Case WCMD_LIST_CLEAR_SEARCH

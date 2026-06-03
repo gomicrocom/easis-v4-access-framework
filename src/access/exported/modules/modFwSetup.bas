@@ -11,6 +11,7 @@ Option Explicit
 '===============================================================================
 
 Private Const MODULE_NAME As String = "modFwSetup"
+Private Const FORM_TRANSLATION_TAG_GENERATOR As String = "frmFwTranslationTagGenerator"
 
 Public Sub SeedTranslations()
     On Error GoTo ErrorHandler
@@ -67,6 +68,8 @@ Public Sub SeedTranslations()
     InsertUnitTranslations db
     InsertVatCodeTranslations db
     InsertShellTranslations db
+    EnsureTranslationTagGeneratorTranslations db
+    EnsureTranslationTagGeneratorTags
 
     MsgBox "fw_translation wurde erfolgreich ergaenzt.", vbInformation
     Exit Sub
@@ -74,6 +77,165 @@ Public Sub SeedTranslations()
 ErrorHandler:
     MsgBox "Fehler beim Initialisieren von fw_translation: " & Err.description, vbExclamation
 End Sub
+
+Public Sub EnsureTranslationTagGeneratorTags()
+    On Error GoTo ErrorHandler
+
+    Dim metadataItems As Collection
+    Dim metadata As Variant
+    Dim controlTagMap As Object
+    Dim controlName As String
+    Dim currentTag As String
+    Dim updatedTag As String
+    Dim updatedCount As Long
+
+    Set metadataItems = modFwComposerService.GetFormControlMetadata(FORM_TRANSLATION_TAG_GENERATOR, True)
+    Set controlTagMap = CreateObject("Scripting.Dictionary")
+    controlTagMap.CompareMode = vbTextCompare
+
+    For Each metadata In metadataItems
+        controlName = Trim$(modDaoHelper.NzString(metadata("control_name")))
+        If LenB(controlName) = 0 Then
+            GoTo NextControl
+        End If
+
+        currentTag = modDaoHelper.NzString(metadata("current_tag"))
+        updatedTag = modFwTranslationRuntime.SetTranslationKeyInTag( _
+            currentTag, _
+            BuildTagGeneratorTranslationKey(controlName))
+
+        If StrComp(updatedTag, currentTag, vbBinaryCompare) <> 0 Then
+            controlTagMap(controlName) = updatedTag
+        End If
+
+NextControl:
+    Next metadata
+
+    If controlTagMap.Count > 0 Then
+        If Not modFwComposerService.SaveControlTagsToObject(modFwComposerService.OBJECT_TYPE_FORM, FORM_TRANSLATION_TAG_GENERATOR, controlTagMap, updatedCount) Then
+            Err.Raise vbObjectError + 6110, MODULE_NAME & ".EnsureTranslationTagGeneratorTags", _
+                "Failed to persist frmFwTranslationTagGenerator tags."
+        End If
+    End If
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".EnsureTranslationTagGeneratorTags", _
+        "Translation tags ensured for frmFwTranslationTagGenerator. updated_count=" & CStr(updatedCount) & "."
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "EnsureTranslationTagGeneratorTags", Err
+End Sub
+
+Public Sub EnsureTranslationTagGeneratorTranslations(Optional ByVal db As DAO.Database = Nothing)
+    On Error GoTo ErrorHandler
+
+    Dim workingDb As DAO.Database
+
+    If db Is Nothing Then
+        Set workingDb = CurrentDb
+    Else
+        Set workingDb = db
+    End If
+
+    EnsureTranslationSeed workingDb, "DE-CH", "NAV.FW_TRANSLATION_TAG_GENERATOR", "Translation-Tags", "NAVIGATION", 240
+    EnsureTranslationSeed workingDb, "EN-US", "NAV.FW_TRANSLATION_TAG_GENERATOR", "Translation tags", "NAVIGATION", 240
+    EnsureTranslationSeed workingDb, "FR-FR", "NAV.FW_TRANSLATION_TAG_GENERATOR", "Balises de traduction", "NAVIGATION", 240
+
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_TITLE", "Translation-Tag-Generator", "FORM", 278
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_TITLE", "Translation tag generator", "FORM", 278
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_TITLE", "Generateur de balises de traduction", "FORM", 278
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_NAME", "Formular", "FORM", 279
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_NAME", "Form", "FORM", 279
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_NAME", "Formulaire", "FORM", 279
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.INCLUDE_HIDDEN", "Versteckte Controls einschliessen", "FORM", 280
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.INCLUDE_HIDDEN", "Include hidden controls", "FORM", 280
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.INCLUDE_HIDDEN", "Inclure les controles masques", "FORM", 280
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SHOW_ALL_CONTROLS", "Alle Controls anzeigen", "FORM", 281
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SHOW_ALL_CONTROLS", "Show all controls", "FORM", 281
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SHOW_ALL_CONTROLS", "Afficher tous les controles", "FORM", 281
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.LOAD_FORM", "Formular laden", "FORM", 282
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.LOAD_FORM", "Load form", "FORM", 282
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.LOAD_FORM", "Charger le formulaire", "FORM", 282
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.GENERATE_SUGGESTIONS", "Vorschlaege generieren", "FORM", 283
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.GENERATE_SUGGESTIONS", "Generate suggestions", "FORM", 283
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.GENERATE_SUGGESTIONS", "Generer les propositions", "FORM", 283
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_MISSING_KEYS", "Fehlende Keys setzen", "FORM", 284
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_MISSING_KEYS", "Set missing keys", "FORM", 284
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_MISSING_KEYS", "Definir les cles manquantes", "FORM", 284
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_SELECTED_KEY", "Key fuer Control setzen", "FORM", 285
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_SELECTED_KEY", "Set key for control", "FORM", 285
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_SELECTED_KEY", "Definir la cle pour le controle", "FORM", 285
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.REMOVE_SELECTED_KEY", "Key fuer Control entfernen", "FORM", 286
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.REMOVE_SELECTED_KEY", "Remove key from control", "FORM", 286
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.REMOVE_SELECTED_KEY", "Supprimer la cle du controle", "FORM", 286
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SAVE", "Aenderungen speichern", "FORM", 287
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SAVE", "Save changes", "FORM", 287
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SAVE", "Enregistrer les modifications", "FORM", 287
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CANCEL", "Schliessen / verwerfen", "FORM", 288
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CANCEL", "Close / discard", "FORM", 288
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CANCEL", "Fermer / abandonner", "FORM", 288
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_NAME", "Control-Name", "FORM", 289
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_NAME", "Control name", "FORM", 289
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_NAME", "Nom du controle", "FORM", 289
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_TYPE", "Control-Typ", "FORM", 290
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_TYPE", "Control type", "FORM", 290
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_TYPE", "Type de controle", "FORM", 290
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SOURCE_TEXT", "Quelltext", "FORM", 291
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SOURCE_TEXT", "Source text", "FORM", 291
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SOURCE_TEXT", "Texte source", "FORM", 291
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TAG", "Aktueller Tag", "FORM", 292
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TAG", "Current tag", "FORM", 292
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TAG", "Balise actuelle", "FORM", 292
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TRANSLATION_KEY", "Vorhandener Translation-Key", "FORM", 293
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TRANSLATION_KEY", "Existing translation key", "FORM", 293
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TRANSLATION_KEY", "Cle de traduction existante", "FORM", 293
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SUGGESTED_TRANSLATION_KEY", "Vorgeschlagener Translation-Key", "FORM", 294
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SUGGESTED_TRANSLATION_KEY", "Suggested translation key", "FORM", 294
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SUGGESTED_TRANSLATION_KEY", "Cle de traduction proposee", "FORM", 294
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.TAG_STATUS", "Tag-Status", "FORM", 295
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.TAG_STATUS", "Tag status", "FORM", 295
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.TAG_STATUS", "Statut de balise", "FORM", 295
+
+    EnsureTranslationSeed workingDb, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_ERROR", "Fehler beim Laden des Translation-Tag-Generators.", "MSG", 295
+    EnsureTranslationSeed workingDb, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_ERROR", "Error loading the translation tag generator.", "MSG", 295
+    EnsureTranslationSeed workingDb, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_ERROR", "Erreur lors du chargement du generateur de balises de traduction.", "MSG", 295
+    EnsureTranslationSeed workingDb, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_FORM_ERROR", "Fehler beim Laden des ausgewaehlten Formulars.", "MSG", 296
+    EnsureTranslationSeed workingDb, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_FORM_ERROR", "Error loading the selected form.", "MSG", 296
+    EnsureTranslationSeed workingDb, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_FORM_ERROR", "Erreur lors du chargement du formulaire selectionne.", "MSG", 296
+    EnsureTranslationSeed workingDb, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_FORM_REQUIRED", "Bitte zuerst ein Formular auswaehlen.", "MSG", 297
+    EnsureTranslationSeed workingDb, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_FORM_REQUIRED", "Please select a form first.", "MSG", 297
+    EnsureTranslationSeed workingDb, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_FORM_REQUIRED", "Veuillez d'abord selectionner un formulaire.", "MSG", 297
+    EnsureTranslationSeed workingDb, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_SELECT_CONTROL", "Bitte zuerst ein Control auswaehlen.", "MSG", 298
+    EnsureTranslationSeed workingDb, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_SELECT_CONTROL", "Please select a control first.", "MSG", 298
+    EnsureTranslationSeed workingDb, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_SELECT_CONTROL", "Veuillez d'abord selectionner un controle.", "MSG", 298
+    EnsureTranslationSeed workingDb, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_NOT_TRANSLATABLE", "Das markierte Control ist nicht fuer einen Translation-Key geeignet.", "MSG", 299
+    EnsureTranslationSeed workingDb, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_NOT_TRANSLATABLE", "The selected control is not suitable for a translation key.", "MSG", 299
+    EnsureTranslationSeed workingDb, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_NOT_TRANSLATABLE", "Le controle selectionne ne convient pas pour une cle de traduction.", "MSG", 299
+    EnsureTranslationSeed workingDb, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_NO_MISSING_KEYS", "Keine fehlenden Translation-Keys zum Setzen gefunden.", "MSG", 300
+    EnsureTranslationSeed workingDb, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_NO_MISSING_KEYS", "No missing translation keys were found to set.", "MSG", 300
+    EnsureTranslationSeed workingDb, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_NO_MISSING_KEYS", "Aucune cle de traduction manquante a definir n'a ete trouvee.", "MSG", 300
+    EnsureTranslationSeed workingDb, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_SUCCESS", "Translation-Tags wurden gespeichert.", "MSG", 301
+    EnsureTranslationSeed workingDb, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_SUCCESS", "Translation tags were saved.", "MSG", 301
+    EnsureTranslationSeed workingDb, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_SUCCESS", "Les balises de traduction ont ete enregistrees.", "MSG", 301
+    EnsureTranslationSeed workingDb, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_ERROR", "Fehler beim Speichern der Translation-Tags.", "MSG", 302
+    EnsureTranslationSeed workingDb, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_ERROR", "Error saving the translation tags.", "MSG", 302
+    EnsureTranslationSeed workingDb, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_ERROR", "Erreur lors de l'enregistrement des balises de traduction.", "MSG", 302
+    EnsureTranslationSeed workingDb, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_DISCARD_CONFIRM", "Ungespeicherte Tag-Aenderungen verwerfen?", "MSG", 303
+    EnsureTranslationSeed workingDb, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_DISCARD_CONFIRM", "Discard unsaved tag changes?", "MSG", 303
+    EnsureTranslationSeed workingDb, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_DISCARD_CONFIRM", "Abandonner les modifications de balises non enregistrees ?", "MSG", 303
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".EnsureTranslationTagGeneratorTranslations", _
+        "Translation seeds ensured for frmFwTranslationTagGenerator."
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "EnsureTranslationTagGeneratorTranslations", Err
+End Sub
+
+Private Function BuildTagGeneratorTranslationKey(ByVal controlName As String) As String
+    controlName = UCase$(Trim$(modDaoHelper.NzString(controlName)))
+    BuildTagGeneratorTranslationKey = "FORM." & UCase$(FORM_TRANSLATION_TAG_GENERATOR) & "." & controlName
+End Function
 
 Public Sub SeedShellTranslations()
     On Error GoTo ErrorHandler
@@ -904,10 +1066,6 @@ Private Sub InsertShellTranslations(ByVal db As DAO.Database)
     EnsureTranslationSeed db, "DE-CH", "NAV.FW_TRANSLATION_AUDIT", "Uebersetzungs-Audit", "NAVIGATION", 240
     EnsureTranslationSeed db, "EN-US", "NAV.FW_TRANSLATION_AUDIT", "Translation audit", "NAVIGATION", 240
     EnsureTranslationSeed db, "FR-FR", "NAV.FW_TRANSLATION_AUDIT", "Audit des traductions", "NAVIGATION", 240
-    EnsureTranslationSeed db, "DE-CH", "NAV.FW_TRANSLATION_TAG_GENERATOR", "Translation-Tags", "NAVIGATION", 240
-    EnsureTranslationSeed db, "EN-US", "NAV.FW_TRANSLATION_TAG_GENERATOR", "Translation tags", "NAVIGATION", 240
-    EnsureTranslationSeed db, "FR-FR", "NAV.FW_TRANSLATION_TAG_GENERATOR", "Balises de traduction", "NAVIGATION", 240
-
     EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONAUDIT.FORM_TITLE", "Uebersetzungs-Audit", "FORM", 241
     EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONAUDIT.FORM_TITLE", "Translation audit", "FORM", 241
     EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONAUDIT.FORM_TITLE", "Audit des traductions", "FORM", 241
@@ -1023,88 +1181,6 @@ Private Sub InsertShellTranslations(ByVal db As DAO.Database)
     EnsureTranslationSeed db, "EN-US", "MSG.TRANSLATION_EDIT_DEEPL_OVERWRITE_CONFIRM", "Replace existing target texts with DeepL suggestions?", "MSG", 277
     EnsureTranslationSeed db, "FR-FR", "MSG.TRANSLATION_EDIT_DEEPL_OVERWRITE_CONFIRM", "Remplacer les textes cibles existants par des suggestions DeepL ?", "MSG", 277
 
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_TITLE", "Translation-Tag-Generator", "FORM", 278
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_TITLE", "Translation tag generator", "FORM", 278
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_TITLE", "Generateur de balises de traduction", "FORM", 278
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_NAME", "Formular", "FORM", 279
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_NAME", "Form", "FORM", 279
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.FORM_NAME", "Formulaire", "FORM", 279
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.INCLUDE_HIDDEN", "Versteckte Controls einschliessen", "FORM", 280
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.INCLUDE_HIDDEN", "Include hidden controls", "FORM", 280
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.INCLUDE_HIDDEN", "Inclure les controles masques", "FORM", 280
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SHOW_ALL_CONTROLS", "Alle Controls anzeigen", "FORM", 281
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SHOW_ALL_CONTROLS", "Show all controls", "FORM", 281
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SHOW_ALL_CONTROLS", "Afficher tous les controles", "FORM", 281
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.LOAD_FORM", "Formular laden", "FORM", 282
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.LOAD_FORM", "Load form", "FORM", 282
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.LOAD_FORM", "Charger le formulaire", "FORM", 282
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.GENERATE_SUGGESTIONS", "Vorschlaege generieren", "FORM", 283
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.GENERATE_SUGGESTIONS", "Generate suggestions", "FORM", 283
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.GENERATE_SUGGESTIONS", "Generer les propositions", "FORM", 283
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_MISSING_KEYS", "Fehlende Keys setzen", "FORM", 284
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_MISSING_KEYS", "Set missing keys", "FORM", 284
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_MISSING_KEYS", "Definir les cles manquantes", "FORM", 284
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_SELECTED_KEY", "Key fuer Control setzen", "FORM", 285
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_SELECTED_KEY", "Set key for control", "FORM", 285
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SET_SELECTED_KEY", "Definir la cle pour le controle", "FORM", 285
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.REMOVE_SELECTED_KEY", "Key fuer Control entfernen", "FORM", 286
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.REMOVE_SELECTED_KEY", "Remove key from control", "FORM", 286
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.REMOVE_SELECTED_KEY", "Supprimer la cle du controle", "FORM", 286
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SAVE", "Aenderungen speichern", "FORM", 287
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SAVE", "Save changes", "FORM", 287
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SAVE", "Enregistrer les modifications", "FORM", 287
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CANCEL", "Schliessen / verwerfen", "FORM", 288
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CANCEL", "Close / discard", "FORM", 288
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CANCEL", "Fermer / abandonner", "FORM", 288
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_NAME", "Control-Name", "FORM", 289
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_NAME", "Control name", "FORM", 289
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_NAME", "Nom du controle", "FORM", 289
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_TYPE", "Control-Typ", "FORM", 290
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_TYPE", "Control type", "FORM", 290
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CONTROL_TYPE", "Type de controle", "FORM", 290
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SOURCE_TEXT", "Quelltext", "FORM", 291
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SOURCE_TEXT", "Source text", "FORM", 291
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SOURCE_TEXT", "Texte source", "FORM", 291
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TAG", "Aktueller Tag", "FORM", 292
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TAG", "Current tag", "FORM", 292
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TAG", "Balise actuelle", "FORM", 292
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TRANSLATION_KEY", "Vorhandener Translation-Key", "FORM", 293
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TRANSLATION_KEY", "Existing translation key", "FORM", 293
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.CURRENT_TRANSLATION_KEY", "Cle de traduction existante", "FORM", 293
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SUGGESTED_TRANSLATION_KEY", "Vorgeschlagener Translation-Key", "FORM", 294
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SUGGESTED_TRANSLATION_KEY", "Suggested translation key", "FORM", 294
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.SUGGESTED_TRANSLATION_KEY", "Cle de traduction proposee", "FORM", 294
-    EnsureTranslationSeed db, "DE-CH", "FORM.FRMFWTRANSLATIONTAGGENERATOR.TAG_STATUS", "Tag-Status", "FORM", 295
-    EnsureTranslationSeed db, "EN-US", "FORM.FRMFWTRANSLATIONTAGGENERATOR.TAG_STATUS", "Tag status", "FORM", 295
-    EnsureTranslationSeed db, "FR-FR", "FORM.FRMFWTRANSLATIONTAGGENERATOR.TAG_STATUS", "Statut de balise", "FORM", 295
-
-    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_ERROR", "Fehler beim Laden des Translation-Tag-Generators.", "MSG", 295
-    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_ERROR", "Error loading the translation tag generator.", "MSG", 295
-    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_ERROR", "Erreur lors du chargement du generateur de balises de traduction.", "MSG", 295
-    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_FORM_ERROR", "Fehler beim Laden des ausgewaehlten Formulars.", "MSG", 296
-    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_FORM_ERROR", "Error loading the selected form.", "MSG", 296
-    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_LOAD_FORM_ERROR", "Erreur lors du chargement du formulaire selectionne.", "MSG", 296
-    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_FORM_REQUIRED", "Bitte zuerst ein Formular auswaehlen.", "MSG", 297
-    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_FORM_REQUIRED", "Please select a form first.", "MSG", 297
-    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_FORM_REQUIRED", "Veuillez d'abord selectionner un formulaire.", "MSG", 297
-    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_SELECT_CONTROL", "Bitte zuerst ein Control auswaehlen.", "MSG", 298
-    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_SELECT_CONTROL", "Please select a control first.", "MSG", 298
-    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_SELECT_CONTROL", "Veuillez d'abord selectionner un controle.", "MSG", 298
-    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_NOT_TRANSLATABLE", "Das markierte Control ist nicht fuer einen Translation-Key geeignet.", "MSG", 299
-    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_NOT_TRANSLATABLE", "The selected control is not suitable for a translation key.", "MSG", 299
-    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_NOT_TRANSLATABLE", "Le controle selectionne ne convient pas pour une cle de traduction.", "MSG", 299
-    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_NO_MISSING_KEYS", "Keine fehlenden Translation-Keys zum Setzen gefunden.", "MSG", 300
-    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_NO_MISSING_KEYS", "No missing translation keys were found to set.", "MSG", 300
-    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_NO_MISSING_KEYS", "Aucune cle de traduction manquante a definir n'a ete trouvee.", "MSG", 300
-    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_SUCCESS", "Translation-Tags wurden gespeichert.", "MSG", 301
-    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_SUCCESS", "Translation tags were saved.", "MSG", 301
-    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_SUCCESS", "Les balises de traduction ont ete enregistrees.", "MSG", 301
-    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_ERROR", "Fehler beim Speichern der Translation-Tags.", "MSG", 302
-    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_ERROR", "Error saving the translation tags.", "MSG", 302
-    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_SAVE_ERROR", "Erreur lors de l'enregistrement des balises de traduction.", "MSG", 302
-    EnsureTranslationSeed db, "DE-CH", "MSG.FW_TRANSLATION_TAG_GENERATOR_DISCARD_CONFIRM", "Ungespeicherte Tag-Aenderungen verwerfen?", "MSG", 303
-    EnsureTranslationSeed db, "EN-US", "MSG.FW_TRANSLATION_TAG_GENERATOR_DISCARD_CONFIRM", "Discard unsaved tag changes?", "MSG", 303
-    EnsureTranslationSeed db, "FR-FR", "MSG.FW_TRANSLATION_TAG_GENERATOR_DISCARD_CONFIRM", "Abandonner les modifications de balises non enregistrees ?", "MSG", 303
 End Sub
 
 Private Sub EnsureTranslationSeed( _
