@@ -1,3 +1,4 @@
+Attribute VB_Name = "modDocumentExportHandler"
 Option Compare Database
 Option Explicit
 
@@ -23,7 +24,7 @@ Public Function ExportDocumentToPdfLegacy(ByVal DocumentId As Long, Optional ByV
     End If
 
     If LenB(Trim$(OutputPath)) > 0 Then
-        targetPdfPath = modOutputPathService.BuildLegacyDocumentPdfPath(DocumentId, OutputPath)
+        targetPdfPath = Trim$(OutputPath)
         If LenB(targetPdfPath) = 0 Then
             modLoggingHandler.LogWarning MODULE_NAME & ".ExportDocumentToPdfLegacy", _
                 "Export skipped because OutputPath could not be resolved for DocumentId=" & CStr(DocumentId) & "."

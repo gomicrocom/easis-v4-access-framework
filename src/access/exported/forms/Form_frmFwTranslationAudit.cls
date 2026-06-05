@@ -195,10 +195,10 @@ Public Function GetWorkspaceCommandBarConfig() As Object
     cfg(modAppShell.WSLOT_L2 & ".caption") = modFwTranslationRuntime.ResolveText("COMMON.BACK", "Zurueck")
     cfg(modAppShell.WSLOT_L2 & ".command") = modAppShell.WCMD_NAV_BACK
 
-    cfg(modAppShell.WSLOT_L3 & ".visible") = True
-    cfg(modAppShell.WSLOT_L3 & ".enabled") = True
-    cfg(modAppShell.WSLOT_L3 & ".caption") = modFwTranslationRuntime.ResolveText("COMMON.REFRESH", "Aktualisieren")
-    cfg(modAppShell.WSLOT_L3 & ".command") = modAppShell.WCMD_LIST_REFRESH
+    cfg(modAppShell.WSLOT_L3 & ".visible") = False
+    cfg(modAppShell.WSLOT_L3 & ".enabled") = False
+    cfg(modAppShell.WSLOT_L3 & ".caption") = vbNullString
+    cfg(modAppShell.WSLOT_L3 & ".command") = vbNullString
 
     cfg(modAppShell.WSLOT_R3 & ".visible") = True
     cfg(modAppShell.WSLOT_R3 & ".enabled") = True
@@ -865,12 +865,12 @@ ErrorHandler:
 End Sub
 
 Private Function BuildAuditOrderBy() As String
-    BuildAuditOrderBy = _
+    BuildAuditOrderBy = RemoveTrailingComma( _
         "IIf([audit_status]='ORPHAN',1," & _
         "IIf([audit_status]='LEGACY_KEY',2," & _
         "IIf([audit_status]='MISSING_ROW',3," & _
         "IIf([audit_status]='EMPTY_VALUE',4,5))))," & _
-        " [scope_code], [translation_key], [language_code]"
+        " [scope_code], [translation_key], [language_code]")
 End Function
 
 Private Function BuildAuditRecordSourceSql(ByVal whereClause As String) As String
@@ -889,6 +889,14 @@ End Function
 
 Private Function BuildEmptyAuditRecordSourceSql() As String
     BuildEmptyAuditRecordSourceSql = vbNullString
+End Function
+
+Private Function RemoveTrailingComma(ByVal sqlFragment As String) As String
+    sqlFragment = RTrim$(sqlFragment)
+    If Right$(sqlFragment, 1) = "," Then
+        sqlFragment = Left$(sqlFragment, Len(sqlFragment) - 1)
+    End If
+    RemoveTrailingComma = sqlFragment
 End Function
 
 Private Function CountAuditRows(ByVal whereClause As String) As Long

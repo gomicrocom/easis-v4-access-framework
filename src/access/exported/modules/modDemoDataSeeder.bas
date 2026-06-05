@@ -1,4 +1,5 @@
-﻿Option Compare Database
+Attribute VB_Name = "modDemoDataSeeder"
+Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -974,7 +975,7 @@ CleanExit:
     On Error Resume Next
     If Not rs Is Nothing Then rs.Close
     Set rs = Nothing
-End Sub
+End Function
 
 Private Function UpdateDocumentRequiredFields( _
     ByVal db As DAO.Database, _
@@ -986,7 +987,7 @@ Private Function UpdateDocumentRequiredFields( _
     ByVal vatRate As Double, _
     ByVal LanguageCode As String, _
     ByVal PaymentTermCode As String, _
-    ByVal PaymentTermsText As String)
+    ByVal PaymentTermsText As String) As Boolean
 
     Dim rs As DAO.Recordset
     Dim sql As String
@@ -1020,7 +1021,7 @@ CleanExit:
     On Error Resume Next
     If Not rs Is Nothing Then rs.Close
     Set rs = Nothing
-End Sub
+End Function
 
 Private Function ResolveAddressId( _
     ByVal db As DAO.Database, _

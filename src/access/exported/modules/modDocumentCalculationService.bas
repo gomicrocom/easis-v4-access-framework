@@ -1,3 +1,4 @@
+Attribute VB_Name = "modDocumentCalculationService"
 Option Compare Database
 Option Explicit
 

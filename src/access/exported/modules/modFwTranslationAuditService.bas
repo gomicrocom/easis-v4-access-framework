@@ -1,3 +1,4 @@
+Attribute VB_Name = "modFwTranslationAuditService"
 Option Compare Database
 Option Explicit
 

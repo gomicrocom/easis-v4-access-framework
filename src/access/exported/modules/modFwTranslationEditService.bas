@@ -338,7 +338,7 @@ CleanExit:
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "LookupTranslationValue", Err
     Resume CleanExit
-End Sub
+End Function
 
 Private Function RequiredLanguageCodes() As Variant
     RequiredLanguageCodes = Array(LANGUAGE_DE_CH, LANGUAGE_EN_US, LANGUAGE_FR_FR)

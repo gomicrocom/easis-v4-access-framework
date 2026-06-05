@@ -153,13 +153,34 @@ Public Function SupportsWorkspaceCommandBar() As Boolean
 End Function
 
 Public Function GetWorkspaceCommandBarConfig() As Object
+    On Error GoTo ErrorHandler
+
     Dim cfg As Object
+    Dim shellForm As Access.Form
+    Dim hasShellHost As Boolean
 
     Set cfg = CreateObject("Scripting.Dictionary")
     cfg.CompareMode = vbTextCompare
+    Set shellForm = ResolveHostingShellForm()
+    hasShellHost = Not shellForm Is Nothing
 
     cfg("search.visible") = False
     cfg("search.enabled") = False
+
+    cfg("L1.visible") = True
+    cfg("L1.enabled") = hasShellHost
+    cfg("L1.caption") = modFwTranslationRuntime.ResolveText("COMMON.HOME", "Home")
+    cfg("L1.command") = modAppShell.WCMD_NAV_HOME
+
+    cfg("L2.visible") = True
+    cfg("L2.enabled") = hasShellHost And modAppWorkspaceService.CanGoBack()
+    cfg("L2.caption") = modFwTranslationRuntime.ResolveText("COMMON.BACK", "Zurueck")
+    cfg("L2.command") = modAppShell.WCMD_NAV_BACK
+
+    cfg("L3.visible") = False
+    cfg("L3.enabled") = False
+    cfg("L3.caption") = vbNullString
+    cfg("L3.command") = vbNullString
 
     cfg("R2.visible") = True
     cfg("R2.enabled") = True
@@ -172,22 +193,54 @@ Public Function GetWorkspaceCommandBarConfig() As Object
     cfg("R1.command") = modAppShell.WCMD_DETAIL_SAVE
 
     Set GetWorkspaceCommandBarConfig = cfg
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "GetWorkspaceCommandBarConfig", Err
 End Function
 
 Public Function CanExecuteWorkspaceCommand(ByVal commandKey As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim shellForm As Access.Form
+
+    Set shellForm = ResolveHostingShellForm()
+
     Select Case UCase$(Trim$(commandKey))
+        Case modAppShell.WCMD_NAV_HOME
+            CanExecuteWorkspaceCommand = Not shellForm Is Nothing
+        Case modAppShell.WCMD_NAV_BACK
+            CanExecuteWorkspaceCommand = (Not shellForm Is Nothing) And modAppWorkspaceService.CanGoBack()
+        Case modAppShell.WCMD_LIST_REFRESH
+            CanExecuteWorkspaceCommand = (LenB(m_currentTranslationKey) > 0)
         Case modAppShell.WCMD_DETAIL_SAVE, modAppShell.WCMD_DETAIL_CANCEL
             CanExecuteWorkspaceCommand = True
     End Select
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "CanExecuteWorkspaceCommand", Err
 End Function
 
 Public Sub ExecuteWorkspaceCommand(ByVal commandKey As String, Optional ByVal commandValue As String = "")
+    On Error GoTo ErrorHandler
+
     Select Case UCase$(Trim$(commandKey))
+        Case modAppShell.WCMD_NAV_HOME
+            NavigateHome
+        Case modAppShell.WCMD_NAV_BACK
+            NavigateBack
+        Case modAppShell.WCMD_LIST_REFRESH
+            RefreshCurrentTranslation
         Case modAppShell.WCMD_DETAIL_SAVE
             DetailSave
         Case modAppShell.WCMD_DETAIL_CANCEL
             DetailCancel
     End Select
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ExecuteWorkspaceCommand", Err
 End Sub
 
 Public Function CanLeaveWorkspace() As Boolean
@@ -404,6 +457,23 @@ Private Sub UpdateLocalCommandButtons()
 SafeExit:
 End Sub
 
+Private Function ResolveHostingShellForm() As Access.Form
+    On Error GoTo SafeExit
+
+    Dim parentForm As Access.Form
+
+    Set parentForm = Me.Parent
+    If parentForm Is Nothing Then
+        Exit Function
+    End If
+
+    If HasControlOnForm(parentForm, "subWorkspaceHost") Then
+        Set ResolveHostingShellForm = parentForm
+    End If
+
+SafeExit:
+End Function
+
 Private Function GetControlText(ByVal controlName As String) As String
     On Error GoTo SafeExit
 
@@ -540,6 +610,25 @@ Private Function HasControl(ByVal controlName As String) As Boolean
 SafeExit:
 End Function
 
+Private Function HasControlOnForm(ByVal targetForm As Access.Form, ByVal controlName As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim currentControl As Control
+
+    If targetForm Is Nothing Then
+        Exit Function
+    End If
+
+    For Each currentControl In targetForm.Controls
+        If StrComp(currentControl.Name, controlName, vbTextCompare) = 0 Then
+            HasControlOnForm = True
+            Exit Function
+        End If
+    Next currentControl
+
+SafeExit:
+End Function
+
 Private Function AddWorkspaceStatePair(ByVal stateText As String, ByVal keyName As String, ByVal valueText As String) As String
     If LenB(stateText) > 0 Then
         stateText = stateText & ";"
@@ -588,8 +677,11 @@ End Function
 Private Sub ReturnToPreviousWorkspace(ByVal callerName As String)
     On Error GoTo ErrorHandler
 
-    If Not Me.Parent Is Nothing Then
-        If modAppWorkspaceService.GoBack(Me.Parent) Then
+    Dim shellForm As Access.Form
+
+    Set shellForm = ResolveHostingShellForm()
+    If Not shellForm Is Nothing Then
+        If modAppWorkspaceService.GoBack(shellForm) Then
             Exit Sub
         End If
     End If
@@ -600,4 +692,64 @@ Private Sub ReturnToPreviousWorkspace(ByVal callerName As String)
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, callerName & ".ReturnToPreviousWorkspace", Err
+End Sub
+
+Private Sub NavigateHome()
+    On Error GoTo ErrorHandler
+
+    Dim shellForm As Access.Form
+
+    Set shellForm = ResolveHostingShellForm()
+    If shellForm Is Nothing Then
+        Exit Sub
+    End If
+
+    modAppShell.LoadDefaultWorkspace shellForm
+    modAppShell.RefreshShellStatus shellForm
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "NavigateHome", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
+
+Private Sub NavigateBack()
+    On Error GoTo ErrorHandler
+
+    Dim shellForm As Access.Form
+
+    Set shellForm = ResolveHostingShellForm()
+    If shellForm Is Nothing Then
+        Exit Sub
+    End If
+
+    If modAppWorkspaceService.GoBack(shellForm) Then
+        modAppShell.RefreshShellStatus shellForm
+    End If
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "NavigateBack", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
+End Sub
+
+Private Sub RefreshCurrentTranslation()
+    On Error GoTo ErrorHandler
+
+    If LenB(m_currentTranslationKey) = 0 Then
+        Exit Sub
+    End If
+
+    If HasUnsavedChanges() Then
+        If MsgBox(modFwTranslationRuntime.ResolveText("MSG.TRANSLATION_EDIT_CANCEL_CONFIRM", "Ungespeicherte Aenderungen verwerfen?"), vbQuestion + vbYesNo + vbDefaultButton2, MODULE_NAME) <> vbYes Then
+            Exit Sub
+        End If
+    End If
+
+    ReloadCurrentTranslationContext
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "RefreshCurrentTranslation", Err
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Sub

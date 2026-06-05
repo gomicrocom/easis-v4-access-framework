@@ -1,3 +1,4 @@
+Attribute VB_Name = "modFwTranslationRuntime"
 Option Compare Database
 Option Explicit
 
@@ -72,6 +73,9 @@ Public Sub ApplyTranslations(ByVal TargetObject As Object)
         "Translated " & objectKind & " '" & objectName & "' with " & _
         CStr(resolvedCount) & " resolved caption(s) and " & _
         CStr(missingCount) & " missing translation(s)."
+    If TypeOf TargetObject Is Access.Form Then
+        modFwDiagnostics.LogFormDiagnostics "AfterApplyTranslations:" & objectName, TargetObject
+    End If
     Exit Sub
 
 ErrorHandler:

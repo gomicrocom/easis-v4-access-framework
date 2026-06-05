@@ -22,19 +22,16 @@ Private Const MODULE_NAME As String = "Form_frmAppShell"
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
 
-    Debug.Print "frmAppShell Form_Load started"
+    modFwDiagnostics.LogSystemSnapshot "frmAppShell.Form_Load.BeforeInitialize"
     modFwTranslationRuntime.ApplyTranslations Me
 
     If Not modAppShell.InitializeAppShell(Me) Then
-        Debug.Print "InitializeAppShell returned False"
         modLoggingHandler.LogWarning MODULE_NAME & ".Form_Load", _
             "Application shell initialization returned False."
     Else
-        Debug.Print "InitializeAppShell returned True"
+        modFwDiagnostics.LogSystemSnapshot "frmAppShell.Form_Load.AfterInitialize"
+        modFwDiagnostics.LogWorkspaceState "frmAppShell.Form_Load.AfterInitialize", Me
     End If
-
-    Debug.Print "Navigation SourceObject: " & Me!subNavigationHost.SourceObject
-    Debug.Print "Workspace SourceObject: " & Me!subWorkspaceHost.SourceObject
 
     Exit Sub
 

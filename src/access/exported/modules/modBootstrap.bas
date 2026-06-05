@@ -1,4 +1,5 @@
-﻿Option Compare Database
+Attribute VB_Name = "modBootstrap"
+Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -42,6 +43,8 @@ Public Function BootstrapApplication(Optional ByVal IniPath As String = vbNullSt
 
     IsBootstrapped = True
     BootstrapApplication = True
+    modFwDiagnostics.LogSystemSnapshot "AfterBootstrap"
+    modFwDiagnostics.LogTranslationRuntimeState "AfterBootstrap"
 
     modLoggingHandler.LogInfo MODULE_NAME & ".BootstrapApplication", "Bootstrap completed successfully."
     Exit Function

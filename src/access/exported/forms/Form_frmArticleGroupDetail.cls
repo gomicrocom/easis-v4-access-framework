@@ -127,6 +127,21 @@ Public Function GetWorkspaceCommandBarConfig() As Object
     cfg("search.visible") = False
     cfg("search.enabled") = False
 
+    cfg("L1.visible") = True
+    cfg("L1.enabled") = True
+    cfg("L1.caption") = modFwTranslationRuntime.ResolveText("COMMON.HOME", "Home")
+    cfg("L1.command") = modAppShell.WCMD_NAV_HOME
+
+    cfg("L2.visible") = True
+    cfg("L2.enabled") = modAppWorkspaceService.CanGoBack()
+    cfg("L2.caption") = modFwTranslationRuntime.ResolveText("COMMON.BACK", "Zurueck")
+    cfg("L2.command") = modAppShell.WCMD_NAV_BACK
+
+    cfg("L3.visible") = False
+    cfg("L3.enabled") = False
+    cfg("L3.caption") = vbNullString
+    cfg("L3.command") = vbNullString
+
     cfg("R2.visible") = True
     cfg("R2.enabled") = True
     cfg("R2.caption") = modFwTranslationRuntime.ResolveText("COMMON.CANCEL", "Abbrechen")

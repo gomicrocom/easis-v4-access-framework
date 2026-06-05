@@ -1,4 +1,5 @@
-﻿Option Compare Database
+Attribute VB_Name = "modAppWorkspaceService"
+Option Compare Database
 Option Explicit
 
 '===============================================================================
@@ -36,40 +37,51 @@ Public Function OpenWorkspaceForm( _
 
     Dim hostForm As Access.Form
     Dim workspaceHost As Control
+    Dim loadedWorkspaceForm As Access.Form
     Dim historyItemText As String
+    Dim previousSourceObject As String
+    Dim previousWorkspaceState As String
+    Dim targetFormName As String
+    Dim targetSourceObject As String
+    Dim currentSourceObject As String
+    Dim loadSucceeded As Boolean
 
-    If LenB(Trim$(form_name)) = 0 Then
+    targetFormName = Trim$(form_name)
+    If LenB(targetFormName) = 0 Then
         Exit Function
     End If
 
-    If Not FormExists(form_name) Then
+    targetSourceObject = "Form." & targetFormName
+    modFwDiagnostics.LogSystemSnapshot "BeforeOpenWorkspaceForm:" & targetFormName
+
+    If Not FormExists(targetFormName) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".OpenWorkspaceForm", _
-            "Workspace form '" & form_name & "' was not found."
+            "Workspace form '" & targetFormName & "' was not found."
         Exit Function
     End If
 
     Set hostForm = ResolveWorkspaceHostForm(shellForm)
 
     If hostForm Is Nothing Then
-        DoCmd.OpenForm form_name, acNormal, , where_condition, data_mode, , open_args
+        DoCmd.OpenForm targetFormName, acNormal, , where_condition, data_mode, , open_args
         OpenWorkspaceForm = True
         modLoggingHandler.LogInfo MODULE_NAME & ".OpenWorkspaceForm", _
-            "Opened form '" & form_name & "' without shell host."
+            "Opened form '" & targetFormName & "' without shell host."
         Exit Function
     End If
 
     Set workspaceHost = GetWorkspaceHostControl(hostForm)
     If workspaceHost Is Nothing Then
-        DoCmd.OpenForm form_name, acNormal, , where_condition, data_mode, , open_args
+        DoCmd.OpenForm targetFormName, acNormal, , where_condition, data_mode, , open_args
         OpenWorkspaceForm = True
         modLoggingHandler.LogWarning MODULE_NAME & ".OpenWorkspaceForm", _
-            "Shell workspace host is missing. Opened form '" & form_name & "' standalone."
+            "Shell workspace host is missing. Opened form '" & targetFormName & "' standalone."
         Exit Function
     End If
 
     If Not CanReplaceWorkspaceContent(workspaceHost) Then
         modLoggingHandler.LogInfo MODULE_NAME & ".OpenWorkspaceForm", _
-            "Workspace navigation to '" & form_name & "' was cancelled by the active workspace form."
+            "Workspace navigation to '" & targetFormName & "' was cancelled by the active workspace form."
         Exit Function
     End If
 
@@ -77,13 +89,27 @@ Public Function OpenWorkspaceForm( _
         historyItemText = CaptureCurrentWorkspaceHistory(workspaceHost)
     End If
 
-    workspaceHost.SourceObject = vbNullString
-    workspaceHost.SourceObject = "Form." & form_name
+    previousSourceObject = Trim$(Nz(workspaceHost.SourceObject, vbNullString))
+    previousWorkspaceState = historyItemText
 
-    ApplyWorkspaceFormState workspaceHost.Form, where_condition, data_mode
+    workspaceHost.SourceObject = vbNullString
+    workspaceHost.SourceObject = targetSourceObject
+
+    Set loadedWorkspaceForm = TryGetHostedWorkspaceForm(workspaceHost)
+    If loadedWorkspaceForm Is Nothing Then
+        Err.Raise 2467, MODULE_NAME & ".OpenWorkspaceForm", _
+            "Workspace target form '" & targetFormName & "' is not available after SourceObject switch."
+    End If
+
+    If StrComp(loadedWorkspaceForm.Name, targetFormName, vbTextCompare) <> 0 Then
+        Err.Raise 2467, MODULE_NAME & ".OpenWorkspaceForm", _
+            "Loaded workspace form mismatch. Expected '" & targetFormName & "', got '" & loadedWorkspaceForm.Name & "'."
+    End If
+
+    ApplyWorkspaceFormState loadedWorkspaceForm, where_condition, data_mode
 
     If LenB(Trim$(open_args)) > 0 Then
-        ApplyWorkspaceOpenArgs workspaceHost.Form, open_args, form_name
+        ApplyWorkspaceOpenArgs loadedWorkspaceForm, open_args, targetFormName
     End If
 
     SetWorkspaceFocus workspaceHost
@@ -93,14 +119,26 @@ Public Function OpenWorkspaceForm( _
     End If
 
     modAppShell.RefreshShellStatus hostForm
+    modFwDiagnostics.LogWorkspaceState "AfterOpenWorkspaceForm:" & targetFormName, hostForm
 
+    loadSucceeded = True
     OpenWorkspaceForm = True
     modLoggingHandler.LogInfo MODULE_NAME & ".OpenWorkspaceForm", _
-        "Loaded form '" & form_name & "' into the shell workspace."
+        "Loaded form '" & targetFormName & "' into the shell workspace."
     Exit Function
 
 ErrorHandler:
     OpenWorkspaceForm = False
+    currentSourceObject = ResolveCurrentWorkspaceSourceObject(workspaceHost)
+    modLoggingHandler.LogWarning MODULE_NAME & ".OpenWorkspaceForm", _
+        "Workspace load failed. target_form_name='" & targetFormName & _
+        "'; previous_source_object='" & previousSourceObject & _
+        "'; current_source_object='" & currentSourceObject & _
+        "'; err_number=" & CStr(Err.Number) & _
+        "; err_description='" & Replace(Err.Description, "'", "''") & "'."
+    If Not loadSucceeded Then
+        RecoverWorkspaceAfterLoadFailure hostForm, workspaceHost, previousSourceObject, previousWorkspaceState, targetFormName
+    End If
     modErrorHandler.HandleError MODULE_NAME, "OpenWorkspaceForm", Err
 End Function
 
@@ -165,7 +203,7 @@ Public Function GoBack(ByVal shellForm As Access.Form) As Boolean
     Set workspaceHost = GetWorkspaceHostControl(hostForm)
 
     If Not workspaceHost Is Nothing Then
-        RestoreWorkspaceHistoryState workspaceHost.Form, historyItemText
+        RestoreWorkspaceHistoryState TryGetHostedWorkspaceForm(workspaceHost), historyItemText
     End If
 
     modAppShell.RefreshShellStatus hostForm
@@ -243,7 +281,7 @@ Private Function CanReplaceWorkspaceContent(ByVal workspaceHost As Control) As B
         Exit Function
     End If
 
-    Set workspaceForm = workspaceHost.Form
+    Set workspaceForm = TryGetHostedWorkspaceForm(workspaceHost)
     If workspaceForm Is Nothing Then
         Exit Function
     End If
@@ -394,7 +432,7 @@ Private Function CaptureCurrentWorkspaceHistory(ByVal workspaceHost As Control) 
         Exit Function
     End If
 
-    Set workspaceForm = workspaceHost.Form
+    Set workspaceForm = TryGetHostedWorkspaceForm(workspaceHost)
     CaptureCurrentWorkspaceHistory = SerializeWorkspaceHistoryItem(workspaceForm)
 
 SafeExit:
@@ -643,6 +681,79 @@ Private Sub SetWorkspaceFocus(ByVal workspaceHost As Control)
     End If
 
     workspaceHost.SetFocus
+
+SafeExit:
+End Sub
+
+Private Function TryGetHostedWorkspaceForm(ByVal workspaceHost As Control) As Access.Form
+    On Error GoTo SafeExit
+
+    If workspaceHost Is Nothing Then
+        Exit Function
+    End If
+
+    If LenB(Trim$(Nz(workspaceHost.SourceObject, vbNullString))) = 0 Then
+        Exit Function
+    End If
+
+    Set TryGetHostedWorkspaceForm = workspaceHost.Form
+
+SafeExit:
+End Function
+
+Private Function ResolveCurrentWorkspaceSourceObject(ByVal workspaceHost As Control) As String
+    On Error GoTo SafeExit
+
+    If workspaceHost Is Nothing Then
+        Exit Function
+    End If
+
+    ResolveCurrentWorkspaceSourceObject = Trim$(Nz(workspaceHost.SourceObject, vbNullString))
+
+SafeExit:
+End Function
+
+Private Sub RecoverWorkspaceAfterLoadFailure( _
+    ByVal hostForm As Access.Form, _
+    ByVal workspaceHost As Control, _
+    ByVal previousSourceObject As String, _
+    ByVal previousWorkspaceState As String, _
+    ByVal requestedFormName As String)
+    On Error GoTo SafeExit
+
+    Dim restoredWorkspaceForm As Access.Form
+
+    If workspaceHost Is Nothing Then
+        Exit Sub
+    End If
+
+    If LenB(previousSourceObject) > 0 Then
+        workspaceHost.SourceObject = vbNullString
+        workspaceHost.SourceObject = previousSourceObject
+        Set restoredWorkspaceForm = TryGetHostedWorkspaceForm(workspaceHost)
+        If Not restoredWorkspaceForm Is Nothing Then
+            If LenB(previousWorkspaceState) > 0 Then
+                RestoreWorkspaceHistoryState restoredWorkspaceForm, previousWorkspaceState
+            End If
+        End If
+
+        modLoggingHandler.LogWarning MODULE_NAME & ".RecoverWorkspaceAfterLoadFailure", _
+            "Workspace load failed for '" & requestedFormName & "'. Restored previous SourceObject '" & previousSourceObject & "'."
+    ElseIf StrComp(requestedFormName, DASHBOARD_FORM_NAME, vbTextCompare) <> 0 Then
+        workspaceHost.SourceObject = vbNullString
+        workspaceHost.SourceObject = "Form." & DASHBOARD_FORM_NAME
+
+        modLoggingHandler.LogWarning MODULE_NAME & ".RecoverWorkspaceAfterLoadFailure", _
+            "Workspace load failed for '" & requestedFormName & "'. Loaded fallback dashboard."
+    Else
+        modLoggingHandler.LogWarning MODULE_NAME & ".RecoverWorkspaceAfterLoadFailure", _
+            "Workspace load failed for dashboard and no previous SourceObject was available."
+    End If
+
+    If Not hostForm Is Nothing Then
+        modAppShell.RefreshShellStatus hostForm
+        modFwDiagnostics.LogWorkspaceState "OpenWorkspaceFormFailureRecovery:" & requestedFormName, hostForm
+    End If
 
 SafeExit:
 End Sub

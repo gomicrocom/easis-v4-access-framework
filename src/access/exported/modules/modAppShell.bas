@@ -1,3 +1,4 @@
+Attribute VB_Name = "modAppShell"
 Option Compare Database
 Option Explicit
 
@@ -654,7 +655,6 @@ Private Function BuildLegacyListCommandBarConfig(ByVal workspaceForm As Access.F
     On Error GoTo SafeExit
 
     Dim cfg As Object
-    Dim supportsNew As Boolean
     Dim supportsEdit As Boolean
 
     If workspaceForm Is Nothing Then
@@ -665,7 +665,6 @@ Private Function BuildLegacyListCommandBarConfig(ByVal workspaceForm As Access.F
         Exit Function
     End If
 
-    supportsNew = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_NEW, True, True)
     supportsEdit = ResolveWorkspaceBooleanCapability(workspaceForm, LIST_METHOD_SUPPORTS_EDIT, True, True)
 
     Set cfg = CreateObject("Scripting.Dictionary")
@@ -677,9 +676,19 @@ Private Function BuildLegacyListCommandBarConfig(ByVal workspaceForm As Access.F
     cfg("search.command_clear") = WCMD_LIST_CLEAR_SEARCH
 
     cfg(WSLOT_L1 & ".visible") = True
-    cfg(WSLOT_L1 & ".enabled") = supportsNew
-    cfg(WSLOT_L1 & ".caption") = ResolveShellText("COMMON.NEW", "Neu")
-    cfg(WSLOT_L1 & ".command") = WCMD_LIST_NEW
+    cfg(WSLOT_L1 & ".enabled") = True
+    cfg(WSLOT_L1 & ".caption") = ResolveShellText("COMMON.HOME", "Home")
+    cfg(WSLOT_L1 & ".command") = WCMD_NAV_HOME
+
+    cfg(WSLOT_L2 & ".visible") = True
+    cfg(WSLOT_L2 & ".enabled") = modAppWorkspaceService.CanGoBack()
+    cfg(WSLOT_L2 & ".caption") = ResolveShellText("COMMON.BACK", "Zurueck")
+    cfg(WSLOT_L2 & ".command") = WCMD_NAV_BACK
+
+    cfg(WSLOT_L3 & ".visible") = False
+    cfg(WSLOT_L3 & ".enabled") = False
+    cfg(WSLOT_L3 & ".caption") = vbNullString
+    cfg(WSLOT_L3 & ".command") = vbNullString
 
     cfg(WSLOT_R3 & ".visible") = True
     cfg(WSLOT_R3 & ".enabled") = True
@@ -818,6 +827,11 @@ Private Function WorkspaceCanExecuteCommand(ByVal workspaceForm As Access.Form, 
         Exit Function
     End If
 
+    If IsShellManagedCommand(commandKey) Then
+        WorkspaceCanExecuteCommand = True
+        Exit Function
+    End If
+
     If Not SupportsWorkspaceCommandBarApi(workspaceForm) Then
         WorkspaceCanExecuteCommand = ResolveLegacyCommandAvailability(workspaceForm, commandKey)
         Exit Function
@@ -866,6 +880,12 @@ Private Sub ExecuteWorkspaceCommandByKey( _
         Exit Sub
     End If
 
+    If IsShellManagedCommand(commandKey) Then
+        ExecuteShellManagedCommand shellForm, commandKey
+        RefreshShellStatus shellForm
+        Exit Sub
+    End If
+
     If SupportsWorkspaceCommandBarApi(workspaceForm) Then
         If WorkspaceCanExecuteCommand(workspaceForm, commandKey) Then
             Set formObject = workspaceForm
@@ -881,6 +901,22 @@ Private Sub ExecuteWorkspaceCommandByKey( _
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ExecuteWorkspaceCommandByKey", Err
+End Sub
+
+Private Function IsShellManagedCommand(ByVal commandKey As String) As Boolean
+    Select Case UCase$(Trim$(commandKey))
+        Case WCMD_NAV_HOME, WCMD_NAV_BACK
+            IsShellManagedCommand = True
+    End Select
+End Function
+
+Private Sub ExecuteShellManagedCommand(ByVal shellForm As Access.Form, ByVal commandKey As String)
+    Select Case UCase$(Trim$(commandKey))
+        Case WCMD_NAV_HOME
+            LoadDefaultWorkspace shellForm
+        Case WCMD_NAV_BACK
+            Call modAppWorkspaceService.GoBack(shellForm)
+    End Select
 End Sub
 
 Private Function SupportsWorkspaceCommandBarApi(ByVal workspaceForm As Access.Form) As Boolean
@@ -1060,7 +1096,23 @@ Private Function ResolveCurrentWorkspaceForm(ByVal shellForm As Access.Form) As 
         Exit Function
     End If
 
-    Set ResolveCurrentWorkspaceForm = workspaceHost.Form
+    Set ResolveCurrentWorkspaceForm = TryGetHostedForm(workspaceHost)
+
+SafeExit:
+End Function
+
+Private Function TryGetHostedForm(ByVal hostControl As Control) As Access.Form
+    On Error GoTo SafeExit
+
+    If hostControl Is Nothing Then
+        Exit Function
+    End If
+
+    If LenB(Trim$(Nz(hostControl.SourceObject, vbNullString))) = 0 Then
+        Exit Function
+    End If
+
+    Set TryGetHostedForm = hostControl.Form
 
 SafeExit:
 End Function

@@ -1,4 +1,5 @@
-﻿Option Compare Database
+Attribute VB_Name = "modOutputPathService"
+Option Compare Database
 Option Explicit
 
 '===============================================================================
