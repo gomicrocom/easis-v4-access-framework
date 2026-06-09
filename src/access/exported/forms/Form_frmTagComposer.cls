@@ -39,6 +39,7 @@ Private Sub Form_Load()
     Me!cboObjectType = OBJECT_TYPE_FORM
     LoadObjectList
     ResetComposerState
+    UpdateLocalCommandButtons
 
     If LenB(Trim$(Nz(Me.openArgs, vbNullString))) > 0 Then
         PreselectLegacyForm Nz(Me.openArgs, vbNullString)
@@ -93,13 +94,134 @@ End Sub
 Private Sub cmdSave_Click()
     On Error GoTo ErrorHandler
 
+    DetailSave
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdSave_Click", Err
+End Sub
+
+Private Sub cmdClose_Click()
+    On Error GoTo ErrorHandler
+
+    DetailCancel
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdClose_Click", Err
+End Sub
+
+Public Function SupportsListCommandBar() As Boolean
+    SupportsListCommandBar = False
+End Function
+
+Public Function SupportsWorkspaceCommandBar() As Boolean
+    SupportsWorkspaceCommandBar = True
+End Function
+
+Public Function GetWorkspaceCommandBarConfig() As Object
+    On Error GoTo ErrorHandler
+
+    Dim cfg As Object
+    Dim shellForm As Access.Form
+    Dim hasShellHost As Boolean
+
+    Set cfg = CreateObject("Scripting.Dictionary")
+    cfg.CompareMode = vbTextCompare
+    Set shellForm = ResolveHostingShellForm()
+    hasShellHost = Not shellForm Is Nothing
+
+    cfg("search.visible") = False
+    cfg("search.enabled") = False
+
+    cfg("L1.visible") = True
+    cfg("L1.enabled") = hasShellHost
+    cfg("L1.caption") = modFwTranslationRuntime.ResolveText("COMMON.HOME", "Home")
+    cfg("L1.command") = modAppShell.WCMD_NAV_HOME
+
+    cfg("L2.visible") = True
+    cfg("L2.enabled") = hasShellHost And modAppWorkspaceService.CanGoBack()
+    cfg("L2.caption") = modFwTranslationRuntime.ResolveText("COMMON.BACK", "Zurueck")
+    cfg("L2.command") = modAppShell.WCMD_NAV_BACK
+
+    cfg("L3.visible") = False
+    cfg("L3.enabled") = False
+    cfg("L3.caption") = vbNullString
+    cfg("L3.command") = vbNullString
+
+    cfg("R2.visible") = True
+    cfg("R2.enabled") = True
+    cfg("R2.caption") = modFwTranslationRuntime.ResolveText("COMMON.CANCEL", "Abbrechen")
+    cfg("R2.command") = modAppShell.WCMD_DETAIL_CANCEL
+
+    cfg("R1.visible") = True
+    cfg("R1.enabled") = HasSelectedTargetObject()
+    cfg("R1.caption") = modFwTranslationRuntime.ResolveText("COMMON.SAVE", "Speichern")
+    cfg("R1.command") = modAppShell.WCMD_DETAIL_SAVE
+
+    Set GetWorkspaceCommandBarConfig = cfg
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "GetWorkspaceCommandBarConfig", Err
+End Function
+
+Public Function CanExecuteWorkspaceCommand(ByVal commandKey As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim shellForm As Access.Form
+
+    Set shellForm = ResolveHostingShellForm()
+
+    Select Case UCase$(Trim$(commandKey))
+        Case modAppShell.WCMD_NAV_HOME
+            CanExecuteWorkspaceCommand = Not shellForm Is Nothing
+        Case modAppShell.WCMD_NAV_BACK
+            CanExecuteWorkspaceCommand = (Not shellForm Is Nothing) And modAppWorkspaceService.CanGoBack()
+        Case modAppShell.WCMD_DETAIL_CANCEL
+            CanExecuteWorkspaceCommand = True
+        Case modAppShell.WCMD_DETAIL_SAVE
+            CanExecuteWorkspaceCommand = HasSelectedTargetObject()
+    End Select
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "CanExecuteWorkspaceCommand", Err
+End Function
+
+Public Sub ExecuteWorkspaceCommand(ByVal commandKey As String, Optional ByVal commandValue As String = "")
+    On Error GoTo ErrorHandler
+
+    Select Case UCase$(Trim$(commandKey))
+        Case modAppShell.WCMD_NAV_HOME
+            NavigateHome
+        Case modAppShell.WCMD_NAV_BACK
+            NavigateBack
+        Case modAppShell.WCMD_DETAIL_CANCEL
+            DetailCancel
+        Case modAppShell.WCMD_DETAIL_SAVE
+            DetailSave
+    End Select
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ExecuteWorkspaceCommand", Err
+End Sub
+
+Public Function CanLeaveWorkspace() As Boolean
+    CanLeaveWorkspace = True
+End Function
+
+Public Sub DetailSave()
+    On Error GoTo ErrorHandler
+
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
     Dim WasLoaded As Boolean
     Dim WasVisible As Boolean
     Dim OpenedForSave As Boolean
 
-    If LenB(m_TargetObjectType) = 0 Or LenB(m_TargetObjectName) = 0 Then
+    If Not HasSelectedTargetObject() Then
         MsgBox "Bitte zuerst ein Formular oder einen Report auswählen.", vbExclamation, MODULE_NAME
         Exit Sub
     End If
@@ -137,7 +259,7 @@ Private Sub cmdSave_Click()
     Exit Sub
 
 ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "cmdSave_Click", Err
+    modErrorHandler.HandleError MODULE_NAME, "DetailSave", Err
     On Error Resume Next
     If OpenedForSave Then
         CloseObjectNoSave m_TargetObjectType, m_TargetObjectName
@@ -149,7 +271,7 @@ ErrorHandler:
     MsgBox "Fehler beim Speichern der Tags: " & Err.description, vbExclamation, MODULE_NAME
 End Sub
 
-Private Sub cmdClose_Click()
+Public Sub DetailCancel()
     CleanupTempSession
     DoCmd.Close acForm, Me.Name
 End Sub
@@ -230,6 +352,7 @@ Private Sub LoadSelectedObject()
     InitializeTempComposerData
     BindTempSubform
     ResetUI
+    RefreshShellStatusIfHosted
     Exit Sub
 
 ErrorHandler:
@@ -253,6 +376,8 @@ Private Sub ResetComposerState(Optional ByVal ClearObjectSelection As Boolean = 
     Me!txtResult = Null
     ResetUI
     BindEmptySubform
+    UpdateLocalCommandButtons
+    RefreshShellStatusIfHosted
 End Sub
 
 Private Sub InitializeTempComposerData()
@@ -1101,4 +1226,125 @@ Private Function TableExists(ByVal tableName As String) As Boolean
 SafeExit:
 End Function
 
+Private Function HasSelectedTargetObject() As Boolean
+    HasSelectedTargetObject = (LenB(m_TargetObjectType) > 0 And LenB(m_TargetObjectName) > 0)
+End Function
+
+Private Sub UpdateLocalCommandButtons()
+    On Error GoTo SafeExit
+
+    If ControlExists("cmdSave") Then
+        Me!cmdSave.Visible = False
+    End If
+
+    If ControlExists("cmdClose") Then
+        Me!cmdClose.Visible = False
+    End If
+
+SafeExit:
+End Sub
+
+Private Function ControlExists(ByVal controlName As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim ctl As Control
+
+    For Each ctl In Me.Controls
+        If StrComp(ctl.Name, controlName, vbTextCompare) = 0 Then
+            ControlExists = True
+            Exit Function
+        End If
+    Next ctl
+
+SafeExit:
+End Function
+
+Private Function ResolveHostingShellForm() As Access.Form
+    On Error GoTo SafeExit
+
+    Dim parentForm As Access.Form
+
+    Set parentForm = Me.Parent
+    If parentForm Is Nothing Then
+        Exit Function
+    End If
+
+    If HasControlOnForm(parentForm, "subWorkspaceHost") Then
+        Set ResolveHostingShellForm = parentForm
+    End If
+
+SafeExit:
+End Function
+
+Private Function HasControlOnForm(ByVal formInstance As Access.Form, ByVal controlName As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim ctl As Control
+
+    If formInstance Is Nothing Then
+        Exit Function
+    End If
+
+    For Each ctl In formInstance.Controls
+        If StrComp(ctl.Name, controlName, vbTextCompare) = 0 Then
+            HasControlOnForm = True
+            Exit Function
+        End If
+    Next ctl
+
+SafeExit:
+End Function
+
+Private Sub RefreshShellStatusIfHosted()
+    On Error GoTo SafeExit
+
+    Dim shellForm As Access.Form
+
+    Set shellForm = ResolveHostingShellForm()
+    If shellForm Is Nothing Then
+        Exit Sub
+    End If
+
+    modAppShell.UpdateShellCommandBarState shellForm
+
+SafeExit:
+End Sub
+
+Private Sub NavigateHome()
+    On Error GoTo ErrorHandler
+
+    Dim shellForm As Access.Form
+
+    Set shellForm = ResolveHostingShellForm()
+    If shellForm Is Nothing Then
+        Exit Sub
+    End If
+
+    If Not modAppWorkspaceService.OpenWorkspaceForm(shellForm, "frmAppDashboard") Then
+        Err.Raise vbObjectError + 5470, MODULE_NAME & ".NavigateHome", "Workspace navigation to dashboard failed."
+    End If
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "NavigateHome", Err
+End Sub
+
+Private Sub NavigateBack()
+    On Error GoTo ErrorHandler
+
+    Dim shellForm As Access.Form
+
+    Set shellForm = ResolveHostingShellForm()
+    If shellForm Is Nothing Then
+        Exit Sub
+    End If
+
+    If Not modAppWorkspaceService.GoBack(shellForm) Then
+        Err.Raise vbObjectError + 5471, MODULE_NAME & ".NavigateBack", "Workspace back navigation failed."
+    End If
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "NavigateBack", Err
+End Sub
 

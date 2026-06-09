@@ -125,6 +125,43 @@ function Get-ArtifactFormatKind {
     return "UNKNOWN"
 }
 
+function Get-CodeArtifactKind {
+    param(
+        [string]$Path,
+        [ValidateSet("FORM", "REPORT")]
+        [string]$ObjectType
+    )
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return "MISSING"
+    }
+
+    $head = @(Get-Content -LiteralPath $Path -TotalCount 20)
+    $joined = ($head -join "`n")
+
+    if ($joined -match "ExportKind:\s*CODE_BEHIND_ONLY") {
+        return "CODE_BEHIND_EXPORT"
+    }
+
+    if ($ObjectType -eq "FORM" -and $joined -match 'Begin Form') {
+        return "FULL_OBJECT_EXPORT"
+    }
+
+    if ($ObjectType -eq "REPORT" -and $joined -match 'Begin Report') {
+        return "FULL_OBJECT_EXPORT"
+    }
+
+    if ($joined -match 'VERSION 1\.0 CLASS' -and $joined -match 'Attribute VB_Name') {
+        return "LEGACY_CLASS_EXPORT"
+    }
+
+    if ($joined -match '^Option Compare Database' -or $joined -match '^Option Explicit') {
+        return "CODE_BEHIND_ONLY"
+    }
+
+    return "UNKNOWN"
+}
+
 function Get-ExpectedEncodingFileSet {
     param(
         [string]$RootPath
@@ -258,7 +295,7 @@ function Test-RepositoryArtifacts {
     foreach ($formName in $manifest.forms) {
         $path = Join-Path $formDir ("Form_" + $formName + ".cls")
         if (-not (Test-Path -LiteralPath $path)) {
-            [void]$issues.Add((New-ValidationIssue "ERROR" "repo.form.missing" $formName "Required form code export file is missing."))
+            [void]$issues.Add((New-ValidationIssue "INFO" "repo.form.no_code_export" $formName "Form has no code-behind export artifact; layout remains in ACCDB or code export was intentionally skipped."))
             continue
         }
 
@@ -267,24 +304,52 @@ function Test-RepositoryArtifacts {
             [void]$issues.Add((New-ValidationIssue "ERROR" "repo.form.empty" $formName "Required form code export file is empty."))
         }
 
-        $formatKind = Get-ArtifactFormatKind -Path $path
-        if ($formatKind -eq "CODE_BEHIND_ONLY") {
-            [void]$issues.Add((New-ValidationIssue "WARN" "repo.form.partial" $formName "Form export looks like code-behind only, not a full SaveAsText class export."))
-            [void]$cleanupCandidates.Add((New-CleanupCandidate $formName "MIGRATE" "Form currently looks like code-behind only; target state is one canonical full form export artifact." @($path)))
+        $formatKind = Get-CodeArtifactKind -Path $path -ObjectType "FORM"
+        switch ($formatKind) {
+            "CODE_BEHIND_EXPORT" {
+                # Canonical state for now: code-behind tracked, layout remains in ACCDB.
+            }
+            "FULL_OBJECT_EXPORT" {
+                # Also acceptable if the project later adopts a verified full roundtrip.
+            }
+            "LEGACY_CLASS_EXPORT" {
+                [void]$issues.Add((New-ValidationIssue "WARN" "repo.form.legacy" $formName "Form export uses a legacy class-style artifact without explicit ExportKind marker."))
+                [void]$cleanupCandidates.Add((New-CleanupCandidate $formName "MIGRATE" "Rewrite this form artifact through the official Access -> Repo export so the validator can distinguish code-behind from full object export." @($path)))
+            }
+            "CODE_BEHIND_ONLY" {
+                [void]$issues.Add((New-ValidationIssue "WARN" "repo.form.partial" $formName "Form export looks like raw code-behind without explicit ExportKind marker."))
+                [void]$cleanupCandidates.Add((New-CleanupCandidate $formName "MIGRATE" "Rewrite this form artifact through the official Access -> Repo export so the validator can distinguish code-behind from full object export." @($path)))
+            }
+            default {
+                [void]$issues.Add((New-ValidationIssue "WARN" "repo.form.unknown" $formName ("Unknown form export format: " + $formatKind)))
+            }
         }
     }
 
     foreach ($reportName in $manifest.reports) {
         $path = Join-Path $reportDir ("Report_" + $reportName + ".cls")
         if (-not (Test-Path -LiteralPath $path)) {
-            [void]$issues.Add((New-ValidationIssue "WARN" "repo.report.missing" $reportName "Expected report code export file is missing."))
+            [void]$issues.Add((New-ValidationIssue "INFO" "repo.report.no_code_export" $reportName "Report has no code-behind export artifact; layout remains in ACCDB or code export was intentionally skipped."))
             continue
         }
 
-        $formatKind = Get-ArtifactFormatKind -Path $path
-        if ($formatKind -eq "CODE_BEHIND_ONLY") {
-            [void]$issues.Add((New-ValidationIssue "WARN" "repo.report.partial" $reportName "Report export looks like code-behind only, not a full SaveAsText class export."))
-            [void]$cleanupCandidates.Add((New-CleanupCandidate $reportName "MIGRATE" "Report currently looks like code-behind only; target state is one canonical full report export artifact." @($path)))
+        $formatKind = Get-CodeArtifactKind -Path $path -ObjectType "REPORT"
+        switch ($formatKind) {
+            "CODE_BEHIND_EXPORT" {
+            }
+            "FULL_OBJECT_EXPORT" {
+            }
+            "LEGACY_CLASS_EXPORT" {
+                [void]$issues.Add((New-ValidationIssue "WARN" "repo.report.legacy" $reportName "Report export uses a legacy class-style artifact without explicit ExportKind marker."))
+                [void]$cleanupCandidates.Add((New-CleanupCandidate $reportName "MIGRATE" "Rewrite this report artifact through the official Access -> Repo export so the validator can distinguish code-behind from full object export." @($path)))
+            }
+            "CODE_BEHIND_ONLY" {
+                [void]$issues.Add((New-ValidationIssue "WARN" "repo.report.partial" $reportName "Report export looks like raw code-behind without explicit ExportKind marker."))
+                [void]$cleanupCandidates.Add((New-CleanupCandidate $reportName "MIGRATE" "Rewrite this report artifact through the official Access -> Repo export so the validator can distinguish code-behind from full object export." @($path)))
+            }
+            default {
+                [void]$issues.Add((New-ValidationIssue "WARN" "repo.report.unknown" $reportName ("Unknown report export format: " + $formatKind)))
+            }
         }
     }
 
@@ -375,6 +440,21 @@ function Get-AccessProjectObjectNames {
     @($names)
 }
 
+function Test-AccessProjectHasVBComponent {
+    param(
+        [object]$AccessApplication,
+        [string]$ComponentName
+    )
+
+    try {
+        $null = $AccessApplication.VBE.ActiveVBProject.VBComponents.Item($ComponentName)
+        return $true
+    }
+    catch {
+        return $false
+    }
+}
+
 function Test-AccessProjectAgainstRepository {
     param(
         [string]$DatabasePath,
@@ -414,7 +494,11 @@ function Test-AccessProjectAgainstRepository {
 
             $repoPath = Join-Path $formDir ("Form_" + $formName + ".cls")
             if (-not (Test-Path -LiteralPath $repoPath)) {
-                [void]$issues.Add((New-ValidationIssue "ERROR" "repo.form.missing" $formName "Required form code export file is missing while validating ACCDB."))
+                if (Test-AccessProjectHasVBComponent -AccessApplication $access -ComponentName ("Form_" + $formName)) {
+                    [void]$issues.Add((New-ValidationIssue "WARN" "repo.form.code_export.missing" $formName "Form has a code-behind module in Access, but no repo code export file exists."))
+                } else {
+                    [void]$issues.Add((New-ValidationIssue "INFO" "repo.form.no_code_export" $formName "Form has no code-behind module in Access; missing repo code export is acceptable."))
+                }
             }
         }
 
@@ -425,7 +509,11 @@ function Test-AccessProjectAgainstRepository {
 
             $repoPath = Join-Path $reportDir ("Report_" + $reportName + ".cls")
             if (-not (Test-Path -LiteralPath $repoPath)) {
-                [void]$issues.Add((New-ValidationIssue "WARN" "repo.report.missing" $reportName "Expected report export file is missing while validating ACCDB."))
+                if (Test-AccessProjectHasVBComponent -AccessApplication $access -ComponentName ("Report_" + $reportName)) {
+                    [void]$issues.Add((New-ValidationIssue "WARN" "repo.report.code_export.missing" $reportName "Report has a code-behind module in Access, but no repo code export file exists."))
+                } else {
+                    [void]$issues.Add((New-ValidationIssue "INFO" "repo.report.no_code_export" $reportName "Report has no code-behind module in Access; missing repo code export is acceptable."))
+                }
             }
         }
 
