@@ -186,7 +186,7 @@ Public Function CreateDocumentPosition( _
     ByVal description As String, _
     ByVal quantity As Double, _
     ByVal UnitPrice As Currency, _
-    Optional ByVal UnitCode As String = "", _
+    Optional ByVal unitCode As String = "", _
     Optional ByVal vatRate As Double = -1, _
     Optional ByVal VatMode As String = "" _
 ) As Boolean
@@ -242,7 +242,7 @@ Public Function CreateDocumentPosition( _
     SetRecordsetValue rs, FIELD_LINE_NO, LineNo
     SetRecordsetValue rs, FIELD_DESCRIPTION, Trim$(description)
     SetRecordsetValue rs, FIELD_QUANTITY, quantity
-    SetRecordsetValue rs, FIELD_UNIT_CODE, Trim$(UnitCode)
+    SetRecordsetValue rs, FIELD_UNIT_CODE, Trim$(unitCode)
     SetRecordsetValue rs, FIELD_UNIT_PRICE, UnitPrice
     SetRecordsetValue rs, FIELD_VAT_RATE, effectiveVatRate
     SetRecordsetValue rs, FIELD_LINE_TOTAL_NET, lineNet

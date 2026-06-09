@@ -566,7 +566,7 @@ End Sub
 
 Private Sub InsertUnit( _
     ByVal db As DAO.Database, _
-    ByVal UnitCode As String, _
+    ByVal unitCode As String, _
     ByVal translationKey As String, _
     ByVal sortOrder As Long, _
     ByVal isActive As Boolean)
@@ -576,7 +576,7 @@ Private Sub InsertUnit( _
     sqlStatement = "INSERT INTO ref_unit " & _
                    "(unit_code, translation_key, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
-                   SqlText(UnitCode) & ", " & _
+                   SqlText(unitCode) & ", " & _
                    SqlText(translationKey) & ", " & _
                    CStr(sortOrder) & ", " & _
                    IIf(isActive, "True", "False") & ", " & _
@@ -647,7 +647,7 @@ End Sub
 
 Private Sub InsertVatCode( _
     ByVal db As DAO.Database, _
-    ByVal VatCode As String, _
+    ByVal vatCode As String, _
     ByVal translationKey As String, _
     ByVal vatRate As Double, _
     ByVal countryCode As String, _
@@ -661,7 +661,7 @@ Private Sub InsertVatCode( _
     sqlStatement = "INSERT INTO ref_vat_code " & _
                    "(vat_code, translation_key, vat_rate, country_code, valid_from, valid_to, sort_order, is_active, created_at, created_by, updated_at, updated_by) " & _
                    "VALUES (" & _
-                   SqlText(VatCode) & ", " & _
+                   SqlText(vatCode) & ", " & _
                    SqlText(translationKey) & ", " & _
                    Replace(CStr(vatRate), ",", ".") & ", " & _
                    SqlText(countryCode) & ", " & _

@@ -725,11 +725,11 @@ ErrorHandler:
     FieldExists = False
 End Function
 
-Private Function EnsureTextField(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String, ByVal FieldSize As Long, ByVal defaultValue As String, ByVal updateNullValues As Boolean) As Boolean
+Private Function EnsureTextField(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String, ByVal fieldSize As Long, ByVal defaultValue As String, ByVal updateNullValues As Boolean) As Boolean
     On Error GoTo ErrorHandler
 
     If Not FieldExists(db, tableName, fieldName) Then
-        db.Execute "ALTER TABLE [" & tableName & "] ADD COLUMN [" & fieldName & "] TEXT(" & CStr(FieldSize) & ");", dbFailOnError
+        db.Execute "ALTER TABLE [" & tableName & "] ADD COLUMN [" & fieldName & "] TEXT(" & CStr(fieldSize) & ");", dbFailOnError
         modLoggingHandler.LogInfo MODULE_NAME & ".EnsureTextField", "Field ensured: " & tableName & "." & fieldName
     Else
         modLoggingHandler.LogInfo MODULE_NAME & ".EnsureTextField", "Field exists: " & tableName & "." & fieldName
@@ -883,10 +883,10 @@ ErrorHandler:
     EnsureLongTextField = False
 End Function
 
-Private Sub ApplyFieldDefaultValue(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String, ByVal DefaultValueExpression As String)
+Private Sub ApplyFieldDefaultValue(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String, ByVal defaultValueExpression As String)
     On Error Resume Next
 
-    db.TableDefs(tableName).Fields(fieldName).defaultValue = DefaultValueExpression
+    db.TableDefs(tableName).Fields(fieldName).DefaultValue = defaultValueExpression
 End Sub
 
 Private Function EnsureRequiredFieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
@@ -1001,7 +1001,7 @@ Private Sub RefreshTableDefinition(ByVal db As DAO.Database, ByVal tableName As 
     Set tdf = Nothing
 End Sub
 
-Private Sub LogTableFieldNames(ByVal db As DAO.Database, ByVal tableName As String, ByVal SourceProcedure As String)
+Private Sub LogTableFieldNames(ByVal db As DAO.Database, ByVal tableName As String, ByVal sourceProcedure As String)
     On Error GoTo ErrorHandler
 
     Dim tdf As DAO.tableDef
@@ -1018,11 +1018,11 @@ Private Sub LogTableFieldNames(ByVal db As DAO.Database, ByVal tableName As Stri
         fieldList = fieldList & fld.Name
     Next fld
 
-    modLoggingHandler.LogInfo SourceProcedure, "Fields in " & tableName & ": " & fieldList
+    modLoggingHandler.LogInfo sourceProcedure, "Fields in " & tableName & ": " & fieldList
     Exit Sub
 
 ErrorHandler:
-    modLoggingHandler.LogWarning SourceProcedure, _
+    modLoggingHandler.LogWarning sourceProcedure, _
         "Could not enumerate fields for " & tableName & " (" & Err.Number & " - " & Err.description & ")"
 End Sub
 

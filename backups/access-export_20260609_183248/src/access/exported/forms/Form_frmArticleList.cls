@@ -164,17 +164,17 @@ End Function
 Public Sub RestoreWorkspaceState(ByVal stateText As String)
     On Error GoTo ErrorHandler
 
-    Dim ArticleId As Long
+    Dim articleId As Long
     Dim searchText As String
 
     searchText = GetWorkspaceStateValue(stateText, "search")
-    ArticleId = modDaoHelper.NzLong(GetWorkspaceStateValue(stateText, "article_id"), 0)
+    articleId = modDaoHelper.NzLong(GetWorkspaceStateValue(stateText, "article_id"), 0)
 
     m_currentSearchText = Trim$(modDaoHelper.NzString(searchText))
     ApplySearchFilter
 
-    If ArticleId > 0 Then
-        RestoreCurrentArticleSelection ArticleId
+    If articleId > 0 Then
+        RestoreCurrentArticleSelection articleId
     End If
     Exit Sub
 
@@ -230,14 +230,14 @@ End Sub
 Private Sub OpenCurrentArticle()
     On Error GoTo ErrorHandler
 
-    Dim ArticleId As Long
+    Dim articleId As Long
 
-    ArticleId = GetCurrentArticleId()
-    If ArticleId <= 0 Then
+    articleId = GetCurrentArticleId()
+    If articleId <= 0 Then
         Exit Sub
     End If
 
-    If Not modAppWorkspaceService.OpenWorkspaceForm(Me, modArticleService.FORM_ARTICLE_DETAIL, "[article_id]=" & CStr(ArticleId)) Then
+    If Not modAppWorkspaceService.OpenWorkspaceForm(Me, modArticleService.FORM_ARTICLE_DETAIL, "[article_id]=" & CStr(articleId)) Then
         Err.Raise vbObjectError + 2200, MODULE_NAME & ".OpenCurrentArticle", "Workspace navigation failed."
     End If
     Exit Sub
@@ -291,13 +291,13 @@ Private Function GetCurrentArticleId() As Long
 SafeExit:
 End Function
 
-Private Sub RestoreCurrentArticleSelection(ByVal ArticleId As Long)
+Private Sub RestoreCurrentArticleSelection(ByVal articleId As Long)
     On Error GoTo ErrorHandler
 
     Dim recordsetClone As DAO.Recordset
 
     Set recordsetClone = Me.recordsetClone
-    recordsetClone.FindFirst "[article_id]=" & CStr(ArticleId)
+    recordsetClone.FindFirst "[article_id]=" & CStr(articleId)
 
     If Not recordsetClone.NoMatch Then
         Me.Bookmark = recordsetClone.Bookmark

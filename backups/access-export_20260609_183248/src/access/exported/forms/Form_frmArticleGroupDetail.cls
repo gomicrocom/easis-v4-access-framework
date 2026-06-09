@@ -2,7 +2,7 @@ VERSION 1.0 CLASS
 BEGIN
   MultiUse = -1  'True
 END
-Attribute VB_Name = "Form_frmArticleDetail"
+Attribute VB_Name = "Form_frmArticleGroupDetail"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = True
@@ -12,31 +12,31 @@ Option Compare Database
 Option Explicit
 
 '===============================================================================
-' Module    : Form_frmArticleDetail
-' Purpose   : Workspace-aware detail form for simple Article master data.
+' Module    : Form_frmArticleGroupDetail
+' Purpose   : Workspace-aware detail form for tenant Article Groups.
 ' Author    : Codex
 ' Version   : 0.1.0
 '===============================================================================
 
-Private Const MODULE_NAME As String = "Form_frmArticleDetail"
+Private Const MODULE_NAME As String = "Form_frmArticleGroupDetail"
 
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
 
+    modArticleGroupService.EnsureArticleGroupTable
     modFormRuntime.InitializeForm Me
     modFwTranslationRuntime.ApplyTranslations Me
-    modArticleService.ConfigureArticleDetailCombos Me
-    modArticleService.ApplyDefaultValues Me
+    modArticleGroupService.ApplyDefaultValues Me
     UpdateHeaderCaptionUi
     UpdateLocalCommandButtons
 
     modLoggingHandler.LogInfo MODULE_NAME & ".Form_Load", _
-        "Article detail loaded."
+        "Article Group detail loaded."
     Exit Sub
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "Form_Load", Err
-    MsgBox modFwTranslationRuntime.ResolveText("MSG.ARTICLE_SAVE_ERROR", "Fehler beim Speichern des Artikels."), vbExclamation, MODULE_NAME
+    MsgBox modFwTranslationRuntime.ResolveText("MSG.ARTICLE_GROUP_DETAIL_LOAD_ERROR", "Fehler beim Laden der Artikelgruppendetails: " & Err.description), vbExclamation, MODULE_NAME
 End Sub
 
 Private Sub Form_Current()
@@ -53,7 +53,7 @@ End Sub
 Private Sub Form_BeforeInsert(Cancel As Integer)
     On Error GoTo ErrorHandler
 
-    modArticleService.ApplyDefaultValues Me
+    modArticleGroupService.ApplyDefaultValues Me
     Exit Sub
 
 ErrorHandler:
@@ -64,9 +64,9 @@ End Sub
 Private Sub Form_BeforeUpdate(Cancel As Integer)
     On Error GoTo ErrorHandler
 
-    modArticleService.PrepareArticleForSave Me
+    modArticleGroupService.PrepareArticleGroupForSave Me
 
-    If Not modArticleService.ValidateArticleForm(Me) Then
+    If Not modArticleGroupService.ValidateArticleGroupForm(Me) Then
         Cancel = True
     End If
     Exit Sub
@@ -96,6 +96,16 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "cmdCancel_Click", Err
 End Sub
 
+Private Sub cmdRefresh_Click()
+    On Error GoTo ErrorHandler
+
+    RefreshCurrentRecord
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cmdRefresh_Click", Err
+End Sub
+
 Public Function CanLeaveWorkspace() As Boolean
     On Error GoTo ErrorHandler
 
@@ -104,7 +114,7 @@ Public Function CanLeaveWorkspace() As Boolean
         Exit Function
     End If
 
-    If MsgBox(modFwTranslationRuntime.ResolveText("MSG.ARTICLE_CANCEL_CONFIRM", "Aenderungen verwerfen?"), vbQuestion + vbYesNo + vbDefaultButton2, MODULE_NAME) = vbYes Then
+    If MsgBox(modFwTranslationRuntime.ResolveText("MSG.ARTICLE_GROUP_DISCARD_CHANGES", "Ungespeicherte Aenderungen verwerfen?"), vbQuestion + vbYesNo + vbDefaultButton2, MODULE_NAME) = vbYes Then
         CancelCurrentEdit False, False
         CanLeaveWorkspace = True
     End If
@@ -157,13 +167,13 @@ Public Sub ExecuteWorkspaceCommand(ByVal commandKey As String, Optional ByVal co
 End Sub
 
 Public Function GetCurrentWorkspaceRecordId() As Long
-    GetCurrentWorkspaceRecordId = GetCurrentArticleId()
+    GetCurrentWorkspaceRecordId = GetCurrentArticleGroupId()
 End Function
 
 Public Function GetWorkspaceState() As String
     Dim stateText As String
 
-    stateText = AddWorkspaceStatePair(stateText, "article_id", CStr(GetCurrentArticleId()))
+    stateText = AddWorkspaceStatePair(stateText, "product_group_id", CStr(GetCurrentArticleGroupId()))
     stateText = AddWorkspaceStatePair(stateText, "is_new", IIf(Me.NewRecord, "1", "0"))
 
     GetWorkspaceState = stateText
@@ -172,13 +182,13 @@ End Function
 Public Sub RestoreWorkspaceState(ByVal stateText As String)
     On Error GoTo ErrorHandler
 
-    Dim ArticleId As Long
+    Dim productGroupId As Long
 
-    ArticleId = modDaoHelper.NzLong(GetWorkspaceStateValue(stateText, "article_id"), 0)
-    If ArticleId > 0 Then
-        RestoreCurrentArticleSelection ArticleId
+    productGroupId = modDaoHelper.NzLong(GetWorkspaceStateValue(stateText, "product_group_id"), 0)
+    If productGroupId > 0 Then
+        RestoreCurrentArticleGroupSelection productGroupId
     ElseIf HasUnsavedChanges() Then
-        modArticleService.ApplyDefaultValues Me
+        modArticleGroupService.ApplyDefaultValues Me
     End If
 
     UpdateHeaderCaptionUi
@@ -208,7 +218,6 @@ Private Sub SaveCurrentRecord()
     On Error GoTo ErrorHandler
 
     If Me.Dirty Then
-        modArticleService.PrepareArticleForSave Me
         modAuditHelper.ApplyAuditFields Me
         Me.Dirty = False
     End If
@@ -216,14 +225,14 @@ Private Sub SaveCurrentRecord()
     UpdateHeaderCaptionUi
 
     modLoggingHandler.LogInfo MODULE_NAME & ".SaveCurrentRecord", _
-        "Article saved for article_id=" & CStr(GetCurrentArticleId()) & "."
+        "Article Group saved for product_group_id=" & CStr(GetCurrentArticleGroupId()) & "."
 
     ReturnToPreviousWorkspace "SaveCurrentRecord"
     Exit Sub
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "SaveCurrentRecord", Err
-    MsgBox modFwTranslationRuntime.ResolveText("MSG.ARTICLE_SAVE_ERROR", "Fehler beim Speichern des Artikels."), vbExclamation, MODULE_NAME
+    MsgBox modFwTranslationRuntime.ResolveText("MSG.ARTICLE_GROUP_SAVE_ERROR", "Fehler beim Speichern der Artikelgruppe: " & Err.description), vbExclamation, MODULE_NAME
 End Sub
 
 Private Sub CancelCurrentEdit( _
@@ -239,17 +248,17 @@ Private Sub CancelCurrentEdit( _
     End If
 
     If showConfirmation Then
-        If MsgBox(modFwTranslationRuntime.ResolveText("MSG.ARTICLE_CANCEL_CONFIRM", "Aenderungen verwerfen?"), vbQuestion + vbYesNo + vbDefaultButton2, MODULE_NAME) <> vbYes Then
+        If MsgBox(modFwTranslationRuntime.ResolveText("MSG.ARTICLE_GROUP_CANCEL_CONFIRM", "Aenderungen verwerfen?"), vbQuestion + vbYesNo + vbDefaultButton2, MODULE_NAME) <> vbYes Then
             Exit Sub
         End If
     End If
 
     Me.Undo
-    modArticleService.ApplyDefaultValues Me
+    modArticleGroupService.ApplyDefaultValues Me
     UpdateHeaderCaptionUi
 
     modLoggingHandler.LogInfo MODULE_NAME & ".CancelCurrentEdit", _
-        "Unsaved Article changes were discarded."
+        "Unsaved Article Group changes were discarded."
 
     If NavigateBack Then
         ReturnToPreviousWorkspace "CancelCurrentEdit"
@@ -260,20 +269,39 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "CancelCurrentEdit", Err
 End Sub
 
+Private Sub RefreshCurrentRecord()
+    On Error GoTo ErrorHandler
+
+    If HasUnsavedChanges() Then
+        MsgBox modFwTranslationRuntime.ResolveText("MSG.ARTICLE_GROUP_SAVE_OR_CANCEL_FIRST", "Bitte zuerst speichern oder abbrechen."), vbExclamation, MODULE_NAME
+        Exit Sub
+    End If
+
+    Me.Requery
+    UpdateHeaderCaptionUi
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".RefreshCurrentRecord", _
+        "Article Group detail requeried."
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "RefreshCurrentRecord", Err
+End Sub
+
 Private Sub UpdateHeaderCaptionUi()
     On Error GoTo SafeExit
 
     Dim headerCaption As String
     Dim displayName As String
 
-    headerCaption = modFwTranslationRuntime.ResolveText("FORM.FRMARTICLEDETAIL.FORM_TITLE", "Artikel")
+    headerCaption = modFwTranslationRuntime.ResolveText("NAV.NEW_ARTICLE_GROUP", "Neue Artikelgruppe")
 
-    If GetCurrentArticleId() > 0 Then
-        displayName = modArticleService.ResolveArticleDisplayName(Me)
+    If GetCurrentArticleGroupId() > 0 Then
+        displayName = modArticleGroupService.ResolveArticleGroupDisplayName(Me)
         If LenB(displayName) > 0 Then
-            headerCaption = modFwTranslationRuntime.ResolveText("FORM.FRMARTICLEDETAIL.FORM_TITLE", "Artikel") & ": " & displayName
+            headerCaption = modFwTranslationRuntime.ResolveText("FORM.FRMARTICLEGROUPDETAIL.FORM_TITLE", "Artikelgruppe") & ": " & displayName
         Else
-            headerCaption = modFwTranslationRuntime.ResolveText("FORM.FRMARTICLEDETAIL.FORM_TITLE", "Artikel") & ": " & CStr(GetCurrentArticleId())
+            headerCaption = modFwTranslationRuntime.ResolveText("FORM.FRMARTICLEGROUPDETAIL.FORM_TITLE", "Artikelgruppe") & ": " & CStr(GetCurrentArticleGroupId())
         End If
     End If
 
@@ -300,25 +328,25 @@ Private Sub UpdateLocalCommandButtons()
 SafeExit:
 End Sub
 
-Private Function GetCurrentArticleId() As Long
+Private Function GetCurrentArticleGroupId() As Long
     On Error GoTo SafeExit
 
     If Me.NewRecord Then
         Exit Function
     End If
 
-    GetCurrentArticleId = modArticleService.ResolveArticleId(Me)
+    GetCurrentArticleGroupId = modArticleGroupService.ResolveArticleGroupId(Me)
 
 SafeExit:
 End Function
 
-Private Sub RestoreCurrentArticleSelection(ByVal ArticleId As Long)
+Private Sub RestoreCurrentArticleGroupSelection(ByVal productGroupId As Long)
     On Error GoTo ErrorHandler
 
     Dim recordsetClone As DAO.Recordset
 
     Set recordsetClone = Me.recordsetClone
-    recordsetClone.FindFirst "[article_id]=" & CStr(ArticleId)
+    recordsetClone.FindFirst "[product_group_id]=" & CStr(productGroupId)
 
     If Not recordsetClone.NoMatch Then
         Me.Bookmark = recordsetClone.Bookmark
@@ -331,7 +359,7 @@ CleanExit:
     Exit Sub
 
 ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "RestoreCurrentArticleSelection", Err
+    modErrorHandler.HandleError MODULE_NAME, "RestoreCurrentArticleGroupSelection", Err
     Resume CleanExit
 End Sub
 

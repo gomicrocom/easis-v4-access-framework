@@ -2,7 +2,7 @@ VERSION 1.0 CLASS
 BEGIN
   MultiUse = -1  'True
 END
-Attribute VB_Name = "Form_frmArticleList"
+Attribute VB_Name = "Form_frmArticleGroupList"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = True
@@ -12,35 +12,34 @@ Option Compare Database
 Option Explicit
 
 '===============================================================================
-' Module    : Form_frmArticleList
-' Purpose   : Workspace-aware list form for simple Article master data.
+' Module    : Form_frmArticleGroupList
+' Purpose   : Workspace-aware list form for tenant Article Groups.
 ' Author    : Codex
-' Version   : 0.1.2
+' Version   : 0.1.1
 '===============================================================================
 
-Private Const MODULE_NAME As String = "Form_frmArticleList"
+Private Const MODULE_NAME As String = "Form_frmArticleGroupList"
 Private m_currentSearchText As String
 
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
 
+    modArticleGroupService.EnsureArticleGroupTable
     modFormRuntime.InitializeForm Me
     modFwTranslationRuntime.ApplyTranslations Me
 
-    Me.RecordSource = modArticleService.BuildArticleListRowSource()
+    Me.RecordSource = modArticleGroupService.BuildArticleGroupListRowSource()
     Me.Filter = vbNullString
     Me.FilterOn = False
     m_currentSearchText = vbNullString
 
-    UpdateActionState
-
     modLoggingHandler.LogInfo MODULE_NAME & ".Form_Load", _
-        "Article list loaded."
+        "Article Group list loaded."
     Exit Sub
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "Form_Load", Err
-    MsgBox modFwTranslationRuntime.ResolveText("MSG.ARTICLE_LIST_LOAD_ERROR", "Fehler beim Laden der Artikelliste: " & Err.description), vbExclamation, MODULE_NAME
+    MsgBox modFwTranslationRuntime.ResolveText("MSG.ARTICLE_GROUP_LIST_LOAD_ERROR", "Fehler beim Laden der Artikelgruppenliste: " & Err.description), vbExclamation, MODULE_NAME
 End Sub
 
 Private Sub Form_Current()
@@ -56,7 +55,7 @@ End Sub
 Private Sub cmdNew_Click()
     On Error GoTo ErrorHandler
 
-    OpenNewArticle
+    OpenNewArticleGroup
     Exit Sub
 
 ErrorHandler:
@@ -66,11 +65,24 @@ End Sub
 Private Sub cmdEdit_Click()
     On Error GoTo ErrorHandler
 
-    OpenCurrentArticle
+    OpenCurrentArticleGroup
     Exit Sub
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "cmdEdit_Click", Err
+End Sub
+
+Private Sub OpenNewArticleGroup()
+    On Error GoTo ErrorHandler
+
+    If Not modAppWorkspaceService.OpenWorkspaceForm(Me, modArticleGroupService.FORM_ARTICLE_GROUP_DETAIL, vbNullString, acFormAdd) Then
+        Err.Raise vbObjectError + 2101, MODULE_NAME & ".OpenNewArticleGroup", "Workspace navigation failed."
+    End If
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "OpenNewArticleGroup", Err
+    Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
 Private Sub cmdRefresh_Click()
@@ -82,22 +94,6 @@ Private Sub cmdRefresh_Click()
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "cmdRefresh_Click", Err
 End Sub
-
-Public Function GetCurrentWorkspaceRecordId() As Long
-    GetCurrentWorkspaceRecordId = GetCurrentArticleId()
-End Function
-
-Public Function SupportsListCommandBar() As Boolean
-    SupportsListCommandBar = True
-End Function
-
-Public Function SupportsListNew() As Boolean
-    SupportsListNew = True
-End Function
-
-Public Function SupportsListEdit() As Boolean
-    SupportsListEdit = True
-End Function
 
 Public Sub ListSearch(ByVal searchText As String)
     On Error GoTo ErrorHandler
@@ -123,7 +119,7 @@ End Sub
 Public Sub ListNew()
     On Error GoTo ErrorHandler
 
-    OpenNewArticle
+    OpenNewArticleGroup
     Exit Sub
 
 ErrorHandler:
@@ -134,7 +130,7 @@ End Sub
 Public Sub ListEdit()
     On Error GoTo ErrorHandler
 
-    OpenCurrentArticle
+    OpenCurrentArticleGroup
     Exit Sub
 
 ErrorHandler:
@@ -152,11 +148,27 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ListRefresh", Err
 End Sub
 
+Public Function SupportsListCommandBar() As Boolean
+    SupportsListCommandBar = True
+End Function
+
+Public Function SupportsListNew() As Boolean
+    SupportsListNew = True
+End Function
+
+Public Function SupportsListEdit() As Boolean
+    SupportsListEdit = True
+End Function
+
+Public Function GetCurrentWorkspaceRecordId() As Long
+    GetCurrentWorkspaceRecordId = GetCurrentArticleGroupId()
+End Function
+
 Public Function GetWorkspaceState() As String
     Dim stateText As String
 
     stateText = AddWorkspaceStatePair(stateText, "search", GetSearchTextValue())
-    stateText = AddWorkspaceStatePair(stateText, "article_id", CStr(GetCurrentArticleId()))
+    stateText = AddWorkspaceStatePair(stateText, "product_group_id", CStr(GetCurrentArticleGroupId()))
 
     GetWorkspaceState = stateText
 End Function
@@ -164,17 +176,17 @@ End Function
 Public Sub RestoreWorkspaceState(ByVal stateText As String)
     On Error GoTo ErrorHandler
 
-    Dim ArticleId As Long
+    Dim articleGroupId As Long
     Dim searchText As String
 
     searchText = GetWorkspaceStateValue(stateText, "search")
-    ArticleId = modDaoHelper.NzLong(GetWorkspaceStateValue(stateText, "article_id"), 0)
+    articleGroupId = modDaoHelper.NzLong(GetWorkspaceStateValue(stateText, "product_group_id"), 0)
 
     m_currentSearchText = Trim$(modDaoHelper.NzString(searchText))
     ApplySearchFilter
 
-    If ArticleId > 0 Then
-        RestoreCurrentArticleSelection ArticleId
+    If articleGroupId > 0 Then
+        RestoreCurrentArticleGroupSelection articleGroupId
     End If
     Exit Sub
 
@@ -193,7 +205,7 @@ Private Sub ApplySearchFilter()
     If LenB(m_currentSearchText) = 0 Then
         Me.Filter = vbNullString
     Else
-        Me.Filter = modArticleService.BuildArticleSearchFilter(m_currentSearchText)
+        Me.Filter = modArticleGroupService.BuildArticleGroupSearchFilter(m_currentSearchText)
         Me.FilterOn = True
     End If
     Exit Sub
@@ -214,36 +226,24 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ClearSearchFilter", Err
 End Sub
 
-Private Sub OpenNewArticle()
+Private Sub OpenCurrentArticleGroup()
     On Error GoTo ErrorHandler
 
-    If Not modAppWorkspaceService.OpenWorkspaceForm(Me, modArticleService.FORM_ARTICLE_DETAIL, vbNullString, acFormAdd) Then
-        Err.Raise vbObjectError + 2201, MODULE_NAME & ".OpenNewArticle", "Workspace navigation failed."
-    End If
-    Exit Sub
+    Dim articleGroupId As Long
 
-ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "OpenNewArticle", Err
-    Err.Raise Err.Number, Err.Source, Err.description
-End Sub
-
-Private Sub OpenCurrentArticle()
-    On Error GoTo ErrorHandler
-
-    Dim ArticleId As Long
-
-    ArticleId = GetCurrentArticleId()
-    If ArticleId <= 0 Then
+    articleGroupId = GetCurrentArticleGroupId()
+    If articleGroupId <= 0 Then
+        MsgBox modFwTranslationRuntime.ResolveText("MSG.ARTICLE_GROUP_SELECT_FIRST", "Bitte zuerst eine Artikelgruppe auswaehlen."), vbExclamation, MODULE_NAME
         Exit Sub
     End If
 
-    If Not modAppWorkspaceService.OpenWorkspaceForm(Me, modArticleService.FORM_ARTICLE_DETAIL, "[article_id]=" & CStr(ArticleId)) Then
-        Err.Raise vbObjectError + 2200, MODULE_NAME & ".OpenCurrentArticle", "Workspace navigation failed."
+    If Not modAppWorkspaceService.OpenWorkspaceForm(Me, modArticleGroupService.FORM_ARTICLE_GROUP_DETAIL, "[product_group_id]=" & CStr(articleGroupId)) Then
+        Err.Raise vbObjectError + 2100, MODULE_NAME & ".OpenCurrentArticleGroup", "Workspace navigation failed."
     End If
     Exit Sub
 
 ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "OpenCurrentArticle", Err
+    modErrorHandler.HandleError MODULE_NAME, "OpenCurrentArticleGroup", Err
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
@@ -254,7 +254,7 @@ Private Sub RefreshListData()
     UpdateActionState
 
     modLoggingHandler.LogInfo MODULE_NAME & ".RefreshListData", _
-        "Article list requeried."
+        "Article Group list requeried."
     Exit Sub
 
 ErrorHandler:
@@ -269,35 +269,35 @@ Private Sub UpdateActionState()
     End If
 
     If HasControl("cmdEdit") Then
-        Me!cmdEdit.Enabled = (GetCurrentArticleId() > 0)
+        Me!cmdEdit.Enabled = (GetCurrentArticleGroupId() > 0)
     End If
 
 SafeExit:
 End Sub
 
-Private Function GetCurrentArticleId() As Long
+Private Function GetCurrentArticleGroupId() As Long
     On Error GoTo SafeExit
 
     If Me.NewRecord Then
         Exit Function
     End If
 
-    If HasControl("article_id") Then
-        GetCurrentArticleId = modDaoHelper.NzLong(Me!article_id.Value, 0)
-    ElseIf HasControl("txtArticleId") Then
-        GetCurrentArticleId = modDaoHelper.NzLong(Me!txtArticleId.Value, 0)
+    If HasControl("product_group_id") Then
+        GetCurrentArticleGroupId = modDaoHelper.NzLong(Me!product_group_id.Value, 0)
+    ElseIf HasControl("txtArticleGroupId") Then
+        GetCurrentArticleGroupId = modDaoHelper.NzLong(Me!txtArticleGroupId.Value, 0)
     End If
 
 SafeExit:
 End Function
 
-Private Sub RestoreCurrentArticleSelection(ByVal ArticleId As Long)
+Private Sub RestoreCurrentArticleGroupSelection(ByVal articleGroupId As Long)
     On Error GoTo ErrorHandler
 
     Dim recordsetClone As DAO.Recordset
 
     Set recordsetClone = Me.recordsetClone
-    recordsetClone.FindFirst "[article_id]=" & CStr(ArticleId)
+    recordsetClone.FindFirst "[product_group_id]=" & CStr(articleGroupId)
 
     If Not recordsetClone.NoMatch Then
         Me.Bookmark = recordsetClone.Bookmark
@@ -310,7 +310,7 @@ CleanExit:
     Exit Sub
 
 ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "RestoreCurrentArticleSelection", Err
+    modErrorHandler.HandleError MODULE_NAME, "RestoreCurrentArticleGroupSelection", Err
     Resume CleanExit
 End Sub
 
@@ -377,4 +377,6 @@ Private Function UnescapeWorkspaceStateValue(ByVal valueText As String) As Strin
     valueText = Replace(valueText, "%25", "%")
     UnescapeWorkspaceStateValue = valueText
 End Function
+
+
 

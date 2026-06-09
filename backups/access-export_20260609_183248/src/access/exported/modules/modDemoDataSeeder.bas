@@ -266,9 +266,9 @@ Public Sub SeedDemoSalesOrder()
     Const DEMO_EXTERNAL_REFERENCE As String = "DEMO_SO_PHASE1_SMOKE"
 
     Dim db As DAO.Database
-    Dim OrderId As Long
+    Dim orderId As Long
     Dim billingAddressId As Long
-    Dim CustomerName As String
+    Dim customerName As String
 
     Set db = currentDb
 
@@ -293,52 +293,52 @@ Public Sub SeedDemoSalesOrder()
         Err.Raise vbObjectError + 761, MODULE_NAME, "Demo billing address for sales order could not be resolved."
     End If
 
-    CustomerName = modAddressRepository.GetAddressDisplayName(billingAddressId, "Muster Handel AG")
-    OrderId = ResolveOrderIdByExternalReference(db, DEMO_EXTERNAL_REFERENCE)
+    customerName = modAddressRepository.GetAddressDisplayName(billingAddressId, "Muster Handel AG")
+    orderId = ResolveOrderIdByExternalReference(db, DEMO_EXTERNAL_REFERENCE)
 
     DBEngine.Workspaces(0).BeginTrans
 
-    If OrderId <= 0 Then
-        OrderId = modOrderRepository.CreateSalesOrderHeader( _
+    If orderId <= 0 Then
+        orderId = modOrderRepository.CreateSalesOrderHeader( _
             CustomerAddressId:=billingAddressId, _
             OrderDate:=DateSerial(2026, 6, 9), _
-            CustomerName:=CustomerName, _
+            CustomerName:=customerName, _
             DeliveryDate:=DateSerial(2026, 6, 16), _
             ValidUntil:=DateSerial(2026, 6, 30), _
             ReferenceText:="Smoke-Test Sales Order", _
             ExternalReference:=DEMO_EXTERNAL_REFERENCE, _
-            languageCode:="DE-CH", _
+            LanguageCode:="DE-CH", _
             CurrencyCode:="CHF", _
             PaymentTermCode:="NET_30", _
             VatMode:="EXCLUSIVE", _
             NotesText:="Phase-1 Smoke-Test fuer Sales Orders.", _
             InternalNotesText:="SeedDemoSalesOrder")
 
-        If OrderId <= 0 Then
+        If orderId <= 0 Then
             Err.Raise vbObjectError + 762, MODULE_NAME, "Sales-order header could not be created."
         End If
 
-        UpdateOrderStatusCode db, OrderId, modOrderRepository.ORDER_STATUS_OPEN
+        UpdateOrderStatusCode db, orderId, modOrderRepository.ORDER_STATUS_OPEN
         mInsertedCount = mInsertedCount + 1
     Else
         mSkippedExistingCount = mSkippedExistingCount + 1
     End If
 
-    EnsureDemoSalesOrderLine db, OrderId, 1, "CONSULT-STD", "Beratung Architekturreview Easis v4", 4, "H", 180, "CH_STANDARD", 7.7
-    EnsureDemoSalesOrderLine db, OrderId, 2, "HARDWARE-BOX", "Demo Hardware Box", 2, "PCS", 245, "CH_STANDARD", 7.7
-    EnsureDemoSalesOrderLine db, OrderId, 3, "OFFICE-MAT", "Bueromaterial Startpaket", 5, "PCS", 19, "CH_STANDARD", 7.7
+    EnsureDemoSalesOrderLine db, orderId, 1, "CONSULT-STD", "Beratung Architekturreview Easis v4", 4, "H", 180, "CH_STANDARD", 7.7
+    EnsureDemoSalesOrderLine db, orderId, 2, "HARDWARE-BOX", "Demo Hardware Box", 2, "PCS", 245, "CH_STANDARD", 7.7
+    EnsureDemoSalesOrderLine db, orderId, 3, "OFFICE-MAT", "Bueromaterial Startpaket", 5, "PCS", 19, "CH_STANDARD", 7.7
 
-    If Not modOrderCalculationService.RecalculateOrder(OrderId) Then
-        Err.Raise vbObjectError + 763, MODULE_NAME, "Sales-order recalculation failed for OrderId=" & CStr(OrderId) & "."
+    If Not modOrderCalculationService.RecalculateOrder(orderId) Then
+        Err.Raise vbObjectError + 763, MODULE_NAME, "Sales-order recalculation failed for OrderId=" & CStr(orderId) & "."
     End If
 
     DBEngine.Workspaces(0).CommitTrans
 
     modLoggingHandler.LogInfo MODULE_NAME & ".SeedDemoSalesOrder", _
-        "Demo sales order ensured. OrderId=" & CStr(OrderId) & ", ExternalReference='" & DEMO_EXTERNAL_REFERENCE & "'."
+        "Demo sales order ensured. OrderId=" & CStr(orderId) & ", ExternalReference='" & DEMO_EXTERNAL_REFERENCE & "'."
 
     MsgBox "Demo-Sales-Order wurde erfolgreich sichergestellt." & vbCrLf & _
-           "OrderId: " & CStr(OrderId), vbInformation, "Easis v4 Demo Seeder"
+           "OrderId: " & CStr(orderId), vbInformation, "Easis v4 Demo Seeder"
 
 CleanExit:
     Set db = Nothing
@@ -349,7 +349,7 @@ ErrorHandler:
     DBEngine.Workspaces(0).Rollback
     modErrorHandler.HandleError MODULE_NAME, "SeedDemoSalesOrder", Err
     MsgBox "Fehler beim Erstellen des Demo-Sales-Orders:" & vbCrLf & _
-           Err.Number & " - " & Err.description, vbCritical, "Easis v4 Demo Seeder"
+           Err.Number & " - " & Err.Description, vbCritical, "Easis v4 Demo Seeder"
     Resume CleanExit
 End Sub
 
@@ -619,7 +619,7 @@ Private Sub InsertPosition( _
     ByVal LineNo As Long, _
     ByVal description As String, _
     ByVal quantity As Double, _
-    ByVal UnitCode As String, _
+    ByVal unitCode As String, _
     ByVal UnitPrice As Currency, _
     ByVal vatRate As Double, _
     Optional ByVal discountType As String = "", _
@@ -651,7 +651,7 @@ Private Sub InsertPosition( _
     SetFieldIfExists rs, "line_no", LineNo
     SetFieldIfExists rs, "description", Trim$(description)
     SetFieldIfExists rs, "quantity", quantity
-    SetFieldIfExists rs, "unit_code", Trim$(UnitCode)
+    SetFieldIfExists rs, "unit_code", Trim$(unitCode)
     SetFieldIfExists rs, "unit_price", UnitPrice
     SetFieldIfExists rs, "vat_rate", vatRate
 
@@ -755,7 +755,7 @@ Private Sub EnsurePosition( _
     ByVal LineNo As Long, _
     ByVal description As String, _
     ByVal quantity As Double, _
-    ByVal UnitCode As String, _
+    ByVal unitCode As String, _
     ByVal UnitPrice As Currency, _
     ByVal vatRate As Double, _
     Optional ByVal discountType As String = "", _
@@ -768,7 +768,7 @@ Private Sub EnsurePosition( _
         Exit Sub
     End If
 
-    InsertPosition db, DocumentId, LineNo, description, quantity, UnitCode, UnitPrice, vatRate, discountType, discountValue
+    InsertPosition db, DocumentId, LineNo, description, quantity, unitCode, UnitPrice, vatRate, discountType, discountValue
     MarkDocumentTotalsDirty DocumentId
     mInsertedCount = mInsertedCount + 1
 End Sub
@@ -944,12 +944,12 @@ End Sub
 
 Private Sub UpsertArticle( _
     ByVal db As DAO.Database, _
-    ByVal ArticleNo As String, _
+    ByVal articleNo As String, _
     ByVal articleName As String, _
     ByVal productGroupCode As String, _
     ByVal articleTypeCode As String, _
-    ByVal UnitCode As String, _
-    ByVal VatCode As String, _
+    ByVal unitCode As String, _
+    ByVal vatCode As String, _
     ByVal purchasePrice As Double, _
     ByVal salesPrice As Double, _
     ByVal barcode As String, _
@@ -966,7 +966,7 @@ Private Sub UpsertArticle( _
     End If
 
     sql = "SELECT * FROM [" & TBL_ART_ARTICLE & "] " & _
-          "WHERE [article_no]=" & SqlText(UCase$(Trim$(ArticleNo))) & ";"
+          "WHERE [article_no]=" & SqlText(UCase$(Trim$(articleNo))) & ";"
 
     Set rs = db.OpenRecordset(sql, dbOpenDynaset)
 
@@ -974,12 +974,12 @@ Private Sub UpsertArticle( _
         rs.AddNew
         SetFieldIfExists rs, "created_at", Now()
         SetFieldIfExists rs, "created_by", created_by
-        SetFieldIfExists rs, "article_no", UCase$(Trim$(ArticleNo))
+        SetFieldIfExists rs, "article_no", UCase$(Trim$(articleNo))
         SetFieldIfExists rs, "article_name", Trim$(articleName)
         SetFieldIfExists rs, "product_group_id", productGroupId
         SetFieldIfExists rs, "article_type_code", UCase$(Trim$(articleTypeCode))
-        SetFieldIfExists rs, "unit_code", UCase$(Trim$(UnitCode))
-        SetFieldIfExists rs, "vat_code", UCase$(Trim$(VatCode))
+        SetFieldIfExists rs, "unit_code", UCase$(Trim$(unitCode))
+        SetFieldIfExists rs, "vat_code", UCase$(Trim$(vatCode))
         SetFieldIfExists rs, "purchase_price", purchasePrice
         SetFieldIfExists rs, "sales_price", salesPrice
         SetFieldIfExists rs, "barcode", Trim$(barcode)
@@ -994,8 +994,8 @@ Private Sub UpsertArticle( _
         If SetFieldIfMissing(rs, "article_name", Trim$(articleName)) _
             Or SetFieldIfMissing(rs, "product_group_id", productGroupId) _
             Or SetFieldIfMissing(rs, "article_type_code", UCase$(Trim$(articleTypeCode))) _
-            Or SetFieldIfMissing(rs, "unit_code", UCase$(Trim$(UnitCode))) _
-            Or SetFieldIfMissing(rs, "vat_code", UCase$(Trim$(VatCode))) _
+            Or SetFieldIfMissing(rs, "unit_code", UCase$(Trim$(unitCode))) _
+            Or SetFieldIfMissing(rs, "vat_code", UCase$(Trim$(vatCode))) _
             Or SetFieldIfMissing(rs, "purchase_price", purchasePrice) _
             Or SetFieldIfMissing(rs, "sales_price", salesPrice) _
             Or SetFieldIfMissing(rs, "barcode", Trim$(barcode)) _
@@ -1427,13 +1427,13 @@ Private Function ResolveOrderIdByExternalReference(ByVal db As DAO.Database, ByV
         "order_id")
 End Function
 
-Private Function ResolveArticleIdByNo(ByVal db As DAO.Database, ByVal ArticleNo As String) As Long
+Private Function ResolveArticleIdByNo(ByVal db As DAO.Database, ByVal articleNo As String) As Long
     If Not TableExists(db, TBL_ART_ARTICLE) Then Exit Function
 
     ResolveArticleIdByNo = LookupLongValue( _
         db, _
         "SELECT TOP 1 [article_id] FROM [" & TBL_ART_ARTICLE & "] " & _
-        "WHERE [article_no]=" & SqlText(UCase$(Trim$(ArticleNo))) & ";", _
+        "WHERE [article_no]=" & SqlText(UCase$(Trim$(articleNo))) & ";", _
         "article_id")
 End Function
 
@@ -1450,16 +1450,16 @@ Private Sub EnsureDemoSalesOrderLine( _
     ByVal db As DAO.Database, _
     ByVal OrderId As Long, _
     ByVal LineNo As Long, _
-    ByVal ArticleNo As String, _
+    ByVal articleNo As String, _
     ByVal DescriptionText As String, _
     ByVal quantity As Double, _
-    ByVal UnitCode As String, _
+    ByVal unitCode As String, _
     ByVal UnitPrice As Currency, _
-    ByVal VatCode As String, _
+    ByVal vatCode As String, _
     ByVal vatRate As Double)
 
-    Dim ArticleId As Long
-    Dim OrderLineId As Long
+    Dim articleId As Long
+    Dim orderLineId As Long
 
     If OrderId <= 0 Then Exit Sub
 
@@ -1468,21 +1468,21 @@ Private Sub EnsureDemoSalesOrderLine( _
         Exit Sub
     End If
 
-    ArticleId = ResolveArticleIdByNo(db, ArticleNo)
-    OrderLineId = modOrderRepository.CreateOrderLine( _
+    articleId = ResolveArticleIdByNo(db, articleNo)
+    orderLineId = modOrderRepository.CreateOrderLine( _
         OrderId:=OrderId, _
         LineNo:=LineNo, _
         DescriptionText:=DescriptionText, _
         quantity:=quantity, _
         UnitPrice:=UnitPrice, _
-        ArticleId:=ArticleId, _
-        ArticleNo:=ArticleNo, _
+        ArticleId:=articleId, _
+        ArticleNo:=articleNo, _
         LineTypeCode:="ARTICLE", _
-        UnitCode:=UnitCode, _
-        VatCode:=VatCode, _
-        vatRate:=vatRate)
+        UnitCode:=unitCode, _
+        VatCode:=vatCode, _
+        VatRate:=vatRate)
 
-    If OrderLineId <= 0 Then
+    If orderLineId <= 0 Then
         Err.Raise vbObjectError + 764, MODULE_NAME, "Sales-order line " & CStr(LineNo) & " could not be created."
     End If
 

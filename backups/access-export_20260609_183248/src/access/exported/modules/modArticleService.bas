@@ -207,12 +207,12 @@ End Sub
 Public Function ValidateArticleForm(ByVal formInstance As Access.Form) As Boolean
     On Error GoTo ErrorHandler
 
-    Dim ArticleId As Long
-    Dim ArticleNo As String
+    Dim articleId As Long
+    Dim articleNo As String
     Dim articleName As String
     Dim productGroupId As Long
-    Dim UnitCode As String
-    Dim VatCode As String
+    Dim unitCode As String
+    Dim vatCode As String
     Dim salesPriceValue As Variant
     Dim purchasePriceValue As Variant
 
@@ -224,12 +224,12 @@ Public Function ValidateArticleForm(ByVal formInstance As Access.Form) As Boolea
         Exit Function
     End If
 
-    ArticleId = ResolveArticleId(formInstance)
-    ArticleNo = UCase$(ResolveFieldText(formInstance, FIELD_ARTICLE_NO))
+    articleId = ResolveArticleId(formInstance)
+    articleNo = UCase$(ResolveFieldText(formInstance, FIELD_ARTICLE_NO))
     articleName = ResolveFieldText(formInstance, FIELD_ARTICLE_NAME)
     productGroupId = ResolveLongFieldValue(formInstance, FIELD_PRODUCT_GROUP_ID)
-    UnitCode = ResolveFieldText(formInstance, FIELD_UNIT_CODE)
-    VatCode = ResolveFieldText(formInstance, FIELD_VAT_CODE)
+    unitCode = ResolveFieldText(formInstance, FIELD_UNIT_CODE)
+    vatCode = ResolveFieldText(formInstance, FIELD_VAT_CODE)
     salesPriceValue = ResolveRawFieldValue(formInstance, FIELD_SALES_PRICE)
     purchasePriceValue = ResolveRawFieldValue(formInstance, FIELD_PURCHASE_PRICE)
 
@@ -243,12 +243,12 @@ Public Function ValidateArticleForm(ByVal formInstance As Access.Form) As Boolea
         Exit Function
     End If
 
-    If LenB(UnitCode) = 0 Then
+    If LenB(unitCode) = 0 Then
         MsgBox modFwTranslationRuntime.ResolveText("MSG.ARTICLE_UNIT_REQUIRED", "Einheit ist erforderlich."), vbExclamation, MODULE_NAME
         Exit Function
     End If
 
-    If LenB(VatCode) = 0 Then
+    If LenB(vatCode) = 0 Then
         MsgBox modFwTranslationRuntime.ResolveText("MSG.ARTICLE_VAT_REQUIRED", "MWST-Code ist erforderlich."), vbExclamation, MODULE_NAME
         Exit Function
     End If
@@ -270,12 +270,12 @@ Public Function ValidateArticleForm(ByVal formInstance As Access.Form) As Boolea
         End If
     End If
 
-    If LenB(ArticleNo) = 0 Then
+    If LenB(articleNo) = 0 Then
         MsgBox modFwTranslationRuntime.ResolveText("MSG.ARTICLE_SAVE_ERROR", "Fehler beim Speichern des Artikels."), vbExclamation, MODULE_NAME
         Exit Function
     End If
 
-    If ArticleNoExists(ArticleNo, ArticleId) Then
+    If ArticleNoExists(articleNo, articleId) Then
         MsgBox modFwTranslationRuntime.ResolveText("MSG.ARTICLE_DUPLICATE_NO", "Artikel-Nr. existiert bereits."), vbExclamation, MODULE_NAME
         Exit Function
     End If
@@ -291,11 +291,11 @@ End Function
 Public Sub PrepareArticleForSave(ByVal formInstance As Access.Form)
     On Error GoTo ErrorHandler
 
-    Dim ArticleNo As String
+    Dim articleNo As String
     Dim articleName As String
     Dim articleTypeCode As String
-    Dim UnitCode As String
-    Dim VatCode As String
+    Dim unitCode As String
+    Dim vatCode As String
     Dim barcode As String
     Dim DescriptionText As String
 
@@ -303,27 +303,27 @@ Public Sub PrepareArticleForSave(ByVal formInstance As Access.Form)
         Exit Sub
     End If
 
-    ArticleNo = UCase$(ResolveFieldText(formInstance, FIELD_ARTICLE_NO))
+    articleNo = UCase$(ResolveFieldText(formInstance, FIELD_ARTICLE_NO))
     articleName = ResolveFieldText(formInstance, FIELD_ARTICLE_NAME)
     articleTypeCode = UCase$(ResolveFieldText(formInstance, FIELD_ARTICLE_TYPE_CODE))
-    UnitCode = UCase$(ResolveFieldText(formInstance, FIELD_UNIT_CODE))
-    VatCode = UCase$(ResolveFieldText(formInstance, FIELD_VAT_CODE))
+    unitCode = UCase$(ResolveFieldText(formInstance, FIELD_UNIT_CODE))
+    vatCode = UCase$(ResolveFieldText(formInstance, FIELD_VAT_CODE))
     barcode = ResolveFieldText(formInstance, FIELD_BARCODE)
     DescriptionText = ResolveFieldText(formInstance, FIELD_DESCRIPTION_TEXT)
 
-    If LenB(ArticleNo) = 0 Then
-        ArticleNo = GenerateNextArticleNo()
+    If LenB(articleNo) = 0 Then
+        articleNo = GenerateNextArticleNo()
     End If
 
     If LenB(articleTypeCode) = 0 Then
         articleTypeCode = DEFAULT_ARTICLE_TYPE_CODE
     End If
 
-    SetFieldValueIfPresent formInstance, FIELD_ARTICLE_NO, ArticleNo
+    SetFieldValueIfPresent formInstance, FIELD_ARTICLE_NO, articleNo
     SetFieldValueIfPresent formInstance, FIELD_ARTICLE_NAME, articleName
     SetFieldValueIfPresent formInstance, FIELD_ARTICLE_TYPE_CODE, articleTypeCode
-    SetFieldValueIfPresent formInstance, FIELD_UNIT_CODE, UnitCode
-    SetFieldValueIfPresent formInstance, FIELD_VAT_CODE, VatCode
+    SetFieldValueIfPresent formInstance, FIELD_UNIT_CODE, unitCode
+    SetFieldValueIfPresent formInstance, FIELD_VAT_CODE, vatCode
     SetFieldValueIfPresent formInstance, FIELD_BARCODE, barcode
     SetFieldValueIfPresent formInstance, FIELD_DESCRIPTION_TEXT, DescriptionText
 
@@ -333,13 +333,13 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "PrepareArticleForSave", Err
 End Sub
 
-Public Function ArticleNoExists(ByVal ArticleNo As String, Optional ByVal excludeArticleId As Long = 0) As Boolean
+Public Function ArticleNoExists(ByVal articleNo As String, Optional ByVal excludeArticleId As Long = 0) As Boolean
     On Error GoTo ErrorHandler
 
     Dim criteria As String
 
-    ArticleNo = UCase$(Trim$(ArticleNo))
-    criteria = "UCase(Nz([" & FIELD_ARTICLE_NO & "],'')) = " & SqlText(ArticleNo)
+    articleNo = UCase$(Trim$(articleNo))
+    criteria = "UCase(Nz([" & FIELD_ARTICLE_NO & "],'')) = " & SqlText(articleNo)
 
     If excludeArticleId > 0 Then
         criteria = criteria & " AND [" & FIELD_ARTICLE_ID & "] <> " & CStr(excludeArticleId)
@@ -385,18 +385,18 @@ Public Function ResolveNextArticleNo() As String
 End Function
 
 Public Function ResolveArticleDisplayName(ByVal formInstance As Access.Form) As String
-    Dim ArticleNo As String
+    Dim articleNo As String
     Dim articleName As String
 
-    ArticleNo = ResolveFieldText(formInstance, FIELD_ARTICLE_NO)
+    articleNo = ResolveFieldText(formInstance, FIELD_ARTICLE_NO)
     articleName = ResolveFieldText(formInstance, FIELD_ARTICLE_NAME)
 
-    If LenB(articleName) > 0 And LenB(ArticleNo) > 0 Then
-        ResolveArticleDisplayName = ArticleNo & " - " & articleName
+    If LenB(articleName) > 0 And LenB(articleNo) > 0 Then
+        ResolveArticleDisplayName = articleNo & " - " & articleName
     ElseIf LenB(articleName) > 0 Then
         ResolveArticleDisplayName = articleName
     Else
-        ResolveArticleDisplayName = ArticleNo
+        ResolveArticleDisplayName = articleNo
     End If
 End Function
 
