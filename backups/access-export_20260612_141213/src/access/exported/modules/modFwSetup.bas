@@ -544,7 +544,7 @@ End Function
 Private Function FormObjectExists(ByVal FormName As String) As Boolean
     On Error GoTo SafeExit
 
-    Dim accessObject As accessObject
+    Dim accessObject As AccessObject
 
     For Each accessObject In CurrentProject.AllForms
         If StrComp(accessObject.Name, FormName, vbTextCompare) = 0 Then

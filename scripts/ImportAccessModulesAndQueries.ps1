@@ -21,6 +21,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $acModule = 5
+$AutoBackupKeepLast = 15
+$AutoBackupRetentionDays = 14
 
 function New-SyncEntry {
     param(
@@ -213,20 +215,98 @@ function Ensure-BackupFolder {
     }
 }
 
+function Get-AutoBackupFolder {
+    param(
+        [string]$BackupRootPath
+    )
+
+    return (Join-Path $BackupRootPath "auto")
+}
+
+function Get-MilestoneBackupFolder {
+    param(
+        [string]$BackupRootPath
+    )
+
+    return (Join-Path $BackupRootPath "milestones")
+}
+
+function Invoke-AutoBackupCleanup {
+    param(
+        [string]$AutoBackupFolderPath,
+        [System.Collections.ArrayList]$EntryLog,
+        [bool]$SimulateOnly
+    )
+
+    if ([string]::IsNullOrWhiteSpace($AutoBackupFolderPath)) {
+        return
+    }
+
+    $existingItems = @()
+    if (Test-Path -LiteralPath $AutoBackupFolderPath) {
+        $existingItems = @(Get-ChildItem -LiteralPath $AutoBackupFolderPath -Force | Sort-Object LastWriteTimeUtc -Descending)
+    }
+
+    if ($existingItems.Count -eq 0) {
+        if ($EntryLog -ne $null) {
+            [void]$EntryLog.Add((New-SyncEntry "backup" "auto-retention" "skipped" "No automatic backups found for cleanup."))
+        }
+        return
+    }
+
+    $cutoffUtc = (Get-Date).ToUniversalTime().AddDays(-$AutoBackupRetentionDays)
+    $toDelete = New-Object System.Collections.ArrayList
+
+    for ($index = 0; $index -lt $existingItems.Count; $index++) {
+        $item = $existingItems[$index]
+        $isProtectedByCount = ($index -lt $AutoBackupKeepLast)
+        $isProtectedByAge = ($item.LastWriteTimeUtc -ge $cutoffUtc)
+        if (-not $isProtectedByCount -and -not $isProtectedByAge) {
+            [void]$toDelete.Add($item)
+        }
+    }
+
+    foreach ($item in $toDelete) {
+        if (-not $SimulateOnly) {
+            Remove-Item -LiteralPath $item.FullName -Force -Recurse
+        }
+        if ($EntryLog -ne $null) {
+            [void]$EntryLog.Add((New-SyncEntry "backup" $item.Name $(if ($SimulateOnly) { "planned" } else { "deleted" }) "Old automatic backup removed by retention cleanup."))
+        }
+    }
+
+    $remainingCount = $existingItems.Count - $toDelete.Count
+    if ($EntryLog -ne $null) {
+        [void]$EntryLog.Add((New-SyncEntry "backup" "auto-retention" "retained" ("Automatic backup cleanup finished. Remaining auto backups: " + $remainingCount)))
+    }
+}
+
 function New-BackupCopy {
     param(
         [string]$DatabasePath,
-        [string]$BackupFolderPath
+        [string]$BackupFolderPath,
+        [System.Collections.ArrayList]$EntryLog,
+        [bool]$SimulateOnly
     )
 
-    Ensure-BackupFolder -FolderPath $BackupFolderPath -SimulateOnly:$false
+    $autoBackupFolder = Get-AutoBackupFolder -BackupRootPath $BackupFolderPath
+    $milestoneFolder = Get-MilestoneBackupFolder -BackupRootPath $BackupFolderPath
+
+    Ensure-BackupFolder -FolderPath $autoBackupFolder -SimulateOnly:$SimulateOnly
+    Ensure-BackupFolder -FolderPath $milestoneFolder -SimulateOnly:$SimulateOnly
 
     $stem = [System.IO.Path]::GetFileNameWithoutExtension($DatabasePath)
     $extension = [System.IO.Path]::GetExtension($DatabasePath)
     $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $backupPath = Join-Path $BackupFolderPath ($stem + ".backup_" + $timestamp + $extension)
+    $backupPath = Join-Path $autoBackupFolder ($stem + ".backup_" + $timestamp + $extension)
 
-    Copy-Item -LiteralPath $DatabasePath -Destination $backupPath -Force
+    if (-not $SimulateOnly) {
+        Copy-Item -LiteralPath $DatabasePath -Destination $backupPath -Force
+    }
+    if ($EntryLog -ne $null) {
+        [void]$EntryLog.Add((New-SyncEntry "backup" ([System.IO.Path]::GetFileName($backupPath)) $(if ($SimulateOnly) { "planned" } else { "created" }) "Backup created in automatic backup folder."))
+    }
+    Invoke-AutoBackupCleanup -AutoBackupFolderPath $autoBackupFolder -EntryLog $EntryLog -SimulateOnly:$SimulateOnly
     return $backupPath
 }
 
@@ -497,7 +577,7 @@ switch ($Mode) {
 
         if ($BackupBeforeImport -and -not $DryRun) {
             $backupFolderForImportOnly = if ([string]::IsNullOrWhiteSpace($config.backup_folder)) { Split-Path -Parent $config.target_accdb_path } else { $config.backup_folder }
-            $backupPath = New-BackupCopy -DatabasePath $config.target_accdb_path -BackupFolderPath $backupFolderForImportOnly
+            $backupPath = New-BackupCopy -DatabasePath $config.target_accdb_path -BackupFolderPath $backupFolderForImportOnly -EntryLog $entries -SimulateOnly:$false
         }
 
         $importResult = Invoke-AccessImport -ExportRoot $exportRoot -DatabasePath $config.target_accdb_path -SimulateOnly $DryRun.IsPresent
@@ -545,8 +625,7 @@ switch ($Mode) {
             [void]$entries.Add((New-SyncEntry "backup" ([System.IO.Path]::GetFileName($config.active_accdb_path)) "planned" "Active ACCDB would be backed up before staging."))
             [void]$entries.Add((New-SyncEntry "staging" ([System.IO.Path]::GetFileName($config.staging_accdb_path)) "planned" "Staging ACCDB would be recreated from the active ACCDB."))
         } else {
-            $backupPath = New-BackupCopy -DatabasePath $config.active_accdb_path -BackupFolderPath $config.backup_folder
-            [void]$entries.Add((New-SyncEntry "backup" ([System.IO.Path]::GetFileName($config.active_accdb_path)) "created" "Backup created successfully."))
+            $backupPath = New-BackupCopy -DatabasePath $config.active_accdb_path -BackupFolderPath $config.backup_folder -EntryLog $entries -SimulateOnly:$false
 
             if (Test-Path -LiteralPath $config.staging_accdb_path) {
                 Remove-Item -LiteralPath $config.staging_accdb_path -Force
@@ -598,8 +677,7 @@ switch ($Mode) {
                 [void]$entries.Add((New-SyncEntry "staging" ([System.IO.Path]::GetFileName($config.staging_accdb_path)) "planned" "Staging ACCDB would be deleted after promotion."))
             }
         } else {
-            $backupPath = New-BackupCopy -DatabasePath $config.active_accdb_path -BackupFolderPath $config.backup_folder
-            [void]$entries.Add((New-SyncEntry "backup" ([System.IO.Path]::GetFileName($config.active_accdb_path)) "created" "Backup created successfully."))
+            $backupPath = New-BackupCopy -DatabasePath $config.active_accdb_path -BackupFolderPath $config.backup_folder -EntryLog $entries -SimulateOnly:$false
 
             Copy-Item -LiteralPath $config.staging_accdb_path -Destination $config.active_accdb_path -Force
             [void]$entries.Add((New-SyncEntry "promote" ([System.IO.Path]::GetFileName($config.active_accdb_path)) "replaced" "Active ACCDB replaced from staging successfully."))

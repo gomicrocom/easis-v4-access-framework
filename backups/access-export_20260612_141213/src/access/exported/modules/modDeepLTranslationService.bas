@@ -247,7 +247,7 @@ Private Function DecodeUtf8ResponseBody(ByVal responseBody As Variant) As String
     stream.Type = 1
     stream.Open
     stream.Write responseBody
-    stream.position = 0
+    stream.Position = 0
     stream.Type = 2
     stream.Charset = "utf-8"
     DecodeUtf8ResponseBody = stream.ReadText

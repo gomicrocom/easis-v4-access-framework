@@ -13,7 +13,6 @@ Option Explicit
 
 Private Const MODULE_NAME As String = "modFwSetup"
 Private Const FORM_TRANSLATION_TAG_GENERATOR As String = "frmFwTranslationTagGenerator"
-Private Const FORM_ADDRESS_COCKPIT As String = "frmAddressCockpit"
 
 Public Function EnsureOrderSchema() As Boolean
     On Error GoTo ErrorHandler
@@ -99,9 +98,6 @@ Public Sub SeedTranslations()
     InsertShellTranslations db
     EnsureTranslationTagGeneratorTranslations db
     EnsureTranslationTagGeneratorTags
-    EnsureAddressCockpitTranslations db
-    EnsureAddressCockpitTags
-    EnsureOrderDetailTranslations db
 
     MsgBox "fw_translation wurde erfolgreich ergaenzt.", vbInformation
     Exit Sub
@@ -264,296 +260,9 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "EnsureTranslationTagGeneratorTranslations", Err
 End Sub
 
-Public Sub EnsureAddressCockpitTranslations(Optional ByVal db As DAO.Database = Nothing)
-    On Error GoTo ErrorHandler
-
-    Dim workingDb As DAO.Database
-
-    If db Is Nothing Then
-        Set workingDb = currentDb
-    Else
-        Set workingDb = db
-    End If
-
-    EnsureTranslationSeed workingDb, "DE-CH", "NAV.ADDRESS_COCKPIT", "Adress-Cockpit", "NAVIGATION", 21
-    EnsureTranslationSeed workingDb, "EN-US", "NAV.ADDRESS_COCKPIT", "Address cockpit", "NAVIGATION", 21
-    EnsureTranslationSeed workingDb, "FR-FR", "NAV.ADDRESS_COCKPIT", "Cockpit adresse", "NAVIGATION", 21
-
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.FORM_TITLE", "Adress-Cockpit", "FORM", 320
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.FORM_TITLE", "Address cockpit", "FORM", 320
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.FORM_TITLE", "Cockpit adresse", "FORM", 320
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.ADDRESS", "Adresse", "FORM", 321
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.ADDRESS", "Address", "FORM", 321
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.ADDRESS", "Adresse", "FORM", 321
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.CONTACT", "Kontakt", "FORM", 322
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.CONTACT", "Contact", "FORM", 322
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.CONTACT", "Contact", "FORM", 322
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.STATUS", "Status", "FORM", 323
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.STATUS", "Status", "FORM", 323
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.STATUS", "Statut", "FORM", 323
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.LOCK_HINT", "Adresse ist gesperrt", "FORM", 324
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.LOCK_HINT", "Address is locked", "FORM", 324
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.LOCK_HINT", "L'adresse est bloquee", "FORM", 324
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.OPEN_INVOICES", "Offene Rechnungen", "FORM", 325
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.OPEN_INVOICES", "Open invoices", "FORM", 325
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.OPEN_INVOICES", "Factures ouvertes", "FORM", 325
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.OVERDUE_ITEMS", "Ueberfaellige Posten", "FORM", 326
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.OVERDUE_ITEMS", "Overdue items", "FORM", 326
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.OVERDUE_ITEMS", "Postes echus", "FORM", 326
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.DUNNINGS", "Mahnungen", "FORM", 327
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.DUNNINGS", "Dunnings", "FORM", 327
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.DUNNINGS", "Rappels", "FORM", 327
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.SALES_CURRENT_YEAR", "Umsatz laufendes Jahr", "FORM", 328
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.SALES_CURRENT_YEAR", "Sales current year", "FORM", 328
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.SALES_CURRENT_YEAR", "Chiffre d'affaires annee en cours", "FORM", 328
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.OPEN_ORDERS", "Offene Auftraege", "FORM", 329
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.OPEN_ORDERS", "Open orders", "FORM", 329
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.OPEN_ORDERS", "Commandes ouvertes", "FORM", 329
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.ACTIVE_SUBSCRIPTIONS", "Aktive Abos", "FORM", 330
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.ACTIVE_SUBSCRIPTIONS", "Active subscriptions", "FORM", 330
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.ACTIVE_SUBSCRIPTIONS", "Abonnements actifs", "FORM", 330
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.LAST_ACTIVITY", "Letzte Aktivitaet", "FORM", 331
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.LAST_ACTIVITY", "Last activity", "FORM", 331
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.LAST_ACTIVITY", "Derniere activite", "FORM", 331
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.NEW_ORDER", "Neue Bestellung", "FORM", 332
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.NEW_ORDER", "New order", "FORM", 332
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.NEW_ORDER", "Nouvelle commande", "FORM", 332
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.MANAGE_ORDERS", "Bestellungen verwalten", "FORM", 333
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.MANAGE_ORDERS", "Manage orders", "FORM", 333
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.MANAGE_ORDERS", "Gerer les commandes", "FORM", 333
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.NEW_SUBSCRIPTION", "Neues Abo", "FORM", 334
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.NEW_SUBSCRIPTION", "New subscription", "FORM", 334
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.NEW_SUBSCRIPTION", "Nouvel abonnement", "FORM", 334
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.MANAGE_SUBSCRIPTIONS", "Abos verwalten", "FORM", 335
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.MANAGE_SUBSCRIPTIONS", "Manage subscriptions", "FORM", 335
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.MANAGE_SUBSCRIPTIONS", "Gerer les abonnements", "FORM", 335
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.ACCOUNT_STATEMENT", "Kontoauszug", "FORM", 336
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.ACCOUNT_STATEMENT", "Account statement", "FORM", 336
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.ACCOUNT_STATEMENT", "Releve de compte", "FORM", 336
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.CAPTURE_PAYMENT", "Zahlungseingang erfassen", "FORM", 337
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.CAPTURE_PAYMENT", "Capture payment", "FORM", 337
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.CAPTURE_PAYMENT", "Saisir un paiement", "FORM", 337
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.DUNNINGS_ACTION", "Mahnungen", "FORM", 338
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.DUNNINGS_ACTION", "Dunnings", "FORM", 338
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.DUNNINGS_ACTION", "Rappels", "FORM", 338
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.NOTES", "Notizen", "FORM", 339
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.NOTES", "Notes", "FORM", 339
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.NOTES", "Notes", "FORM", 339
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.EMAILS", "E-Mails", "FORM", 340
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.EMAILS", "Emails", "FORM", 340
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.EMAILS", "E-mails", "FORM", 340
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.REPORTS", "Reports", "FORM", 341
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.REPORTS", "Reports", "FORM", 341
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.REPORTS", "Rapports", "FORM", 341
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.N_A", "n/a", "FORM", 342
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.N_A", "n/a", "FORM", 342
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.N_A", "n/a", "FORM", 342
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.STATUS_ACTIVE", "Aktiv", "FORM", 343
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.STATUS_ACTIVE", "Active", "FORM", 343
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.STATUS_ACTIVE", "Actif", "FORM", 343
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMADDRESSCOCKPIT.STATUS_INACTIVE", "Inaktiv", "FORM", 344
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMADDRESSCOCKPIT.STATUS_INACTIVE", "Inactive", "FORM", 344
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMADDRESSCOCKPIT.STATUS_INACTIVE", "Inactif", "FORM", 344
-
-    EnsureTranslationSeed workingDb, "DE-CH", "MSG.ADDRESS_COCKPIT_SELECT_ADDRESS_FIRST", "Bitte zuerst eine Adresse auswaehlen.", "MSG", 345
-    EnsureTranslationSeed workingDb, "EN-US", "MSG.ADDRESS_COCKPIT_SELECT_ADDRESS_FIRST", "Please select an address first.", "MSG", 345
-    EnsureTranslationSeed workingDb, "FR-FR", "MSG.ADDRESS_COCKPIT_SELECT_ADDRESS_FIRST", "Veuillez d'abord selectionner une adresse.", "MSG", 345
-    EnsureTranslationSeed workingDb, "DE-CH", "MSG.ADDRESS_COCKPIT_ORDER_CREATE_FAILED", "Die Bestellung konnte nicht erstellt werden.", "MSG", 346
-    EnsureTranslationSeed workingDb, "EN-US", "MSG.ADDRESS_COCKPIT_ORDER_CREATE_FAILED", "The order could not be created.", "MSG", 346
-    EnsureTranslationSeed workingDb, "FR-FR", "MSG.ADDRESS_COCKPIT_ORDER_CREATE_FAILED", "La commande n'a pas pu etre creee.", "MSG", 346
-    EnsureTranslationSeed workingDb, "DE-CH", "MSG.ADDRESS_COCKPIT_ORDER_DETAIL_MISSING", "Die Bestellung wurde erstellt, aber frmOrderDetail ist nicht verfuegbar.", "MSG", 347
-    EnsureTranslationSeed workingDb, "EN-US", "MSG.ADDRESS_COCKPIT_ORDER_DETAIL_MISSING", "The order was created, but frmOrderDetail is not available.", "MSG", 347
-    EnsureTranslationSeed workingDb, "FR-FR", "MSG.ADDRESS_COCKPIT_ORDER_DETAIL_MISSING", "La commande a ete creee, mais frmOrderDetail n'est pas disponible.", "MSG", 347
-
-    modLoggingHandler.LogInfo MODULE_NAME & ".EnsureAddressCockpitTranslations", _
-        "Translation seeds ensured for frmAddressCockpit."
-    Exit Sub
-
-ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "EnsureAddressCockpitTranslations", Err
-End Sub
-
-Public Sub EnsureAddressCockpitTags()
-    On Error GoTo ErrorHandler
-
-    Dim metadataItems As Collection
-    Dim metadata As Variant
-    Dim controlTagMap As Object
-    Dim ControlName As String
-    Dim currentTag As String
-    Dim updatedTag As String
-    Dim updatedCount As Long
-
-    If Not FormObjectExists(FORM_ADDRESS_COCKPIT) Then
-        modLoggingHandler.LogWarning MODULE_NAME & ".EnsureAddressCockpitTags", _
-            "Form '" & FORM_ADDRESS_COCKPIT & "' is not available in the current Access project. Tag ensure skipped."
-        Exit Sub
-    End If
-
-    Set metadataItems = modFwComposerService.GetFormControlMetadata(FORM_ADDRESS_COCKPIT, True)
-    Set controlTagMap = CreateObject("Scripting.Dictionary")
-    controlTagMap.CompareMode = vbTextCompare
-
-    For Each metadata In metadataItems
-        ControlName = Trim$(modDaoHelper.NzString(metadata("control_name")))
-        If LenB(ControlName) = 0 Then
-            GoTo NextControl
-        End If
-
-        currentTag = modDaoHelper.NzString(metadata("current_tag"))
-        updatedTag = modFwTranslationRuntime.SetTranslationKeyInTag( _
-            currentTag, _
-            BuildAddressCockpitTranslationKey(ControlName))
-
-        If StrComp(updatedTag, currentTag, vbBinaryCompare) <> 0 Then
-            controlTagMap(ControlName) = updatedTag
-        End If
-
-NextControl:
-    Next metadata
-
-    If controlTagMap.count > 0 Then
-        If Not modFwComposerService.SaveControlTagsToObject(modFwComposerService.OBJECT_TYPE_FORM, FORM_ADDRESS_COCKPIT, controlTagMap, updatedCount) Then
-            Err.Raise vbObjectError + 6111, MODULE_NAME & ".EnsureAddressCockpitTags", _
-                "Failed to persist frmAddressCockpit tags."
-        End If
-    End If
-
-    modLoggingHandler.LogInfo MODULE_NAME & ".EnsureAddressCockpitTags", _
-        "Translation tags ensured for frmAddressCockpit. updated_count=" & CStr(updatedCount) & "."
-    Exit Sub
-
-ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "EnsureAddressCockpitTags", Err
-End Sub
-
-Public Sub EnsureOrderDetailTranslations(Optional ByVal db As DAO.Database = Nothing)
-    On Error GoTo ErrorHandler
-
-    Dim workingDb As DAO.Database
-
-    If db Is Nothing Then
-        Set workingDb = currentDb
-    Else
-        Set workingDb = db
-    End If
-
-    EnsureTranslationSeed workingDb, "DE-CH", "NAV.ORDER_DETAIL", "Bestellung", "NAVIGATION", 348
-    EnsureTranslationSeed workingDb, "EN-US", "NAV.ORDER_DETAIL", "Order", "NAVIGATION", 348
-    EnsureTranslationSeed workingDb, "FR-FR", "NAV.ORDER_DETAIL", "Commande", "NAVIGATION", 348
-
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.FORM_TITLE", "Bestellung", "FORM", 349
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.FORM_TITLE", "Order", "FORM", 349
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.FORM_TITLE", "Commande", "FORM", 349
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.ORDER_NO", "Bestell-Nr.", "FORM", 350
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.ORDER_NO", "Order no.", "FORM", 350
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.ORDER_NO", "No de commande", "FORM", 350
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.CUSTOMER_NAME", "Kunde", "FORM", 351
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.CUSTOMER_NAME", "Customer", "FORM", 351
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.CUSTOMER_NAME", "Client", "FORM", 351
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.ORDER_DATE", "Bestelldatum", "FORM", 352
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.ORDER_DATE", "Order date", "FORM", 352
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.ORDER_DATE", "Date de commande", "FORM", 352
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.DELIVERY_DATE", "Lieferdatum", "FORM", 353
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.DELIVERY_DATE", "Delivery date", "FORM", 353
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.DELIVERY_DATE", "Date de livraison", "FORM", 353
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.VALID_UNTIL", "Gueltig bis", "FORM", 354
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.VALID_UNTIL", "Valid until", "FORM", 354
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.VALID_UNTIL", "Valable jusqu'au", "FORM", 354
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.REFERENCE_TEXT", "Referenz", "FORM", 355
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.REFERENCE_TEXT", "Reference", "FORM", 355
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.REFERENCE_TEXT", "Reference", "FORM", 355
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.EXTERNAL_REFERENCE", "Externe Referenz", "FORM", 356
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.EXTERNAL_REFERENCE", "External reference", "FORM", 356
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.EXTERNAL_REFERENCE", "Reference externe", "FORM", 356
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.LANGUAGE_CODE", "Sprache", "FORM", 357
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.LANGUAGE_CODE", "Language", "FORM", 357
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.LANGUAGE_CODE", "Langue", "FORM", 357
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.CURRENCY_CODE", "Waehrung", "FORM", 358
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.CURRENCY_CODE", "Currency", "FORM", 358
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.CURRENCY_CODE", "Devise", "FORM", 358
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.PAYMENT_TERM_CODE", "Zahlungsbedingung", "FORM", 359
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.PAYMENT_TERM_CODE", "Payment term", "FORM", 359
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.PAYMENT_TERM_CODE", "Condition de paiement", "FORM", 359
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.VAT_MODE", "MWST-Modus", "FORM", 360
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.VAT_MODE", "VAT mode", "FORM", 360
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.VAT_MODE", "Mode TVA", "FORM", 360
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.ORDER_STATUS_CODE", "Status", "FORM", 361
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.ORDER_STATUS_CODE", "Status", "FORM", 361
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.ORDER_STATUS_CODE", "Statut", "FORM", 361
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.NOTES_TEXT", "Notizen", "FORM", 362
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.NOTES_TEXT", "Notes", "FORM", 362
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.NOTES_TEXT", "Notes", "FORM", 362
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.INTERNAL_NOTES_TEXT", "Interne Notizen", "FORM", 363
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.INTERNAL_NOTES_TEXT", "Internal notes", "FORM", 363
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.INTERNAL_NOTES_TEXT", "Notes internes", "FORM", 363
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.SUBTOTAL_NET_AMOUNT", "Zwischentotal netto", "FORM", 364
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.SUBTOTAL_NET_AMOUNT", "Subtotal net", "FORM", 364
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.SUBTOTAL_NET_AMOUNT", "Sous-total net", "FORM", 364
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.NET_AMOUNT", "Netto", "FORM", 365
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.NET_AMOUNT", "Net", "FORM", 365
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.NET_AMOUNT", "Net", "FORM", 365
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.VAT_AMOUNT", "MWST", "FORM", 366
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.VAT_AMOUNT", "VAT", "FORM", 366
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.VAT_AMOUNT", "TVA", "FORM", 366
-    EnsureTranslationSeed workingDb, "DE-CH", "FORM.FRMORDERDETAIL.GROSS_AMOUNT", "Brutto", "FORM", 367
-    EnsureTranslationSeed workingDb, "EN-US", "FORM.FRMORDERDETAIL.GROSS_AMOUNT", "Gross", "FORM", 367
-    EnsureTranslationSeed workingDb, "FR-FR", "FORM.FRMORDERDETAIL.GROSS_AMOUNT", "Brut", "FORM", 367
-
-    EnsureTranslationSeed workingDb, "DE-CH", "MSG.ORDER_DETAIL_MISSING_ID", "Keine Bestellung uebergeben.", "MSG", 368
-    EnsureTranslationSeed workingDb, "EN-US", "MSG.ORDER_DETAIL_MISSING_ID", "No order was provided.", "MSG", 368
-    EnsureTranslationSeed workingDb, "FR-FR", "MSG.ORDER_DETAIL_MISSING_ID", "Aucune commande n'a ete transmise.", "MSG", 368
-    EnsureTranslationSeed workingDb, "DE-CH", "MSG.ORDER_DETAIL_INVALID_ID", "Die uebergebene Bestell-ID ist ungueltig.", "MSG", 369
-    EnsureTranslationSeed workingDb, "EN-US", "MSG.ORDER_DETAIL_INVALID_ID", "The provided order id is invalid.", "MSG", 369
-    EnsureTranslationSeed workingDb, "FR-FR", "MSG.ORDER_DETAIL_INVALID_ID", "L'identifiant de commande transmis est invalide.", "MSG", 369
-    EnsureTranslationSeed workingDb, "DE-CH", "MSG.ORDER_DETAIL_NOT_FOUND", "Die Bestellung konnte nicht gefunden werden.", "MSG", 370
-    EnsureTranslationSeed workingDb, "EN-US", "MSG.ORDER_DETAIL_NOT_FOUND", "The order could not be found.", "MSG", 370
-    EnsureTranslationSeed workingDb, "FR-FR", "MSG.ORDER_DETAIL_NOT_FOUND", "La commande n'a pas pu etre trouvee.", "MSG", 370
-    EnsureTranslationSeed workingDb, "DE-CH", "MSG.ORDER_DETAIL_SAVE_ERROR", "Fehler beim Speichern der Bestellung.", "MSG", 371
-    EnsureTranslationSeed workingDb, "EN-US", "MSG.ORDER_DETAIL_SAVE_ERROR", "Error saving the order.", "MSG", 371
-    EnsureTranslationSeed workingDb, "FR-FR", "MSG.ORDER_DETAIL_SAVE_ERROR", "Erreur lors de l'enregistrement de la commande.", "MSG", 371
-    EnsureTranslationSeed workingDb, "DE-CH", "MSG.ORDER_DETAIL_CANCEL_CONFIRM", "Aenderungen verwerfen?", "MSG", 372
-    EnsureTranslationSeed workingDb, "EN-US", "MSG.ORDER_DETAIL_CANCEL_CONFIRM", "Discard changes?", "MSG", 372
-    EnsureTranslationSeed workingDb, "FR-FR", "MSG.ORDER_DETAIL_CANCEL_CONFIRM", "Abandonner les modifications ?", "MSG", 372
-
-    EnsureTranslationSeed workingDb, "DE-CH", "COMMON.SAVE", "Speichern", "COMMON", 373
-    EnsureTranslationSeed workingDb, "EN-US", "COMMON.SAVE", "Save", "COMMON", 373
-    EnsureTranslationSeed workingDb, "FR-FR", "COMMON.SAVE", "Enregistrer", "COMMON", 373
-    EnsureTranslationSeed workingDb, "DE-CH", "COMMON.CANCEL", "Abbrechen", "COMMON", 374
-    EnsureTranslationSeed workingDb, "EN-US", "COMMON.CANCEL", "Cancel", "COMMON", 374
-    EnsureTranslationSeed workingDb, "FR-FR", "COMMON.CANCEL", "Annuler", "COMMON", 374
-
-    modLoggingHandler.LogInfo MODULE_NAME & ".EnsureOrderDetailTranslations", _
-        "Translation seeds ensured for frmOrderDetail."
-    Exit Sub
-
-ErrorHandler:
-    modErrorHandler.HandleError MODULE_NAME, "EnsureOrderDetailTranslations", Err
-End Sub
-
 Private Function BuildTagGeneratorTranslationKey(ByVal ControlName As String) As String
     ControlName = UCase$(Trim$(modDaoHelper.NzString(ControlName)))
     BuildTagGeneratorTranslationKey = "FORM." & UCase$(FORM_TRANSLATION_TAG_GENERATOR) & "." & ControlName
-End Function
-
-Private Function BuildAddressCockpitTranslationKey(ByVal ControlName As String) As String
-    ControlName = UCase$(Trim$(modDaoHelper.NzString(ControlName)))
-    BuildAddressCockpitTranslationKey = "FORM." & UCase$(FORM_ADDRESS_COCKPIT) & "." & ControlName
-End Function
-
-Private Function FormObjectExists(ByVal FormName As String) As Boolean
-    On Error GoTo SafeExit
-
-    Dim accessObject As accessObject
-
-    For Each accessObject In CurrentProject.AllForms
-        If StrComp(accessObject.Name, FormName, vbTextCompare) = 0 Then
-            FormObjectExists = True
-            Exit Function
-        End If
-    Next accessObject
-
-SafeExit:
 End Function
 
 Public Sub SeedShellTranslations()
@@ -563,6 +272,7 @@ Public Sub SeedShellTranslations()
     Set db = currentDb
 
     InsertShellTranslations db
+
     MsgBox "Shell-, Dashboard- und Navigations-Uebersetzungen wurden erfolgreich initialisiert.", vbInformation, MODULE_NAME
     Exit Sub
 
@@ -1194,25 +904,18 @@ Private Sub InsertShellTranslations(ByVal db As DAO.Database)
 
     EnsureTranslationSeed db, "DE-CH", "COMMON.NEW", "Neu", "COMMON", 171
     EnsureTranslationSeed db, "EN-US", "COMMON.NEW", "New", "COMMON", 171
-    EnsureTranslationSeed db, "FR-FR", "COMMON.NEW", "Nouveau", "COMMON", 171
     EnsureTranslationSeed db, "DE-CH", "COMMON.EDIT", "Bearbeiten", "COMMON", 172
     EnsureTranslationSeed db, "EN-US", "COMMON.EDIT", "Edit", "COMMON", 172
-    EnsureTranslationSeed db, "FR-FR", "COMMON.EDIT", "Modifier", "COMMON", 172
     EnsureTranslationSeed db, "DE-CH", "COMMON.REFRESH", "Aktualisieren", "COMMON", 173
     EnsureTranslationSeed db, "EN-US", "COMMON.REFRESH", "Refresh", "COMMON", 173
-    EnsureTranslationSeed db, "FR-FR", "COMMON.REFRESH", "Actualiser", "COMMON", 173
     EnsureTranslationSeed db, "DE-CH", "COMMON.SEARCH", "Suche", "COMMON", 174
     EnsureTranslationSeed db, "EN-US", "COMMON.SEARCH", "Search", "COMMON", 174
-    EnsureTranslationSeed db, "FR-FR", "COMMON.SEARCH", "Recherche", "COMMON", 174
     EnsureTranslationSeed db, "DE-CH", "COMMON.CLEAR_SEARCH", "Leeren", "COMMON", 175
     EnsureTranslationSeed db, "EN-US", "COMMON.CLEAR_SEARCH", "Clear", "COMMON", 175
-    EnsureTranslationSeed db, "FR-FR", "COMMON.CLEAR_SEARCH", "Effacer", "COMMON", 175
     EnsureTranslationSeed db, "DE-CH", "COMMON.HOME", "Home", "COMMON", 176
     EnsureTranslationSeed db, "EN-US", "COMMON.HOME", "Home", "COMMON", 176
-    EnsureTranslationSeed db, "FR-FR", "COMMON.HOME", "Accueil", "COMMON", 176
     EnsureTranslationSeed db, "DE-CH", "COMMON.BACK", "Zurueck", "COMMON", 177
     EnsureTranslationSeed db, "EN-US", "COMMON.BACK", "Back", "COMMON", 177
-    EnsureTranslationSeed db, "FR-FR", "COMMON.BACK", "Retour", "COMMON", 177
 
     EnsureTranslationSeed db, "DE-CH", "FORM.FRMAPPSHELL.APP_TITLE", "EASIS v4", "FORM", 10
     EnsureTranslationSeed db, "EN-US", "FORM.FRMAPPSHELL.APP_TITLE", "EASIS v4", "FORM", 10

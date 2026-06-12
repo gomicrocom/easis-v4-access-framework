@@ -5,6 +5,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$TargetRepoPath,
 
+    [string]$BackupFolder = "",
     [switch]$BackupBeforeExport,
     [switch]$DryRun,
     [switch]$AsJson,
@@ -18,6 +19,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $acModule = 5
+$ExportBackupKeepLast = 3
 
 function New-ExportEntry {
     param(
@@ -147,6 +149,65 @@ function Backup-ExistingFile {
     $destinationDir = Split-Path -Parent $destination
     New-Item -ItemType Directory -Path $destinationDir -Force | Out-Null
     Copy-Item -LiteralPath $SourcePath -Destination $destination -Force
+}
+
+function Ensure-BackupFolder {
+    param(
+        [string]$FolderPath,
+        [bool]$SimulateOnly
+    )
+
+    if ([string]::IsNullOrWhiteSpace($FolderPath)) {
+        throw "Backup folder path could not be resolved."
+    }
+
+    if ($SimulateOnly) {
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $FolderPath)) {
+        New-Item -ItemType Directory -Path $FolderPath -Force | Out-Null
+    }
+}
+
+function Invoke-ExportBackupCleanup {
+    param(
+        [string]$BackupParentFolderPath,
+        [System.Collections.ArrayList]$EntryLog,
+        [bool]$SimulateOnly
+    )
+
+    if ([string]::IsNullOrWhiteSpace($BackupParentFolderPath)) {
+        return
+    }
+
+    $existingItems = @()
+    if (Test-Path -LiteralPath $BackupParentFolderPath) {
+        $existingItems = @(Get-ChildItem -LiteralPath $BackupParentFolderPath -Directory -Filter "access-export_*" | Sort-Object LastWriteTimeUtc -Descending)
+    }
+
+    if ($existingItems.Count -le $ExportBackupKeepLast) {
+        if ($EntryLog -ne $null) {
+            [void]$EntryLog.Add((New-ExportEntry "backup" "export-retention" "retained" ("Export backup cleanup finished. Remaining export backups: " + $existingItems.Count)))
+        }
+        return
+    }
+
+    $toDelete = @($existingItems | Select-Object -Skip $ExportBackupKeepLast)
+
+    foreach ($item in $toDelete) {
+        if (-not $SimulateOnly) {
+            Remove-Item -LiteralPath $item.FullName -Force -Recurse
+        }
+        if ($EntryLog -ne $null) {
+            [void]$EntryLog.Add((New-ExportEntry "backup" $item.Name $(if ($SimulateOnly) { "planned" } else { "deleted" }) "Old export backup removed by retention cleanup."))
+        }
+    }
+
+    $remainingCount = $existingItems.Count - $toDelete.Count
+    if ($EntryLog -ne $null) {
+        [void]$EntryLog.Add((New-ExportEntry "backup" "export-retention" "retained" ("Export backup cleanup finished. Remaining export backups: " + $remainingCount)))
+    }
 }
 
 function Export-StandardModules {
@@ -372,10 +433,13 @@ $targetReports = Join-Path $exportRoot "reports"
 $repoRoot = (Resolve-Path -LiteralPath $TargetRepoPath).Path
 
 $backupRoot = ""
+$backupParentFolder = ""
 if ($BackupBeforeExport) {
-    $backupRoot = Join-Path $repoRoot ("backups\access-export_" + (Get-Date -Format "yyyyMMdd_HHmmss"))
+    $backupParentFolder = if ([string]::IsNullOrWhiteSpace($BackupFolder)) { Join-Path $repoRoot "backups" } else { [System.IO.Path]::GetFullPath($BackupFolder) }
+    $backupRoot = Join-Path $backupParentFolder ("access-export_" + (Get-Date -Format "yyyyMMdd_HHmmss"))
     if (-not $DryRun) {
-        New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
+        Ensure-BackupFolder -FolderPath $backupParentFolder -SimulateOnly:$false
+        Ensure-BackupFolder -FolderPath $backupRoot -SimulateOnly:$false
     }
 }
 
@@ -416,6 +480,14 @@ finally {
         try { $access.CloseCurrentDatabase() } catch {}
         try { $access.Quit() } catch {}
         [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($access)
+    }
+}
+
+if ($BackupBeforeExport) {
+    if ($DryRun) {
+        [void]$entries.Add((New-ExportEntry "backup" "export-retention" "planned" "Only the 3 newest access-export_* backup folders would be kept after export." $backupRoot))
+    } else {
+        Invoke-ExportBackupCleanup -BackupParentFolderPath $backupParentFolder -EntryLog $entries -SimulateOnly:$false
     }
 }
 
