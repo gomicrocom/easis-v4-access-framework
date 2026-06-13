@@ -92,8 +92,18 @@ Public Function OpenWorkspaceForm( _
     previousSourceObject = Trim$(Nz(workspaceHost.sourceObject, vbNullString))
     previousWorkspaceState = historyItemText
 
+    modLoggingHandler.LogInfo MODULE_NAME & ".OpenWorkspaceForm", _
+        "Preparing SourceObject switch. target_form_name='" & targetFormName & _
+        "'; target_source_object='" & targetSourceObject & _
+        "'; previous_source_object='" & previousSourceObject & _
+        "'; where_condition='" & Replace(where_condition, "'", "''") & _
+        "'; open_args='" & Replace(open_args, "'", "''") & "'."
+
     workspaceHost.sourceObject = vbNullString
     workspaceHost.sourceObject = targetSourceObject
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".OpenWorkspaceForm", _
+        "SourceObject switched. current_source_object='" & ResolveCurrentWorkspaceSourceObject(workspaceHost) & "'."
 
     Set loadedWorkspaceForm = TryGetHostedWorkspaceForm(workspaceHost)
     If loadedWorkspaceForm Is Nothing Then
@@ -261,7 +271,11 @@ ErrorHandler:
         modLoggingHandler.LogInfo MODULE_NAME & ".ApplyWorkspaceOpenArgs", _
             "Workspace form '" & FormName & "' does not implement ApplyWorkspaceOpenArgs."
     Else
+        modLoggingHandler.LogWarning MODULE_NAME & ".ApplyWorkspaceOpenArgs", _
+            "ApplyWorkspaceOpenArgs failed for form '" & FormName & "'; err_number=" & CStr(Err.Number) & _
+            "; err_description='" & Replace(Err.Description, "'", "''") & "'."
         modErrorHandler.HandleError MODULE_NAME, "ApplyWorkspaceOpenArgs", Err
+        Err.Raise Err.Number, Err.Source, Err.Description
     End If
 End Sub
 

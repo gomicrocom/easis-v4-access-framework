@@ -22,21 +22,32 @@ Private Const MODULE_NAME As String = "Form_frmOrderDetail"
 Private Const TABLE_ORD_ORDER As String = "ord_order"
 Private Const FIELD_ORDER_ID As String = "order_id"
 Private Const DASHBOARD_FORM_NAME As String = "frmAppDashboard"
+Private Const ORDER_LINES_SUBFORM_CONTROL As String = "subOrderLines"
+Private Const ORDER_LINES_SUBFORM_NAME As String = "sfrmOrderLines"
+
+Private m_workspaceOpenArgsApplied As Boolean
 
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
 
+    modLoggingHandler.LogInfo MODULE_NAME & ".Form_Load", _
+        "OpenArgs raw='" & Replace(modDaoHelper.NzString(Me.OpenArgs), "'", "''") & "'."
+
     InitializeRecordSource
+    ConfigureOrderLinesSubform
     modFwTranslationRuntime.ApplyTranslations Me
     UpdateLocalCommandButtons
+    UpdateHeaderCaptionUi
 
-    If LenB(Trim$(modDaoHelper.NzString(Me.OpenArgs))) = 0 Then
-        HandleInvalidOrderContext "MSG.ORDER_DETAIL_MISSING_ID", "Keine Bestellung uebergeben."
-        Exit Sub
+    If LenB(Trim$(modDaoHelper.NzString(Me.OpenArgs))) > 0 Then
+        modLoggingHandler.LogInfo MODULE_NAME & ".Form_Load", _
+            "Applying standalone OpenArgs during Form_Load."
+        ApplyWorkspaceOpenArgs CStr(Me.OpenArgs)
+    Else
+        modLoggingHandler.LogInfo MODULE_NAME & ".Form_Load", _
+            "No OpenArgs available during Form_Load. Waiting for workspace ApplyWorkspaceOpenArgs if hosted."
     End If
 
-    ApplyWorkspaceOpenArgs CStr(Me.OpenArgs)
-    UpdateHeaderCaptionUi
     Exit Sub
 
 ErrorHandler:
@@ -172,6 +183,10 @@ Public Function GetCurrentWorkspaceRecordId() As Long
     GetCurrentWorkspaceRecordId = GetCurrentOrderId()
 End Function
 
+Public Function GetCurrentOrderDetailId() As Long
+    GetCurrentOrderDetailId = GetCurrentOrderId()
+End Function
+
 Public Function GetWorkspaceState() As String
     Dim stateText As String
 
@@ -202,6 +217,11 @@ Public Sub ApplyWorkspaceOpenArgs(ByVal openArgs As String)
     Dim OrderId As Long
 
     OrderId = NzLong(openArgs, 0)
+    m_workspaceOpenArgsApplied = False
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".ApplyWorkspaceOpenArgs", _
+        "Parsed order_id=" & CStr(OrderId) & "; raw_open_args='" & Replace(openArgs, "'", "''") & "'."
+
     If OrderId <= 0 Then
         HandleInvalidOrderContext "MSG.ORDER_DETAIL_INVALID_ID", "Die uebergebene Bestell-ID ist ungueltig."
         Exit Sub
@@ -213,6 +233,12 @@ Public Sub ApplyWorkspaceOpenArgs(ByVal openArgs As String)
     End If
 
     RestoreCurrentOrderSelection OrderId
+    RequeryOrderLinesSubform
+    UpdateHeaderCaptionUi
+    m_workspaceOpenArgsApplied = True
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".ApplyWorkspaceOpenArgs", _
+        "Order context applied successfully for order_id=" & CStr(OrderId) & "."
     Exit Sub
 
 ErrorHandler:
@@ -235,6 +261,29 @@ Public Sub DetailCancel()
     CancelCurrentEdit
 End Sub
 
+Public Sub RefreshCalculatedTotals(Optional ByVal requeryLines As Boolean = False)
+    On Error GoTo ErrorHandler
+
+    Dim OrderId As Long
+
+    OrderId = GetCurrentOrderId()
+
+    Me.Requery
+    If OrderId > 0 Then
+        RestoreCurrentOrderSelection OrderId
+    End If
+
+    If requeryLines Then
+        RequeryOrderLinesSubform
+    End If
+
+    UpdateHeaderCaptionUi
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "RefreshCalculatedTotals", Err
+End Sub
+
 Private Sub InitializeRecordSource()
     On Error GoTo ErrorHandler
 
@@ -245,6 +294,40 @@ Private Sub InitializeRecordSource()
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "InitializeRecordSource", Err
+End Sub
+
+Private Sub ConfigureOrderLinesSubform()
+    On Error GoTo SafeExit
+
+    If Not HasControl(ORDER_LINES_SUBFORM_CONTROL) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".ConfigureOrderLinesSubform", _
+            "Subform control '" & ORDER_LINES_SUBFORM_CONTROL & "' was not found."
+        Exit Sub
+    End If
+
+    Me.Controls(ORDER_LINES_SUBFORM_CONTROL).SourceObject = "Form." & ORDER_LINES_SUBFORM_NAME
+    Me.Controls(ORDER_LINES_SUBFORM_CONTROL).LinkMasterFields = FIELD_ORDER_ID
+    Me.Controls(ORDER_LINES_SUBFORM_CONTROL).LinkChildFields = FIELD_ORDER_ID
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".ConfigureOrderLinesSubform", _
+        "Configured subform control='" & ORDER_LINES_SUBFORM_CONTROL & _
+        "'; source_object='" & Me.Controls(ORDER_LINES_SUBFORM_CONTROL).SourceObject & _
+        "'; link_master_fields='" & Me.Controls(ORDER_LINES_SUBFORM_CONTROL).LinkMasterFields & _
+        "'; link_child_fields='" & Me.Controls(ORDER_LINES_SUBFORM_CONTROL).LinkChildFields & "'."
+
+SafeExit:
+End Sub
+
+Private Sub RequeryOrderLinesSubform()
+    On Error GoTo SafeExit
+
+    If Not HasControl(ORDER_LINES_SUBFORM_CONTROL) Then
+        Exit Sub
+    End If
+
+    Me.Controls(ORDER_LINES_SUBFORM_CONTROL).Form.Requery
+
+SafeExit:
 End Sub
 
 Private Sub SaveCurrentRecord()
@@ -372,13 +455,19 @@ Private Sub RestoreCurrentOrderSelection(ByVal OrderId As Long)
 
     Set recordsetClone = Me.RecordsetClone
     If recordsetClone.BOF And recordsetClone.EOF Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".RestoreCurrentOrderSelection", _
+            "RecordsetClone is empty while trying to restore order_id=" & CStr(OrderId) & "."
         GoTo CleanExit
     End If
 
     recordsetClone.FindFirst "[" & FIELD_ORDER_ID & "]=" & CStr(OrderId)
     If Not recordsetClone.NoMatch Then
+        modLoggingHandler.LogInfo MODULE_NAME & ".RestoreCurrentOrderSelection", _
+            "Order found for order_id=" & CStr(OrderId) & "."
         Me.Bookmark = recordsetClone.Bookmark
     Else
+        modLoggingHandler.LogWarning MODULE_NAME & ".RestoreCurrentOrderSelection", _
+            "Order not found for order_id=" & CStr(OrderId) & "."
         HandleInvalidOrderContext "MSG.ORDER_DETAIL_NOT_FOUND", "Die Bestellung konnte nicht gefunden werden."
     End If
 

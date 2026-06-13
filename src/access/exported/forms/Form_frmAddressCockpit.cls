@@ -248,7 +248,7 @@ Private Sub CreateNewSalesOrder()
     End If
 
     If FormExists(FORM_ORDER_DETAIL) Then
-        If Not modAppWorkspaceService.OpenWorkspaceForm(Me, FORM_ORDER_DETAIL, "[order_id]=" & CStr(OrderId)) Then
+        If Not modAppWorkspaceService.OpenWorkspaceForm(Me, FORM_ORDER_DETAIL, vbNullString, acFormPropertySettings, CStr(OrderId)) Then
             Err.Raise vbObjectError + 5320, MODULE_NAME & ".CreateNewSalesOrder", "Workspace navigation to frmOrderDetail failed."
         End If
     Else

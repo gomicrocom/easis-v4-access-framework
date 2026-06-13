@@ -14,6 +14,7 @@ Option Explicit
 Private Const MODULE_NAME As String = "modFwSetup"
 Private Const FORM_TRANSLATION_TAG_GENERATOR As String = "frmFwTranslationTagGenerator"
 Private Const FORM_ADDRESS_COCKPIT As String = "frmAddressCockpit"
+Private Const FORM_ORDER_LINES_SUBFORM As String = "sfrmOrderLines"
 
 Public Function EnsureOrderSchema() As Boolean
     On Error GoTo ErrorHandler
@@ -102,6 +103,8 @@ Public Sub SeedTranslations()
     EnsureAddressCockpitTranslations db
     EnsureAddressCockpitTags
     EnsureOrderDetailTranslations db
+    EnsureOrderLinesTranslations db
+    EnsureOrderLinesTags
 
     MsgBox "fw_translation wurde erfolgreich ergaenzt.", vbInformation
     Exit Sub
@@ -531,6 +534,128 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "EnsureOrderDetailTranslations", Err
 End Sub
 
+Public Sub EnsureOrderLinesTranslations(Optional ByVal db As DAO.Database = Nothing)
+    On Error GoTo ErrorHandler
+
+    Dim workingDb As DAO.Database
+
+    If db Is Nothing Then
+        Set workingDb = currentDb
+    Else
+        Set workingDb = db
+    End If
+
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.LINE_NO", "Pos.", "FORM", 375
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.LINE_NO", "Line", "FORM", 375
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.LINE_NO", "Pos.", "FORM", 375
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.ARTICLE_ID", "Artikel-ID", "FORM", 376
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.ARTICLE_ID", "Article id", "FORM", 376
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.ARTICLE_ID", "Id article", "FORM", 376
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.ARTICLE_NO", "Artikel-Nr.", "FORM", 377
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.ARTICLE_NO", "Article no.", "FORM", 377
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.ARTICLE_NO", "No article", "FORM", 377
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.DESCRIPTION_TEXT", "Beschreibung", "FORM", 378
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.DESCRIPTION_TEXT", "Description", "FORM", 378
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.DESCRIPTION_TEXT", "Description", "FORM", 378
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.QUANTITY", "Menge", "FORM", 379
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.QUANTITY", "Quantity", "FORM", 379
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.QUANTITY", "Quantite", "FORM", 379
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.UNIT_CODE", "Einheit", "FORM", 380
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.UNIT_CODE", "Unit", "FORM", 380
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.UNIT_CODE", "Unite", "FORM", 380
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.UNIT_PRICE", "Preis", "FORM", 381
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.UNIT_PRICE", "Price", "FORM", 381
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.UNIT_PRICE", "Prix", "FORM", 381
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.DISCOUNT_TYPE", "Rabattart", "FORM", 382
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.DISCOUNT_TYPE", "Discount type", "FORM", 382
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.DISCOUNT_TYPE", "Type de rabais", "FORM", 382
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.DISCOUNT_VALUE", "Rabatt", "FORM", 383
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.DISCOUNT_VALUE", "Discount", "FORM", 383
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.DISCOUNT_VALUE", "Rabais", "FORM", 383
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.SURCHARGE_TYPE", "Zuschlagsart", "FORM", 384
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.SURCHARGE_TYPE", "Surcharge type", "FORM", 384
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.SURCHARGE_TYPE", "Type de supplement", "FORM", 384
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.SURCHARGE_VALUE", "Zuschlag", "FORM", 385
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.SURCHARGE_VALUE", "Surcharge", "FORM", 385
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.SURCHARGE_VALUE", "Supplement", "FORM", 385
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.VAT_CODE", "MWST-Code", "FORM", 386
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.VAT_CODE", "VAT code", "FORM", 386
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.VAT_CODE", "Code TVA", "FORM", 386
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.VAT_RATE", "MWST-Satz", "FORM", 387
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.VAT_RATE", "VAT rate", "FORM", 387
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.VAT_RATE", "Taux TVA", "FORM", 387
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.LINE_NET_AMOUNT", "Netto", "FORM", 388
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.LINE_NET_AMOUNT", "Net", "FORM", 388
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.LINE_NET_AMOUNT", "Net", "FORM", 388
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.LINE_VAT_AMOUNT", "MWST", "FORM", 389
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.LINE_VAT_AMOUNT", "VAT", "FORM", 389
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.LINE_VAT_AMOUNT", "TVA", "FORM", 389
+    EnsureTranslationSeed workingDb, "DE-CH", "FORM.SFRMORDERLINES.LINE_GROSS_AMOUNT", "Brutto", "FORM", 390
+    EnsureTranslationSeed workingDb, "EN-US", "FORM.SFRMORDERLINES.LINE_GROSS_AMOUNT", "Gross", "FORM", 390
+    EnsureTranslationSeed workingDb, "FR-FR", "FORM.SFRMORDERLINES.LINE_GROSS_AMOUNT", "Brut", "FORM", 390
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".EnsureOrderLinesTranslations", _
+        "Translation seeds ensured for sfrmOrderLines."
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "EnsureOrderLinesTranslations", Err
+End Sub
+
+Public Sub EnsureOrderLinesTags()
+    On Error GoTo ErrorHandler
+
+    Dim metadataItems As Collection
+    Dim metadata As Variant
+    Dim controlTagMap As Object
+    Dim ControlName As String
+    Dim currentTag As String
+    Dim updatedTag As String
+    Dim updatedCount As Long
+
+    If Not FormObjectExists(FORM_ORDER_LINES_SUBFORM) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".EnsureOrderLinesTags", _
+            "Form '" & FORM_ORDER_LINES_SUBFORM & "' is not available in the current Access project. Tag ensure skipped."
+        Exit Sub
+    End If
+
+    Set metadataItems = modFwComposerService.GetFormControlMetadata(FORM_ORDER_LINES_SUBFORM, True)
+    Set controlTagMap = CreateObject("Scripting.Dictionary")
+    controlTagMap.CompareMode = vbTextCompare
+
+    For Each metadata In metadataItems
+        ControlName = Trim$(modDaoHelper.NzString(metadata("control_name")))
+        If LenB(ControlName) = 0 Then
+            GoTo NextControl
+        End If
+
+        currentTag = modDaoHelper.NzString(metadata("current_tag"))
+        updatedTag = modFwTranslationRuntime.SetTranslationKeyInTag( _
+            currentTag, _
+            BuildOrderLinesTranslationKey(ControlName))
+
+        If StrComp(updatedTag, currentTag, vbBinaryCompare) <> 0 Then
+            controlTagMap(ControlName) = updatedTag
+        End If
+
+NextControl:
+    Next metadata
+
+    If controlTagMap.count > 0 Then
+        If Not modFwComposerService.SaveControlTagsToObject(modFwComposerService.OBJECT_TYPE_FORM, FORM_ORDER_LINES_SUBFORM, controlTagMap, updatedCount) Then
+            Err.Raise vbObjectError + 6112, MODULE_NAME & ".EnsureOrderLinesTags", _
+                "Failed to persist sfrmOrderLines tags."
+        End If
+    End If
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".EnsureOrderLinesTags", _
+        "Translation tags ensured for sfrmOrderLines. updated_count=" & CStr(updatedCount) & "."
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "EnsureOrderLinesTags", Err
+End Sub
+
 Private Function BuildTagGeneratorTranslationKey(ByVal ControlName As String) As String
     ControlName = UCase$(Trim$(modDaoHelper.NzString(ControlName)))
     BuildTagGeneratorTranslationKey = "FORM." & UCase$(FORM_TRANSLATION_TAG_GENERATOR) & "." & ControlName
@@ -539,6 +664,11 @@ End Function
 Private Function BuildAddressCockpitTranslationKey(ByVal ControlName As String) As String
     ControlName = UCase$(Trim$(modDaoHelper.NzString(ControlName)))
     BuildAddressCockpitTranslationKey = "FORM." & UCase$(FORM_ADDRESS_COCKPIT) & "." & ControlName
+End Function
+
+Private Function BuildOrderLinesTranslationKey(ByVal ControlName As String) As String
+    ControlName = UCase$(Trim$(modDaoHelper.NzString(ControlName)))
+    BuildOrderLinesTranslationKey = "FORM." & UCase$(FORM_ORDER_LINES_SUBFORM) & "." & ControlName
 End Function
 
 Private Function FormObjectExists(ByVal FormName As String) As Boolean
