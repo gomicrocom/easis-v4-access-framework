@@ -13,13 +13,19 @@ Private Const MODULE_NAME As String = "modOrderRepository"
 
 Private Const TABLE_ORD_ORDER As String = "ord_order"
 Private Const TABLE_ORD_ORDER_LINE As String = "ord_order_line"
+Private Const TABLE_TMP_ORDER As String = "tmp_order"
+Private Const TABLE_TMP_ORDER_LINE As String = "tmp_order_line"
 Private Const TABLE_TEN_NUMBERRANGE As String = "ten_numberrange"
 
 Private Const FIELD_ORDER_ID As String = "order_id"
+Private Const FIELD_TMP_ORDER_ID As String = "tmp_order_id"
+Private Const FIELD_SESSION_ID As String = "session_id"
 Private Const FIELD_ORDER_NO As String = "order_no"
 Private Const FIELD_ORDER_TYPE_CODE As String = "order_type_code"
 Private Const FIELD_ORDER_STATUS_CODE As String = "order_status_code"
 Private Const FIELD_CUSTOMER_ADDRESS_ID As String = "customer_address_id"
+Private Const FIELD_INVOICE_ADDRESS_ID As String = "invoice_address_id"
+Private Const FIELD_DELIVERY_ADDRESS_ID As String = "delivery_address_id"
 Private Const FIELD_CUSTOMER_NAME As String = "customer_name"
 Private Const FIELD_ORDER_DATE As String = "order_date"
 Private Const FIELD_DELIVERY_DATE As String = "delivery_date"
@@ -30,6 +36,18 @@ Private Const FIELD_LANGUAGE_CODE As String = "language_code"
 Private Const FIELD_CURRENCY_CODE As String = "currency_code"
 Private Const FIELD_PAYMENT_TERM_CODE As String = "payment_term_code"
 Private Const FIELD_VAT_MODE As String = "vat_mode"
+Private Const FIELD_VAT_CODE As String = "vat_code"
+Private Const FIELD_VAT_RATE As String = "vat_rate"
+Private Const FIELD_HEADER_DISCOUNT_TYPE As String = "header_discount_type"
+Private Const FIELD_HEADER_DISCOUNT_VALUE As String = "header_discount_value"
+Private Const FIELD_HEADER_DISCOUNT_AMOUNT As String = "header_discount_amount"
+Private Const FIELD_HEADER_SURCHARGE_TYPE As String = "header_surcharge_type"
+Private Const FIELD_HEADER_SURCHARGE_VALUE As String = "header_surcharge_value"
+Private Const FIELD_HEADER_SURCHARGE_AMOUNT As String = "header_surcharge_amount"
+Private Const FIELD_SUBTOTAL_NET_AMOUNT As String = "subtotal_net_amount"
+Private Const FIELD_NET_AMOUNT As String = "net_amount"
+Private Const FIELD_VAT_AMOUNT As String = "vat_amount"
+Private Const FIELD_GROSS_AMOUNT As String = "gross_amount"
 Private Const FIELD_NOTES_TEXT As String = "notes_text"
 Private Const FIELD_INTERNAL_NOTES_TEXT As String = "internal_notes_text"
 Private Const FIELD_CREATED_AT As String = "created_at"
@@ -38,6 +56,7 @@ Private Const FIELD_UPDATED_AT As String = "updated_at"
 Private Const FIELD_UPDATED_BY As String = "updated_by"
 
 Private Const FIELD_ORDER_LINE_ID As String = "order_line_id"
+Private Const FIELD_TMP_ORDER_LINE_ID As String = "tmp_order_line_id"
 Private Const FIELD_LINE_NO As String = "line_no"
 Private Const FIELD_ARTICLE_ID As String = "article_id"
 Private Const FIELD_ARTICLE_NO As String = "article_no"
@@ -46,9 +65,17 @@ Private Const FIELD_DESCRIPTION_TEXT As String = "description_text"
 Private Const FIELD_QUANTITY As String = "quantity"
 Private Const FIELD_UNIT_CODE As String = "unit_code"
 Private Const FIELD_UNIT_PRICE As String = "unit_price"
-Private Const FIELD_VAT_CODE As String = "vat_code"
-Private Const FIELD_VAT_RATE As String = "vat_rate"
-
+Private Const FIELD_DISCOUNT_TYPE As String = "discount_type"
+Private Const FIELD_DISCOUNT_VALUE As String = "discount_value"
+Private Const FIELD_LINE_DISCOUNT_AMOUNT As String = "line_discount_amount"
+Private Const FIELD_SURCHARGE_TYPE As String = "surcharge_type"
+Private Const FIELD_SURCHARGE_VALUE As String = "surcharge_value"
+Private Const FIELD_LINE_SURCHARGE_AMOUNT As String = "line_surcharge_amount"
+Private Const FIELD_LINE_BASE_AMOUNT As String = "line_base_amount"
+Private Const FIELD_LINE_NET_AMOUNT As String = "line_net_amount"
+Private Const FIELD_LINE_VAT_AMOUNT As String = "line_vat_amount"
+Private Const FIELD_LINE_GROSS_AMOUNT As String = "line_gross_amount"
+Private Const FIELD_SORT_ORDER As String = "sort_order"
 Private Const FIELD_NR_DOCUMENT_TYPE_CODE As String = "document_type_code"
 Private Const FIELD_NR_FISCAL_YEAR As String = "fiscal_year"
 Private Const FIELD_NR_PREFIX As String = "prefix"
@@ -65,6 +92,9 @@ Public Const ORDER_STATUS_CANCELLED As String = "CANCELLED"
 Public Const ORDER_STATUS_CLOSED As String = "CLOSED"
 
 Private Const DEFAULT_ORDER_FORMAT_MASK As String = "{PREFIX}-{YEAR}-{NUMBER:0000}"
+Private Const DEFAULT_TENANT_COUNTRY_CODE As String = "CH"
+Private Const DEFAULT_ZERO_VAT_CODE As String = "CH_ZERO"
+Private Const DEFAULT_STANDARD_VAT_CODE As String = "CH_STANDARD"
 
 Public Function EnsureOrderRepositoryReady() As Boolean
     On Error GoTo ErrorHandler
@@ -212,6 +242,8 @@ End Function
 
 Public Function CreateSalesOrderHeader( _
     Optional ByVal CustomerAddressId As Long = 0, _
+    Optional ByVal InvoiceAddressId As Long = 0, _
+    Optional ByVal DeliveryAddressId As Long = 0, _
     Optional ByVal OrderDate As Date = 0, _
     Optional ByVal CustomerName As String = "", _
     Optional ByVal DeliveryDate As Date = 0, _
@@ -222,6 +254,8 @@ Public Function CreateSalesOrderHeader( _
     Optional ByVal CurrencyCode As String = "", _
     Optional ByVal PaymentTermCode As String = "", _
     Optional ByVal VatMode As String = "", _
+    Optional ByVal VatCode As String = "", _
+    Optional ByVal vatRate As Double = -1, _
     Optional ByVal NotesText As String = "", _
     Optional ByVal InternalNotesText As String = "" _
 ) As Long
@@ -232,6 +266,12 @@ Public Function CreateSalesOrderHeader( _
     Dim effectiveDate As Date
     Dim effectiveCustomerName As String
     Dim orderNo As String
+    Dim effectiveInvoiceAddressId As Long
+    Dim effectiveDeliveryAddressId As Long
+    Dim vatContext As Object
+    Dim effectiveVatCode As String
+    Dim effectiveVatMode As String
+    Dim effectiveVatRate As Double
 
     CreateSalesOrderHeader = 0
 
@@ -242,11 +282,35 @@ Public Function CreateSalesOrderHeader( _
     effectiveDate = IIf(OrderDate = 0, Date, OrderDate)
     orderNo = GetNextSalesOrderNumber(effectiveDate)
     effectiveCustomerName = Trim$(CustomerName)
+    effectiveInvoiceAddressId = InvoiceAddressId
+    effectiveDeliveryAddressId = DeliveryAddressId
 
     If CustomerAddressId > 0 Then
         If modAddressRepository.AddressExists(CustomerAddressId) Then
             effectiveCustomerName = modAddressRepository.GetAddressDisplayName(CustomerAddressId, effectiveCustomerName)
         End If
+    End If
+
+    If effectiveInvoiceAddressId <= 0 Then
+        effectiveInvoiceAddressId = CustomerAddressId
+    End If
+    If effectiveDeliveryAddressId <= 0 Then
+        effectiveDeliveryAddressId = CustomerAddressId
+    End If
+
+    Set vatContext = GetDefaultVatContextForOrder(CustomerAddressId, effectiveDeliveryAddressId)
+    effectiveVatMode = ResolveVatMode(VatMode)
+    effectiveVatCode = Trim$(VatCode)
+    effectiveVatRate = vatRate
+
+    If Not vatContext Is Nothing Then
+        If LenB(effectiveVatMode) = 0 Then effectiveVatMode = GetDictionaryString(vatContext, FIELD_VAT_MODE)
+        If LenB(effectiveVatCode) = 0 Then effectiveVatCode = GetDictionaryString(vatContext, FIELD_VAT_CODE)
+        If effectiveVatRate < 0 Then effectiveVatRate = GetDictionaryDouble(vatContext, FIELD_VAT_RATE, 0)
+    End If
+
+    If effectiveVatRate < 0 Then
+        effectiveVatRate = ResolveVatRateByCode(effectiveVatCode, modVatHandler.GetVatRate())
     End If
 
     Set db = modDb.GetCurrentDatabase()
@@ -257,6 +321,8 @@ Public Function CreateSalesOrderHeader( _
     SetRecordsetValue rs, FIELD_ORDER_TYPE_CODE, ORDER_TYPE_SALES_ORDER
     SetRecordsetValue rs, FIELD_ORDER_STATUS_CODE, ORDER_STATUS_DRAFT
     SetRecordsetValue rs, FIELD_CUSTOMER_ADDRESS_ID, CustomerAddressId
+    SetRecordsetValue rs, FIELD_INVOICE_ADDRESS_ID, effectiveInvoiceAddressId
+    SetRecordsetValue rs, FIELD_DELIVERY_ADDRESS_ID, effectiveDeliveryAddressId
     SetRecordsetValue rs, FIELD_CUSTOMER_NAME, effectiveCustomerName
     SetRecordsetValue rs, FIELD_ORDER_DATE, effectiveDate
     If DeliveryDate <> 0 Then SetRecordsetValue rs, FIELD_DELIVERY_DATE, DeliveryDate
@@ -266,7 +332,9 @@ Public Function CreateSalesOrderHeader( _
     SetRecordsetValue rs, FIELD_LANGUAGE_CODE, ResolveLanguageCode(languageCode)
     SetRecordsetValue rs, FIELD_CURRENCY_CODE, ResolveCurrencyCode(CurrencyCode)
     SetRecordsetValue rs, FIELD_PAYMENT_TERM_CODE, Trim$(PaymentTermCode)
-    SetRecordsetValue rs, FIELD_VAT_MODE, ResolveVatMode(VatMode)
+    SetRecordsetValue rs, FIELD_VAT_MODE, effectiveVatMode
+    SetRecordsetValue rs, FIELD_VAT_CODE, effectiveVatCode
+    SetRecordsetValue rs, FIELD_VAT_RATE, effectiveVatRate
     SetRecordsetValue rs, FIELD_NOTES_TEXT, NotesText
     SetRecordsetValue rs, FIELD_INTERNAL_NOTES_TEXT, InternalNotesText
     SetCreatedAuditFields rs
@@ -275,6 +343,18 @@ Public Function CreateSalesOrderHeader( _
 
     rs.Bookmark = rs.LastModified
     CreateSalesOrderHeader = modDaoHelper.NzLong(rs.Fields(FIELD_ORDER_ID).Value, 0)
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".CreateSalesOrderHeader", _
+        "Sales order header created. order_id=" & CStr(CreateSalesOrderHeader) & _
+        "; customer_address_id=" & CStr(CustomerAddressId) & _
+        "; invoice_address_id=" & CStr(effectiveInvoiceAddressId) & _
+        "; delivery_address_id=" & CStr(effectiveDeliveryAddressId) & _
+        "; customer_name='" & Replace(effectiveCustomerName, "'", "''") & "'" & _
+        "; order_type_code='" & ORDER_TYPE_SALES_ORDER & "'" & _
+        "; order_status_code='" & ORDER_STATUS_DRAFT & "'" & _
+        "; vat_mode='" & effectiveVatMode & "'" & _
+        "; vat_code='" & Replace(effectiveVatCode, "'", "''") & "'" & _
+        "; vat_rate=" & Replace(CStr(effectiveVatRate), ",", ".") & "."
 
 CleanExit:
     On Error Resume Next
@@ -337,6 +417,8 @@ Public Function CreateOrderLine( _
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
     Dim effectiveVatRate As Double
+    Dim headerVatContext As Object
+    Dim effectiveVatCode As String
 
     CreateOrderLine = 0
 
@@ -348,8 +430,22 @@ Public Function CreateOrderLine( _
         Exit Function
     End If
 
+    Set headerVatContext = GetOrderHeaderVatContext(OrderId)
+    effectiveVatCode = Trim$(VatCode)
+
+    If LenB(effectiveVatCode) = 0 And Not headerVatContext Is Nothing Then
+        effectiveVatCode = GetDictionaryString(headerVatContext, FIELD_VAT_CODE)
+    End If
+
     If vatRate < 0 Then
-        effectiveVatRate = modVatHandler.GetVatRate()
+        If Not headerVatContext Is Nothing Then
+            effectiveVatRate = GetDictionaryDouble(headerVatContext, FIELD_VAT_RATE, modVatHandler.GetVatRate())
+        Else
+            effectiveVatRate = modVatHandler.GetVatRate()
+        End If
+        If LenB(effectiveVatCode) > 0 Then
+            effectiveVatRate = ResolveVatRateByCode(effectiveVatCode, effectiveVatRate)
+        End If
     Else
         effectiveVatRate = vatRate
     End If
@@ -367,7 +463,7 @@ Public Function CreateOrderLine( _
     SetRecordsetValue rs, FIELD_QUANTITY, quantity
     SetRecordsetValue rs, FIELD_UNIT_CODE, Trim$(UnitCode)
     SetRecordsetValue rs, FIELD_UNIT_PRICE, UnitPrice
-    SetRecordsetValue rs, FIELD_VAT_CODE, Trim$(VatCode)
+    SetRecordsetValue rs, FIELD_VAT_CODE, effectiveVatCode
     SetRecordsetValue rs, FIELD_VAT_RATE, effectiveVatRate
     SetCreatedAuditFields rs
     SetUpdatedAuditFields rs
@@ -391,6 +487,521 @@ CleanExit:
 ErrorHandler:
     CreateOrderLine = 0
     modErrorHandler.HandleError MODULE_NAME, "CreateOrderLine", Err
+    Resume CleanExit
+End Function
+
+Public Function GetNewSalesOrderDefaults(ByVal CustomerAddressId As Long) As Object
+    On Error GoTo ErrorHandler
+
+    Dim result As Object
+    Dim vatContext As Object
+    Dim languageCode As String
+
+    Set result = CreateObject("Scripting.Dictionary")
+    result.CompareMode = vbTextCompare
+
+    result(FIELD_CUSTOMER_ADDRESS_ID) = CustomerAddressId
+    result(FIELD_INVOICE_ADDRESS_ID) = CustomerAddressId
+    result(FIELD_DELIVERY_ADDRESS_ID) = CustomerAddressId
+    result(FIELD_CUSTOMER_NAME) = modAddressRepository.GetAddressDisplayName(CustomerAddressId, vbNullString)
+    result(FIELD_ORDER_TYPE_CODE) = ORDER_TYPE_SALES_ORDER
+    result(FIELD_ORDER_STATUS_CODE) = ORDER_STATUS_DRAFT
+    result(FIELD_ORDER_DATE) = Date
+    result(FIELD_CURRENCY_CODE) = ResolveCurrencyCode(vbNullString)
+    result(FIELD_PAYMENT_TERM_CODE) = Trim$(modTenantRepository.GetTenantParameter("PAYMENT_TERM_CODE", vbNullString))
+
+    languageCode = ResolveAddressLanguageCode(CustomerAddressId, vbNullString)
+    If LenB(languageCode) = 0 Then
+        languageCode = ResolveLanguageCode(vbNullString)
+    End If
+    result(FIELD_LANGUAGE_CODE) = languageCode
+
+    Set vatContext = GetDefaultVatContextForOrder(CustomerAddressId, CustomerAddressId)
+    If Not vatContext Is Nothing Then
+        result(FIELD_VAT_MODE) = GetDictionaryString(vatContext, FIELD_VAT_MODE)
+        result(FIELD_VAT_CODE) = GetDictionaryString(vatContext, FIELD_VAT_CODE)
+        result(FIELD_VAT_RATE) = GetDictionaryDouble(vatContext, FIELD_VAT_RATE, 0)
+    End If
+
+    Set GetNewSalesOrderDefaults = result
+    Exit Function
+
+ErrorHandler:
+    Set GetNewSalesOrderDefaults = Nothing
+    modErrorHandler.HandleError MODULE_NAME, "GetNewSalesOrderDefaults", Err
+End Function
+
+Public Function CreateTemporarySalesOrderForAddress(ByVal addressId As Long) As Long
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim defaults As Object
+
+    CreateTemporarySalesOrderForAddress = 0
+
+    If addressId <= 0 Then
+        Exit Function
+    End If
+
+    If Not EnsureOrderRepositoryReady() Then
+        Exit Function
+    End If
+
+    Set defaults = GetNewSalesOrderDefaults(addressId)
+    If defaults Is Nothing Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    Set rs = db.OpenRecordset(TABLE_TMP_ORDER, dbOpenDynaset, dbAppendOnly)
+
+    rs.AddNew
+    SetRecordsetValue rs, FIELD_SESSION_ID, ResolveTemporarySessionId()
+    SetRecordsetValue rs, FIELD_ORDER_ID, 0
+    SetRecordsetValue rs, FIELD_ORDER_NO, vbNullString
+    SetRecordsetValue rs, FIELD_CUSTOMER_ADDRESS_ID, GetDictionaryLong(defaults, FIELD_CUSTOMER_ADDRESS_ID, 0)
+    SetRecordsetValue rs, FIELD_INVOICE_ADDRESS_ID, GetDictionaryLong(defaults, FIELD_INVOICE_ADDRESS_ID, 0)
+    SetRecordsetValue rs, FIELD_DELIVERY_ADDRESS_ID, GetDictionaryLong(defaults, FIELD_DELIVERY_ADDRESS_ID, 0)
+    SetRecordsetValue rs, FIELD_CUSTOMER_NAME, GetDictionaryString(defaults, FIELD_CUSTOMER_NAME)
+    SetRecordsetValue rs, FIELD_ORDER_TYPE_CODE, GetDictionaryString(defaults, FIELD_ORDER_TYPE_CODE)
+    SetRecordsetValue rs, FIELD_ORDER_STATUS_CODE, GetDictionaryString(defaults, FIELD_ORDER_STATUS_CODE)
+    SetRecordsetValue rs, FIELD_ORDER_DATE, defaults(FIELD_ORDER_DATE)
+    SetRecordsetValue rs, FIELD_LANGUAGE_CODE, GetDictionaryString(defaults, FIELD_LANGUAGE_CODE)
+    SetRecordsetValue rs, FIELD_CURRENCY_CODE, GetDictionaryString(defaults, FIELD_CURRENCY_CODE)
+    SetRecordsetValue rs, FIELD_PAYMENT_TERM_CODE, GetDictionaryString(defaults, FIELD_PAYMENT_TERM_CODE)
+    SetRecordsetValue rs, FIELD_VAT_MODE, GetDictionaryString(defaults, FIELD_VAT_MODE)
+    SetRecordsetValue rs, FIELD_VAT_CODE, GetDictionaryString(defaults, FIELD_VAT_CODE)
+    SetRecordsetValue rs, FIELD_VAT_RATE, GetDictionaryDouble(defaults, FIELD_VAT_RATE, 0)
+    SetRecordsetValue rs, FIELD_HEADER_DISCOUNT_TYPE, "NONE"
+    SetRecordsetValue rs, FIELD_HEADER_SURCHARGE_TYPE, "NONE"
+    SetCreatedAuditFields rs
+    SetUpdatedAuditFields rs
+    rs.Update
+
+    rs.Bookmark = rs.LastModified
+    CreateTemporarySalesOrderForAddress = modDaoHelper.NzLong(rs.Fields(FIELD_TMP_ORDER_ID).Value, 0)
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    CreateTemporarySalesOrderForAddress = 0
+    modErrorHandler.HandleError MODULE_NAME, "CreateTemporarySalesOrderForAddress", Err
+    Resume CleanExit
+End Function
+
+Public Function TemporaryOrderExists(ByVal tmpOrderId As Long) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+
+    If tmpOrderId <= 0 Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    Set rs = db.OpenRecordset( _
+        "SELECT [" & FIELD_TMP_ORDER_ID & "] FROM [" & TABLE_TMP_ORDER & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", _
+        dbOpenSnapshot)
+    TemporaryOrderExists = Not (rs.BOF And rs.EOF)
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    TemporaryOrderExists = False
+    modErrorHandler.HandleError MODULE_NAME, "TemporaryOrderExists", Err
+    Resume CleanExit
+End Function
+
+Public Function DeleteTemporaryOrder(ByVal tmpOrderId As Long) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+
+    DeleteTemporaryOrder = False
+
+    If tmpOrderId <= 0 Then
+        DeleteTemporaryOrder = True
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    db.Execute "DELETE FROM [" & TABLE_TMP_ORDER_LINE & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", dbFailOnError
+    db.Execute "DELETE FROM [" & TABLE_TMP_ORDER & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", dbFailOnError
+    DeleteTemporaryOrder = True
+    Exit Function
+
+ErrorHandler:
+    DeleteTemporaryOrder = False
+    modErrorHandler.HandleError MODULE_NAME, "DeleteTemporaryOrder", Err
+End Function
+
+Public Function PersistTemporaryOrder(ByVal tmpOrderId As Long) As Long
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rsTmpOrder As DAO.Recordset
+    Dim rsTmpLines As DAO.Recordset
+    Dim rsOrder As DAO.Recordset
+    Dim rsOrderLines As DAO.Recordset
+    Dim orderNo As String
+    Dim OrderId As Long
+    Dim paymentTermCode As String
+    Dim sortOrder As Long
+
+    PersistTemporaryOrder = 0
+
+    If tmpOrderId <= 0 Then
+        Exit Function
+    End If
+
+    If Not TemporaryOrderExists(tmpOrderId) Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    Set rsTmpOrder = db.OpenRecordset( _
+        "SELECT * FROM [" & TABLE_TMP_ORDER & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", _
+        dbOpenDynaset)
+
+    If rsTmpOrder.BOF And rsTmpOrder.EOF Then
+        GoTo CleanExit
+    End If
+
+    orderNo = GetNextSalesOrderNumber(GetRecordsetDateValue(rsTmpOrder, FIELD_ORDER_DATE, Date))
+    paymentTermCode = Trim$(GetRecordsetStringValue(rsTmpOrder, FIELD_PAYMENT_TERM_CODE, vbNullString))
+    If LenB(paymentTermCode) = 0 Then
+        paymentTermCode = Trim$(modTenantRepository.GetTenantParameter("PAYMENT_TERM_CODE", vbNullString))
+    End If
+
+    Set rsOrder = db.OpenRecordset(TABLE_ORD_ORDER, dbOpenDynaset, dbAppendOnly)
+
+    rsOrder.AddNew
+    SetRecordsetValue rsOrder, FIELD_ORDER_NO, orderNo
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_ORDER_TYPE_CODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_ORDER_STATUS_CODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_CUSTOMER_ADDRESS_ID
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_INVOICE_ADDRESS_ID
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_DELIVERY_ADDRESS_ID
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_CUSTOMER_NAME
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_ORDER_DATE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_DELIVERY_DATE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VALID_UNTIL
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_REFERENCE_TEXT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_EXTERNAL_REFERENCE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_LANGUAGE_CODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_CURRENCY_CODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_PAYMENT_TERM_CODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VAT_MODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VAT_CODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VAT_RATE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_DISCOUNT_TYPE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_DISCOUNT_VALUE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_DISCOUNT_AMOUNT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_SURCHARGE_TYPE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_SURCHARGE_VALUE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_SURCHARGE_AMOUNT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_SUBTOTAL_NET_AMOUNT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_NET_AMOUNT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VAT_AMOUNT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_GROSS_AMOUNT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_NOTES_TEXT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_INTERNAL_NOTES_TEXT
+    SetRecordsetValue rsOrder, FIELD_PAYMENT_TERM_CODE, paymentTermCode
+    SetCreatedAuditFields rsOrder
+    SetUpdatedAuditFields rsOrder
+    rsOrder.Update
+
+    rsOrder.Bookmark = rsOrder.LastModified
+    OrderId = modDaoHelper.NzLong(rsOrder.Fields(FIELD_ORDER_ID).Value, 0)
+    If OrderId <= 0 Then
+        GoTo CleanExit
+    End If
+
+    Set rsTmpLines = db.OpenRecordset( _
+        "SELECT * FROM [" & TABLE_TMP_ORDER_LINE & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & _
+        " ORDER BY [" & FIELD_LINE_NO & "], [" & FIELD_SORT_ORDER & "], [" & FIELD_TMP_ORDER_LINE_ID & "];", _
+        dbOpenSnapshot)
+    Set rsOrderLines = db.OpenRecordset(TABLE_ORD_ORDER_LINE, dbOpenDynaset, dbAppendOnly)
+
+    If Not (rsTmpLines.BOF And rsTmpLines.EOF) Then
+        rsTmpLines.MoveFirst
+        Do Until rsTmpLines.EOF
+            rsOrderLines.AddNew
+            sortOrder = GetRecordsetLongValue(rsTmpLines, FIELD_SORT_ORDER, 0)
+            If sortOrder <= 0 Then
+                sortOrder = GetRecordsetLongValue(rsTmpLines, FIELD_LINE_NO, 0)
+            End If
+
+            SetRecordsetValue rsOrderLines, FIELD_ORDER_ID, OrderId
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_LINE_NO
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_ARTICLE_ID
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_ARTICLE_NO
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_LINE_TYPE_CODE
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_DESCRIPTION_TEXT
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_QUANTITY
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_UNIT_CODE
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_UNIT_PRICE
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_DISCOUNT_TYPE
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_DISCOUNT_VALUE
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_LINE_DISCOUNT_AMOUNT
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_SURCHARGE_TYPE
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_SURCHARGE_VALUE
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_LINE_SURCHARGE_AMOUNT
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_VAT_CODE
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_VAT_RATE
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_LINE_BASE_AMOUNT
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_LINE_NET_AMOUNT
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_LINE_VAT_AMOUNT
+            CopyLineField rsTmpLines, rsOrderLines, FIELD_LINE_GROSS_AMOUNT
+            SetRecordsetValue rsOrderLines, FIELD_SORT_ORDER, sortOrder
+            SetCreatedAuditFields rsOrderLines
+            SetUpdatedAuditFields rsOrderLines
+            rsOrderLines.Update
+            rsTmpLines.MoveNext
+        Loop
+    End If
+
+    Call modOrderCalculationService.RecalculateOrder(OrderId)
+    Call DeleteTemporaryOrder(tmpOrderId)
+    PersistTemporaryOrder = OrderId
+
+CleanExit:
+    On Error Resume Next
+    If Not rsOrderLines Is Nothing Then rsOrderLines.Close
+    If Not rsTmpLines Is Nothing Then rsTmpLines.Close
+    If Not rsOrder Is Nothing Then rsOrder.Close
+    If Not rsTmpOrder Is Nothing Then rsTmpOrder.Close
+    Set rsOrderLines = Nothing
+    Set rsTmpLines = Nothing
+    Set rsOrder = Nothing
+    Set rsTmpOrder = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    PersistTemporaryOrder = 0
+    modErrorHandler.HandleError MODULE_NAME, "PersistTemporaryOrder", Err
+    Resume CleanExit
+End Function
+
+Public Function GetDefaultVatContextForOrder( _
+    Optional ByVal CustomerAddressId As Long = 0, _
+    Optional ByVal DeliveryAddressId As Long = 0) As Object
+    On Error GoTo ErrorHandler
+
+    Dim result As Object
+    Dim tenantCountryCode As String
+    Dim deliveryCountryCode As String
+    Dim resolvedVatMode As String
+    Dim resolvedVatCode As String
+    Dim resolvedVatRate As Double
+    Dim effectiveAddressId As Long
+
+    Set result = CreateObject("Scripting.Dictionary")
+    result.CompareMode = vbTextCompare
+
+    tenantCountryCode = ResolveTenantCountryCode()
+    effectiveAddressId = DeliveryAddressId
+    If effectiveAddressId <= 0 Then
+        effectiveAddressId = CustomerAddressId
+    End If
+
+    deliveryCountryCode = modAddressRepository.GetAddressCountryCode(effectiveAddressId, tenantCountryCode)
+    If LenB(deliveryCountryCode) = 0 Then
+        deliveryCountryCode = tenantCountryCode
+    End If
+
+    If StrComp(deliveryCountryCode, tenantCountryCode, vbTextCompare) <> 0 Then
+        resolvedVatMode = "NONE"
+        resolvedVatCode = ResolveDefaultZeroVatCode(tenantCountryCode)
+        resolvedVatRate = 0
+    Else
+        resolvedVatMode = ResolveVatMode(modTenantRepository.GetTenantParameter("VAT_MODE", modVatHandler.GetVatMode()))
+        resolvedVatCode = ResolveDefaultStandardVatCode(tenantCountryCode)
+        resolvedVatRate = ResolveVatRateByCode(resolvedVatCode, modVatHandler.GetVatRate())
+    End If
+
+    result("tenant_country_code") = tenantCountryCode
+    result("country_code") = deliveryCountryCode
+    result(FIELD_VAT_MODE) = resolvedVatMode
+    result(FIELD_VAT_CODE) = resolvedVatCode
+    result(FIELD_VAT_RATE) = resolvedVatRate
+
+    Set GetDefaultVatContextForOrder = result
+    Exit Function
+
+ErrorHandler:
+    Set GetDefaultVatContextForOrder = Nothing
+    modErrorHandler.HandleError MODULE_NAME, "GetDefaultVatContextForOrder", Err
+End Function
+
+Public Function GetOrderHeaderVatContext(ByVal OrderId As Long) As Object
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim result As Object
+    Dim deliveryAddressId As Long
+    Dim customerAddressId As Long
+
+    If OrderId <= 0 Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    Set rs = db.OpenRecordset( _
+        "SELECT [" & FIELD_CUSTOMER_ADDRESS_ID & "], [" & FIELD_DELIVERY_ADDRESS_ID & "], " & _
+        "[" & FIELD_VAT_MODE & "], [" & FIELD_VAT_CODE & "], [" & FIELD_VAT_RATE & "] " & _
+        "FROM [" & TABLE_ORD_ORDER & "] WHERE [" & FIELD_ORDER_ID & "]=" & CStr(OrderId) & ";", _
+        dbOpenSnapshot)
+
+    If rs.BOF And rs.EOF Then
+        GoTo CleanExit
+    End If
+
+    customerAddressId = GetRecordsetLongValue(rs, FIELD_CUSTOMER_ADDRESS_ID, 0)
+    deliveryAddressId = GetRecordsetLongValue(rs, FIELD_DELIVERY_ADDRESS_ID, 0)
+
+    Set result = CreateObject("Scripting.Dictionary")
+    result.CompareMode = vbTextCompare
+    result("country_code") = ResolveOrderCountryCode(customerAddressId, deliveryAddressId)
+    result(FIELD_VAT_MODE) = GetRecordsetStringValue(rs, FIELD_VAT_MODE, modVatHandler.GetVatMode())
+    result(FIELD_VAT_CODE) = GetRecordsetStringValue(rs, FIELD_VAT_CODE, vbNullString)
+    result(FIELD_VAT_RATE) = GetRecordsetDoubleValue(rs, FIELD_VAT_RATE, 0)
+
+    Set GetOrderHeaderVatContext = result
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    Set GetOrderHeaderVatContext = Nothing
+    modErrorHandler.HandleError MODULE_NAME, "GetOrderHeaderVatContext", Err
+    Resume CleanExit
+End Function
+
+Public Function ApplyDefaultVatContextToOrder(ByVal OrderId As Long) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim customerAddressId As Long
+    Dim deliveryAddressId As Long
+    Dim vatContext As Object
+
+    ApplyDefaultVatContextToOrder = False
+
+    If OrderId <= 0 Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    Set rs = db.OpenRecordset( _
+        "SELECT * FROM [" & TABLE_ORD_ORDER & "] WHERE [" & FIELD_ORDER_ID & "]=" & CStr(OrderId) & ";", _
+        dbOpenDynaset)
+
+    If rs.BOF And rs.EOF Then
+        GoTo CleanExit
+    End If
+
+    customerAddressId = GetRecordsetLongValue(rs, FIELD_CUSTOMER_ADDRESS_ID, 0)
+    deliveryAddressId = GetRecordsetLongValue(rs, FIELD_DELIVERY_ADDRESS_ID, 0)
+    Set vatContext = GetDefaultVatContextForOrder(customerAddressId, deliveryAddressId)
+    If vatContext Is Nothing Then
+        GoTo CleanExit
+    End If
+
+    rs.Edit
+    SetRecordsetValue rs, FIELD_VAT_MODE, GetDictionaryString(vatContext, FIELD_VAT_MODE)
+    SetRecordsetValue rs, FIELD_VAT_CODE, GetDictionaryString(vatContext, FIELD_VAT_CODE)
+    SetRecordsetValue rs, FIELD_VAT_RATE, GetDictionaryDouble(vatContext, FIELD_VAT_RATE, 0)
+    SetUpdatedAuditFields rs
+    rs.Update
+
+    ApplyDefaultVatContextToOrder = True
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    ApplyDefaultVatContextToOrder = False
+    modErrorHandler.HandleError MODULE_NAME, "ApplyDefaultVatContextToOrder", Err
+    Resume CleanExit
+End Function
+
+Public Function GetAddressRowSourceSql() As String
+    GetAddressRowSourceSql = _
+        "SELECT a.address_id, " & _
+        "IIf(Nz(a.company_name,'')<>'', Nz(a.company_name,''), Trim(Nz(a.first_name,'') & ' ' & Nz(a.last_name,''))) AS display_name, " & _
+        "Nz(a.city,'') AS city_name, " & _
+        "Nz(a.country_code,'') AS country_code " & _
+        "FROM adr_address AS a " & _
+        "WHERE Nz(a.is_active, True)=True " & _
+        "ORDER BY IIf(Nz(a.company_name,'')<>'', Nz(a.company_name,''), Trim(Nz(a.first_name,'') & ' ' & Nz(a.last_name,''))), Nz(a.city,''), a.address_id;"
+End Function
+
+Public Function GetVatCodeRowSourceSql() As String
+    GetVatCodeRowSourceSql = _
+        "SELECT v.vat_code, " & _
+        "Nz(v.vat_code,'') & ' (' & Format(Nz(v.vat_rate,0), '0.0') & '%)' AS vat_display_name, " & _
+        "Nz(v.vat_rate,0) AS vat_rate " & _
+        "FROM ref_vat_code AS v " & _
+        "WHERE Nz(v.is_active, True)=True " & _
+        "ORDER BY Nz(v.sort_order, 0), Nz(v.vat_code,'');"
+End Function
+
+Public Function ResolveVatRateByCode(ByVal VatCode As String, Optional ByVal defaultValue As Double = 0) As Double
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+
+    VatCode = UCase$(Trim$(VatCode))
+    ResolveVatRateByCode = defaultValue
+
+    If LenB(VatCode) = 0 Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    Set rs = db.OpenRecordset( _
+        "SELECT [vat_rate] FROM [ref_vat_code] WHERE [vat_code]=" & SqlText(VatCode) & ";", _
+        dbOpenSnapshot)
+
+    If Not (rs.BOF And rs.EOF) Then
+        ResolveVatRateByCode = GetRecordsetDoubleValue(rs, FIELD_VAT_RATE, defaultValue)
+    End If
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    ResolveVatRateByCode = defaultValue
+    modErrorHandler.HandleError MODULE_NAME, "ResolveVatRateByCode", Err
     Resume CleanExit
 End Function
 
@@ -425,6 +1036,18 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
+Private Sub CopyHeaderField(ByVal rsSource As DAO.Recordset, ByVal rsTarget As DAO.Recordset, ByVal fieldName As String)
+    If modDaoHelper.RecordsetHasField(rsSource, fieldName) Then
+        SetRecordsetValue rsTarget, fieldName, rsSource.Fields(fieldName).Value
+    End If
+End Sub
+
+Private Sub CopyLineField(ByVal rsSource As DAO.Recordset, ByVal rsTarget As DAO.Recordset, ByVal fieldName As String)
+    If modDaoHelper.RecordsetHasField(rsSource, fieldName) Then
+        SetRecordsetValue rsTarget, fieldName, rsSource.Fields(fieldName).Value
+    End If
+End Sub
+
 Private Function ResolveCurrencyCode(ByVal explicitValue As String) As String
     ResolveCurrencyCode = Trim$(explicitValue)
     If LenB(ResolveCurrencyCode) = 0 Then
@@ -439,12 +1062,281 @@ Private Function ResolveLanguageCode(ByVal explicitValue As String) As String
     End If
 End Function
 
+Private Function ResolveTemporarySessionId() As String
+    ResolveTemporarySessionId = Trim$(modSessionContext.currentUserId)
+    If LenB(ResolveTemporarySessionId) = 0 Then
+        ResolveTemporarySessionId = Trim$(modSessionContext.CurrentUserName)
+    End If
+    If LenB(ResolveTemporarySessionId) = 0 Then
+        ResolveTemporarySessionId = "SYSTEM"
+    End If
+End Function
+
+Private Function ResolveAddressLanguageCode(ByVal addressId As Long, ByVal defaultValue As String) As String
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+
+    ResolveAddressLanguageCode = Trim$(defaultValue)
+    If addressId <= 0 Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    Set rs = db.OpenRecordset( _
+        "SELECT [" & FIELD_LANGUAGE_CODE & "] FROM [adr_address] WHERE [address_id]=" & CStr(addressId) & ";", _
+        dbOpenSnapshot)
+
+    If Not (rs.BOF And rs.EOF) Then
+        ResolveAddressLanguageCode = GetRecordsetStringValue(rs, FIELD_LANGUAGE_CODE, ResolveAddressLanguageCode)
+    End If
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    ResolveAddressLanguageCode = Trim$(defaultValue)
+    modErrorHandler.HandleError MODULE_NAME, "ResolveAddressLanguageCode", Err
+    Resume CleanExit
+End Function
+
 Private Function ResolveVatMode(ByVal explicitValue As String) As String
     If LenB(Trim$(explicitValue)) = 0 Then
         ResolveVatMode = modVatHandler.GetVatMode()
     Else
         ResolveVatMode = modVatHandler.NormalizeVatMode(explicitValue)
     End If
+End Function
+
+Private Function ResolveTenantCountryCode() As String
+    ResolveTenantCountryCode = UCase$(Trim$( _
+        modTenantRepository.GetTenantParameter( _
+            "TENANT_COUNTRY_CODE", _
+            modTenantRepository.GetTenantParameter("SENDER_COUNTRY_CODE", DEFAULT_TENANT_COUNTRY_CODE))))
+    If LenB(ResolveTenantCountryCode) = 0 Then
+        ResolveTenantCountryCode = DEFAULT_TENANT_COUNTRY_CODE
+    End If
+End Function
+
+Private Function ResolveDefaultZeroVatCode(ByVal tenantCountryCode As String) As String
+    Dim candidateCode As String
+
+    candidateCode = UCase$(Trim$(tenantCountryCode)) & "_ZERO"
+    If VatCodeExists(candidateCode) Then
+        ResolveDefaultZeroVatCode = candidateCode
+    ElseIf VatCodeExists(DEFAULT_ZERO_VAT_CODE) Then
+        ResolveDefaultZeroVatCode = DEFAULT_ZERO_VAT_CODE
+    Else
+        ResolveDefaultZeroVatCode = FindVatCodeByCountryAndRate(tenantCountryCode, True, vbNullString)
+    End If
+End Function
+
+Private Function ResolveDefaultStandardVatCode(ByVal tenantCountryCode As String) As String
+    Dim candidateCode As String
+
+    candidateCode = UCase$(Trim$(tenantCountryCode)) & "_STANDARD"
+    If VatCodeExists(candidateCode) Then
+        ResolveDefaultStandardVatCode = candidateCode
+    ElseIf VatCodeExists(DEFAULT_STANDARD_VAT_CODE) Then
+        ResolveDefaultStandardVatCode = DEFAULT_STANDARD_VAT_CODE
+    Else
+        ResolveDefaultStandardVatCode = FindVatCodeByCountryAndRate(tenantCountryCode, False, DEFAULT_ZERO_VAT_CODE)
+    End If
+End Function
+
+Private Function ResolveOrderCountryCode(ByVal customerAddressId As Long, ByVal deliveryAddressId As Long) As String
+    Dim effectiveAddressId As Long
+
+    effectiveAddressId = deliveryAddressId
+    If effectiveAddressId <= 0 Then
+        effectiveAddressId = customerAddressId
+    End If
+
+    ResolveOrderCountryCode = modAddressRepository.GetAddressCountryCode(effectiveAddressId, ResolveTenantCountryCode())
+    If LenB(ResolveOrderCountryCode) = 0 Then
+        ResolveOrderCountryCode = ResolveTenantCountryCode()
+    End If
+End Function
+
+Private Function VatCodeExists(ByVal VatCode As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+
+    VatCode = UCase$(Trim$(VatCode))
+    If LenB(VatCode) = 0 Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    Set rs = db.OpenRecordset( _
+        "SELECT [vat_code] FROM [ref_vat_code] WHERE [vat_code]=" & SqlText(VatCode) & ";", _
+        dbOpenSnapshot)
+    VatCodeExists = Not (rs.BOF And rs.EOF)
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    VatCodeExists = False
+    Resume CleanExit
+End Function
+
+Private Function FindVatCodeByCountryAndRate( _
+    ByVal countryCode As String, _
+    ByVal zeroRateOnly As Boolean, _
+    Optional ByVal fallbackValue As String = "") As String
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim sqlStatement As String
+
+    countryCode = UCase$(Trim$(countryCode))
+    If LenB(countryCode) = 0 Then
+        FindVatCodeByCountryAndRate = fallbackValue
+        Exit Function
+    End If
+
+    sqlStatement = _
+        "SELECT TOP 1 [vat_code] FROM [ref_vat_code] " & _
+        "WHERE Nz([is_active], True)=True " & _
+        "AND UCase(Nz([country_code],''))=" & SqlText(countryCode) & " "
+
+    If zeroRateOnly Then
+        sqlStatement = sqlStatement & "AND Nz([vat_rate],0)=0 "
+    Else
+        sqlStatement = sqlStatement & "AND Nz([vat_rate],0)>0 "
+    End If
+
+    sqlStatement = sqlStatement & "ORDER BY Nz([sort_order],0), [vat_code];"
+
+    Set db = modDb.GetCurrentDatabase()
+    Set rs = db.OpenRecordset(sqlStatement, dbOpenSnapshot)
+
+    If Not (rs.BOF And rs.EOF) Then
+        FindVatCodeByCountryAndRate = GetRecordsetStringValue(rs, FIELD_VAT_CODE, fallbackValue)
+    Else
+        FindVatCodeByCountryAndRate = fallbackValue
+    End If
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    FindVatCodeByCountryAndRate = fallbackValue
+    Resume CleanExit
+End Function
+
+
+Private Function SqlText(ByVal valueText As String) As String
+    SqlText = "'" & Replace(Trim$(valueText), "'", "''") & "'"
+End Function
+
+Private Function GetRecordsetStringValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal defaultValue As String) As String
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        GetRecordsetStringValue = Trim$(modDaoHelper.NzString(rs.Fields(fieldName).Value, defaultValue))
+    Else
+        GetRecordsetStringValue = defaultValue
+    End If
+End Function
+
+Private Function GetRecordsetDoubleValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal defaultValue As Double) As Double
+    Dim rawValue As String
+
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        rawValue = modDaoHelper.NzString(rs.Fields(fieldName).Value, CStr(defaultValue))
+        If IsNumeric(rawValue) Then
+            GetRecordsetDoubleValue = CDbl(rawValue)
+        Else
+            GetRecordsetDoubleValue = defaultValue
+        End If
+    Else
+        GetRecordsetDoubleValue = defaultValue
+    End If
+End Function
+
+Private Function GetRecordsetDateValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal defaultValue As Date) As Date
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        If IsDate(rs.Fields(fieldName).Value) Then
+            GetRecordsetDateValue = CDate(rs.Fields(fieldName).Value)
+        Else
+            GetRecordsetDateValue = defaultValue
+        End If
+    Else
+        GetRecordsetDateValue = defaultValue
+    End If
+End Function
+
+Private Function GetRecordsetLongValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal defaultValue As Long) As Long
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        GetRecordsetLongValue = modDaoHelper.NzLong(rs.Fields(fieldName).Value, defaultValue)
+    Else
+        GetRecordsetLongValue = defaultValue
+    End If
+End Function
+
+Private Function GetDictionaryString(ByVal dictionaryObject As Object, ByVal keyName As String) As String
+    On Error GoTo SafeExit
+
+    If dictionaryObject Is Nothing Then
+        Exit Function
+    End If
+
+    If dictionaryObject.Exists(keyName) Then
+        GetDictionaryString = Trim$(modDaoHelper.NzString(dictionaryObject(keyName), vbNullString))
+    End If
+
+SafeExit:
+End Function
+
+Private Function GetDictionaryDouble(ByVal dictionaryObject As Object, ByVal keyName As String, ByVal defaultValue As Double) As Double
+    On Error GoTo SafeExit
+
+    Dim rawValue As String
+
+    GetDictionaryDouble = defaultValue
+    If dictionaryObject Is Nothing Then
+        Exit Function
+    End If
+
+    If dictionaryObject.Exists(keyName) Then
+        rawValue = modDaoHelper.NzString(dictionaryObject(keyName), CStr(defaultValue))
+        If IsNumeric(rawValue) Then
+            GetDictionaryDouble = CDbl(rawValue)
+        End If
+    End If
+
+SafeExit:
+End Function
+
+Private Function GetDictionaryLong(ByVal dictionaryObject As Object, ByVal keyName As String, ByVal defaultValue As Long) As Long
+    On Error GoTo SafeExit
+
+    GetDictionaryLong = defaultValue
+    If dictionaryObject Is Nothing Then
+        Exit Function
+    End If
+
+    If dictionaryObject.Exists(keyName) Then
+        GetDictionaryLong = modDaoHelper.NzLong(dictionaryObject(keyName), defaultValue)
+    End If
+
+SafeExit:
 End Function
 
 Private Function ResolveAuditUserName() As String

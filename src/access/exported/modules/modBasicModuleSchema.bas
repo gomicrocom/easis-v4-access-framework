@@ -11,6 +11,8 @@ Option Explicit
 
 Private Const MODULE_NAME As String = "modBasicModuleSchema"
 Private Const ACCESS_CONNECT_PREFIX As String = ";DATABASE="
+Private Const SYSTEM_BACKEND_PATH As String = "C:\easis\Data\sys_be.accdb"
+Private Const TABLE_REF_LANGUAGE As String = "ref_language"
 
 Public Sub CreateBasicModuleTables(Optional ByVal backendPath As String = vbNullString)
     On Error GoTo ErrorHandler
@@ -36,8 +38,11 @@ Public Sub CreateBasicModuleTables(Optional ByVal backendPath As String = vbNull
 
     CreateTblOrders db
     CreateTblOrderLines db
+    CreateTmpOrders db
+    CreateTmpOrderLines db
     Call EnsureOrderPhase1SchemaForDatabase(db)
     Call modOrderRepository.EnsureSalesOrderNumberRange(Year(Date))
+    Call EnsureSystemLanguageReferenceSchema
 
     MsgBox "BasicModule-Tabellen wurden erstellt.", vbInformation, MODULE_NAME
 
@@ -58,6 +63,7 @@ Public Function EnsureOrderPhase1Schema(Optional ByVal backendPath As String = v
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
+    Dim frontendDb As DAO.Database
     Dim shouldCloseDb As Boolean
 
     If Not OpenSchemaDatabase(backendPath, db, shouldCloseDb) Then
@@ -65,9 +71,16 @@ Public Function EnsureOrderPhase1Schema(Optional ByVal backendPath As String = v
     End If
 
     EnsureOrderPhase1Schema = EnsureOrderPhase1SchemaForDatabase(db)
+    If EnsureOrderPhase1Schema Then
+        Set frontendDb = CurrentDb
+        If Not EnsureTemporaryOrderWorkspaceSchema(frontendDb) Then
+            EnsureOrderPhase1Schema = False
+        End If
+    End If
 
 CleanExit:
     On Error Resume Next
+    Set frontendDb = Nothing
     If Not db Is Nothing Then
         If shouldCloseDb Then db.Close
     End If
@@ -77,6 +90,37 @@ CleanExit:
 ErrorHandler:
     EnsureOrderPhase1Schema = False
     Resume CleanExit
+End Function
+
+Private Function EnsureTemporaryOrderWorkspaceSchema(ByVal db As DAO.Database) As Boolean
+    On Error GoTo ErrorHandler
+
+    EnsureTemporaryOrderWorkspaceSchema = False
+
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    CreateTmpOrders db
+    CreateTmpOrderLines db
+
+    If Not TableExists(db, "tmp_order") Then Exit Function
+    If Not TableExists(db, "tmp_order_line") Then Exit Function
+    If Not EnsureTemporaryOrderHeaderSchema(db) Then Exit Function
+    If Not EnsureTemporaryOrderLineSchema(db) Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "tmp_order", "session_id") Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "tmp_order", "order_no") Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "tmp_order_line", "tmp_order_id") Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "tmp_order_line", "order_line_id") Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "tmp_order_line", "vat_rate") Then Exit Function
+    If Not EnsureTemporaryOrderHeaderIndexes(db) Then Exit Function
+    If Not EnsureTemporaryOrderLineIndexes(db) Then Exit Function
+
+    EnsureTemporaryOrderWorkspaceSchema = True
+    Exit Function
+
+ErrorHandler:
+    EnsureTemporaryOrderWorkspaceSchema = False
 End Function
 
 Public Sub DiagnoseOrderSchema(Optional ByVal backendPath As String = vbNullString)
@@ -95,6 +139,10 @@ Public Sub DiagnoseOrderSchema(Optional ByVal backendPath As String = vbNullStri
     modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "backend_path=" & resolvedPath
     modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "table_exists ord_order=" & CStr(TableExists(db, "ord_order"))
     modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.customer_address_id=" & CStr(FieldExists(db, "ord_order", "customer_address_id"))
+    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.invoice_address_id=" & CStr(FieldExists(db, "ord_order", "invoice_address_id"))
+    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.delivery_address_id=" & CStr(FieldExists(db, "ord_order", "delivery_address_id"))
+    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.vat_code=" & CStr(FieldExists(db, "ord_order", "vat_code"))
+    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.vat_rate=" & CStr(FieldExists(db, "ord_order", "vat_rate"))
     modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "table_exists ord_order_line=" & CStr(TableExists(db, "ord_order_line"))
     modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order_line.article_no=" & CStr(FieldExists(db, "ord_order_line", "article_no"))
     modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order_line.vat_rate=" & CStr(FieldExists(db, "ord_order_line", "vat_rate"))
@@ -235,6 +283,31 @@ Private Sub CreateRefContactType(ByVal db As DAO.Database)
     ExecuteDdl db, sqlStatement
 End Sub
 
+Private Sub CreateRefLanguage(ByVal db As DAO.Database)
+    Dim sqlStatement As String
+
+    sqlStatement = ""
+    sqlStatement = sqlStatement & "CREATE TABLE ref_language ("
+    sqlStatement = sqlStatement & "language_code TEXT(10) CONSTRAINT pk_ref_language PRIMARY KEY, "
+    sqlStatement = sqlStatement & "language_name TEXT(100), "
+    sqlStatement = sqlStatement & "iso_language_code TEXT(10), "
+    sqlStatement = sqlStatement & "country_code TEXT(10), "
+    sqlStatement = sqlStatement & "is_default YESNO, "
+    sqlStatement = sqlStatement & "is_active YESNO, "
+    sqlStatement = sqlStatement & "sort_order LONG, "
+    sqlStatement = sqlStatement & "created_at DATETIME, "
+    sqlStatement = sqlStatement & "created_by TEXT(50), "
+    sqlStatement = sqlStatement & "updated_at DATETIME, "
+    sqlStatement = sqlStatement & "updated_by TEXT(50)"
+    sqlStatement = sqlStatement & ");"
+
+    ExecuteDdl db, sqlStatement
+    ExecuteCreateIndexIfMissing db, TABLE_REF_LANGUAGE, "ix_ref_language_is_active", _
+        "CREATE INDEX ix_ref_language_is_active ON ref_language (is_active);"
+    ExecuteCreateIndexIfMissing db, TABLE_REF_LANGUAGE, "ix_ref_language_sort_order", _
+        "CREATE INDEX ix_ref_language_sort_order ON ref_language (sort_order);"
+End Sub
+
 Private Sub CreateTenPaymentTerms(ByVal db As DAO.Database)
     Dim sqlStatement As String
 
@@ -305,6 +378,148 @@ Private Sub CreateRefUnits(ByVal db As DAO.Database)
 
     ExecuteDdl db, sqlStatement
 End Sub
+
+Private Function EnsureRefLanguageSchema(ByVal db As DAO.Database) As Boolean
+    On Error GoTo ErrorHandler
+
+    EnsureRefLanguageSchema = False
+
+    If Not EnsureTextField(db, TABLE_REF_LANGUAGE, "language_code", 10, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, TABLE_REF_LANGUAGE, "language_name", 100, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, TABLE_REF_LANGUAGE, "iso_language_code", 10, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, TABLE_REF_LANGUAGE, "country_code", 10, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, TABLE_REF_LANGUAGE, "sort_order", 0, False) Then GoTo ErrorHandler
+    If Not EnsureDateField(db, TABLE_REF_LANGUAGE, "created_at", Now(), False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, TABLE_REF_LANGUAGE, "created_by", 50, "SYSTEM", False) Then GoTo ErrorHandler
+    If Not EnsureDateField(db, TABLE_REF_LANGUAGE, "updated_at", Now(), False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, TABLE_REF_LANGUAGE, "updated_by", 50, "SYSTEM", False) Then GoTo ErrorHandler
+
+    If Not FieldExists(db, TABLE_REF_LANGUAGE, "is_default") Then
+        db.Execute "ALTER TABLE [" & TABLE_REF_LANGUAGE & "] ADD COLUMN [is_default] YESNO;", dbFailOnError
+    End If
+    If Not FieldExists(db, TABLE_REF_LANGUAGE, "is_active") Then
+        db.Execute "ALTER TABLE [" & TABLE_REF_LANGUAGE & "] ADD COLUMN [is_active] YESNO;", dbFailOnError
+    End If
+
+    ExecuteCreateIndexIfMissing db, TABLE_REF_LANGUAGE, "ix_ref_language_is_active", _
+        "CREATE INDEX ix_ref_language_is_active ON ref_language (is_active);"
+    ExecuteCreateIndexIfMissing db, TABLE_REF_LANGUAGE, "ix_ref_language_sort_order", _
+        "CREATE INDEX ix_ref_language_sort_order ON ref_language (sort_order);"
+
+    EnsureRefLanguageSchema = True
+    Exit Function
+
+ErrorHandler:
+    EnsureRefLanguageSchema = False
+End Function
+
+Private Function SeedRefLanguageData(ByVal db As DAO.Database) As Boolean
+    On Error GoTo ErrorHandler
+
+    SeedRefLanguageData = False
+
+    UpsertRefLanguage db, "de-CH", "Deutsch (Schweiz)", "de", "CH", True, True, 10
+    UpsertRefLanguage db, "de-DE", "Deutsch (Deutschland)", "de", "DE", False, True, 20
+    UpsertRefLanguage db, "en-US", "English (United States)", "en", "US", False, True, 30
+    UpsertRefLanguage db, "fr-FR", "Français (France)", "fr", "FR", False, True, 40
+    UpsertRefLanguage db, "it-CH", "Italiano (Svizzera)", "it", "CH", False, True, 50
+
+    SeedRefLanguageData = True
+    Exit Function
+
+ErrorHandler:
+    SeedRefLanguageData = False
+End Function
+
+Private Sub UpsertRefLanguage( _
+    ByVal db As DAO.Database, _
+    ByVal languageCode As String, _
+    ByVal languageName As String, _
+    ByVal isoLanguageCode As String, _
+    ByVal countryCode As String, _
+    ByVal isDefault As Boolean, _
+    ByVal isActive As Boolean, _
+    ByVal sortOrder As Long)
+    On Error GoTo ErrorHandler
+
+    Dim rs As DAO.Recordset
+    Dim sqlStatement As String
+
+    sqlStatement = "SELECT * FROM [" & TABLE_REF_LANGUAGE & "] WHERE [language_code]=" & SqlText(languageCode) & ";"
+    Set rs = db.OpenRecordset(sqlStatement, dbOpenDynaset)
+
+    If rs.BOF And rs.EOF Then
+        rs.AddNew
+        rs.Fields("language_code").Value = languageCode
+        rs.Fields("created_at").Value = Now()
+        rs.Fields("created_by").Value = "SYSTEM"
+    Else
+        rs.Edit
+    End If
+
+    rs.Fields("language_name").Value = languageName
+    rs.Fields("iso_language_code").Value = isoLanguageCode
+    rs.Fields("country_code").Value = countryCode
+    rs.Fields("is_default").Value = isDefault
+    rs.Fields("is_active").Value = isActive
+    rs.Fields("sort_order").Value = sortOrder
+    rs.Fields("updated_at").Value = Now()
+    rs.Fields("updated_by").Value = "SYSTEM"
+    rs.Update
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Exit Sub
+
+ErrorHandler:
+    Err.Raise Err.Number, MODULE_NAME & ".UpsertRefLanguage", Err.description
+End Sub
+
+Private Function EnsureLinkedAccessTable(ByVal frontendDb As DAO.Database, ByVal backendPath As String, ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim existingTableDef As DAO.TableDef
+    Dim newTableDef As DAO.TableDef
+    Dim existingConnect As String
+
+    EnsureLinkedAccessTable = False
+
+    If frontendDb Is Nothing Then
+        Exit Function
+    End If
+
+    If LenB(Trim$(backendPath)) = 0 Then
+        Exit Function
+    End If
+
+    If TableExists(frontendDb, tableName) Then
+        Set existingTableDef = frontendDb.TableDefs(tableName)
+        existingConnect = Trim$(Nz(existingTableDef.Connect, vbNullString))
+
+        If LenB(existingConnect) = 0 Then
+            modLoggingHandler.LogError MODULE_NAME & ".EnsureLinkedAccessTable", _
+                "Local frontend table blocks required link: " & tableName
+            Exit Function
+        End If
+
+        frontendDb.TableDefs.Delete tableName
+        frontendDb.TableDefs.Refresh
+    End If
+
+    Set newTableDef = frontendDb.CreateTableDef(tableName)
+    newTableDef.Connect = ACCESS_CONNECT_PREFIX & backendPath
+    newTableDef.SourceTableName = tableName
+    frontendDb.TableDefs.Append newTableDef
+    frontendDb.TableDefs.Refresh
+
+    EnsureLinkedAccessTable = True
+    Exit Function
+
+ErrorHandler:
+    EnsureLinkedAccessTable = False
+End Function
 
 ' Deprecated:
 '   tblAddresses is a legacy table and must not be recreated by current setup paths.
@@ -404,6 +619,8 @@ Private Sub CreateTblOrders(ByVal db As DAO.Database)
     SqlText = SqlText & "order_type_code TEXT(30), "
     SqlText = SqlText & "order_status_code TEXT(30), "
     SqlText = SqlText & "customer_address_id LONG, "
+    SqlText = SqlText & "invoice_address_id LONG, "
+    SqlText = SqlText & "delivery_address_id LONG, "
     SqlText = SqlText & "customer_name TEXT(150), "
     SqlText = SqlText & "order_date DATETIME, "
     SqlText = SqlText & "delivery_date DATETIME, "
@@ -414,6 +631,8 @@ Private Sub CreateTblOrders(ByVal db As DAO.Database)
     SqlText = SqlText & "currency_code TEXT(10), "
     SqlText = SqlText & "payment_term_code TEXT(50), "
     SqlText = SqlText & "vat_mode TEXT(20), "
+    SqlText = SqlText & "vat_code TEXT(30), "
+    SqlText = SqlText & "vat_rate DOUBLE, "
     SqlText = SqlText & "header_discount_type TEXT(20), "
     SqlText = SqlText & "header_discount_value CURRENCY, "
     SqlText = SqlText & "header_discount_amount CURRENCY, "
@@ -463,6 +682,129 @@ Private Sub CreateTblOrderLines(ByVal db As DAO.Database)
     SqlText = SqlText & "line_net_amount CURRENCY, "
     SqlText = SqlText & "line_vat_amount CURRENCY, "
     SqlText = SqlText & "line_gross_amount CURRENCY, "
+    SqlText = SqlText & "sort_order LONG, "
+    SqlText = SqlText & "created_at DATETIME, "
+    SqlText = SqlText & "created_by TEXT(50), "
+    SqlText = SqlText & "updated_at DATETIME, "
+    SqlText = SqlText & "updated_by TEXT(50)"
+    SqlText = SqlText & ");"
+
+    ExecuteDdl db, SqlText
+End Sub
+
+Public Function EnsureSystemLanguageReferenceSchema(Optional ByVal sysBackendPath As String = vbNullString) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim backendDb As DAO.Database
+    Dim frontendDb As DAO.Database
+    Dim effectiveBackendPath As String
+
+    effectiveBackendPath = Trim$(sysBackendPath)
+    If LenB(effectiveBackendPath) = 0 Then
+        effectiveBackendPath = SYSTEM_BACKEND_PATH
+    End If
+
+    Set backendDb = OpenOrCreateAccessDatabase(effectiveBackendPath)
+    CreateRefLanguage backendDb
+    If Not EnsureRefLanguageSchema(backendDb) Then GoTo CleanExit
+    If Not SeedRefLanguageData(backendDb) Then GoTo CleanExit
+
+    Set frontendDb = CurrentDb
+    If Not EnsureLinkedAccessTable(frontendDb, effectiveBackendPath, TABLE_REF_LANGUAGE) Then GoTo CleanExit
+
+    EnsureSystemLanguageReferenceSchema = True
+
+CleanExit:
+    On Error Resume Next
+    If Not backendDb Is Nothing Then backendDb.Close
+    Set frontendDb = Nothing
+    Set backendDb = Nothing
+    Exit Function
+
+ErrorHandler:
+    EnsureSystemLanguageReferenceSchema = False
+    modErrorHandler.HandleError MODULE_NAME, "EnsureSystemLanguageReferenceSchema", Err
+    Resume CleanExit
+End Function
+
+Private Sub CreateTmpOrders(ByVal db As DAO.Database)
+    Dim SqlText As String
+
+    SqlText = ""
+    SqlText = SqlText & "CREATE TABLE tmp_order ("
+    SqlText = SqlText & "tmp_order_id AUTOINCREMENT CONSTRAINT pk_tmp_order PRIMARY KEY, "
+    SqlText = SqlText & "session_id TEXT(100), "
+    SqlText = SqlText & "order_id LONG, "
+    SqlText = SqlText & "order_no TEXT(50), "
+    SqlText = SqlText & "customer_address_id LONG, "
+    SqlText = SqlText & "invoice_address_id LONG, "
+    SqlText = SqlText & "delivery_address_id LONG, "
+    SqlText = SqlText & "customer_name TEXT(150), "
+    SqlText = SqlText & "order_type_code TEXT(30), "
+    SqlText = SqlText & "order_status_code TEXT(30), "
+    SqlText = SqlText & "order_date DATETIME, "
+    SqlText = SqlText & "delivery_date DATETIME, "
+    SqlText = SqlText & "valid_until DATETIME, "
+    SqlText = SqlText & "reference_text TEXT(150), "
+    SqlText = SqlText & "external_reference TEXT(150), "
+    SqlText = SqlText & "language_code TEXT(10), "
+    SqlText = SqlText & "currency_code TEXT(10), "
+    SqlText = SqlText & "payment_term_code TEXT(50), "
+    SqlText = SqlText & "vat_mode TEXT(20), "
+    SqlText = SqlText & "vat_code TEXT(30), "
+    SqlText = SqlText & "vat_rate DOUBLE, "
+    SqlText = SqlText & "header_discount_type TEXT(20), "
+    SqlText = SqlText & "header_discount_value CURRENCY, "
+    SqlText = SqlText & "header_discount_amount CURRENCY, "
+    SqlText = SqlText & "header_surcharge_type TEXT(20), "
+    SqlText = SqlText & "header_surcharge_value CURRENCY, "
+    SqlText = SqlText & "header_surcharge_amount CURRENCY, "
+    SqlText = SqlText & "subtotal_net_amount CURRENCY, "
+    SqlText = SqlText & "net_amount CURRENCY, "
+    SqlText = SqlText & "vat_amount CURRENCY, "
+    SqlText = SqlText & "gross_amount CURRENCY, "
+    SqlText = SqlText & "notes_text LONGTEXT, "
+    SqlText = SqlText & "internal_notes_text LONGTEXT, "
+    SqlText = SqlText & "result_document_id LONG, "
+    SqlText = SqlText & "created_at DATETIME, "
+    SqlText = SqlText & "created_by TEXT(50), "
+    SqlText = SqlText & "updated_at DATETIME, "
+    SqlText = SqlText & "updated_by TEXT(50)"
+    SqlText = SqlText & ");"
+
+    ExecuteDdl db, SqlText
+End Sub
+
+Private Sub CreateTmpOrderLines(ByVal db As DAO.Database)
+    Dim SqlText As String
+
+    SqlText = ""
+    SqlText = SqlText & "CREATE TABLE tmp_order_line ("
+    SqlText = SqlText & "tmp_order_line_id AUTOINCREMENT CONSTRAINT pk_tmp_order_line PRIMARY KEY, "
+    SqlText = SqlText & "order_line_id LONG, "
+    SqlText = SqlText & "order_id LONG, "
+    SqlText = SqlText & "tmp_order_id LONG NOT NULL, "
+    SqlText = SqlText & "line_no LONG, "
+    SqlText = SqlText & "article_id LONG, "
+    SqlText = SqlText & "article_no TEXT(50), "
+    SqlText = SqlText & "line_type_code TEXT(30), "
+    SqlText = SqlText & "description_text LONGTEXT, "
+    SqlText = SqlText & "quantity DOUBLE, "
+    SqlText = SqlText & "unit_code TEXT(30), "
+    SqlText = SqlText & "unit_price CURRENCY, "
+    SqlText = SqlText & "discount_type TEXT(20), "
+    SqlText = SqlText & "discount_value CURRENCY, "
+    SqlText = SqlText & "line_discount_amount CURRENCY, "
+    SqlText = SqlText & "surcharge_type TEXT(20), "
+    SqlText = SqlText & "surcharge_value CURRENCY, "
+    SqlText = SqlText & "line_surcharge_amount CURRENCY, "
+    SqlText = SqlText & "vat_code TEXT(30), "
+    SqlText = SqlText & "vat_rate DOUBLE, "
+    SqlText = SqlText & "line_base_amount CURRENCY, "
+    SqlText = SqlText & "line_net_amount CURRENCY, "
+    SqlText = SqlText & "line_vat_amount CURRENCY, "
+    SqlText = SqlText & "line_gross_amount CURRENCY, "
+    SqlText = SqlText & "sort_order LONG, "
     SqlText = SqlText & "created_at DATETIME, "
     SqlText = SqlText & "created_by TEXT(50), "
     SqlText = SqlText & "updated_at DATETIME, "
@@ -483,15 +825,24 @@ Private Function EnsureOrderPhase1SchemaForDatabase(ByVal db As DAO.Database) As
 
     CreateTblOrders db
     CreateTblOrderLines db
+    CreateTmpOrders db
+    CreateTmpOrderLines db
 
     If Not TableExists(db, "ord_order") Then Exit Function
     If Not TableExists(db, "ord_order_line") Then Exit Function
+    If Not TableExists(db, "tmp_order") Then Exit Function
+    If Not TableExists(db, "tmp_order_line") Then Exit Function
 
     If Not EnsureOrderHeaderSchema(db) Then GoTo CleanExit
     If Not EnsureOrderLineSchema(db) Then GoTo CleanExit
+    If Not EnsureTemporaryOrderHeaderSchema(db) Then GoTo CleanExit
+    If Not EnsureTemporaryOrderLineSchema(db) Then GoTo CleanExit
+    If Not CleanupLegacyOrderSchema(db) Then GoTo CleanExit
     If Not VerifyRequiredOrderFields(db) Then GoTo CleanExit
     If Not EnsureOrderHeaderIndexes(db) Then GoTo CleanExit
     If Not EnsureOrderLineIndexes(db) Then GoTo CleanExit
+    If Not EnsureTemporaryOrderHeaderIndexes(db) Then GoTo CleanExit
+    If Not EnsureTemporaryOrderLineIndexes(db) Then GoTo CleanExit
 
     EnsureOrderPhase1SchemaForDatabase = True
 
@@ -509,6 +860,8 @@ Private Function EnsureOrderHeaderSchema(ByVal db As DAO.Database) As Boolean
     If Not EnsureTextField(db, "ord_order", "order_type_code", 30, "SO", True) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "ord_order", "order_status_code", 30, "DRAFT", True) Then GoTo ErrorHandler
     If Not EnsureLongField(db, "ord_order", "customer_address_id", 0, False) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "ord_order", "invoice_address_id", 0, False) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "ord_order", "delivery_address_id", 0, False) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "ord_order", "customer_name", 150, vbNullString, False) Then GoTo ErrorHandler
     If Not EnsureDateField(db, "ord_order", "order_date", Date, True) Then GoTo ErrorHandler
     If Not EnsureDateField(db, "ord_order", "delivery_date", 0, False) Then GoTo ErrorHandler
@@ -519,6 +872,8 @@ Private Function EnsureOrderHeaderSchema(ByVal db As DAO.Database) As Boolean
     If Not EnsureTextField(db, "ord_order", "currency_code", 10, "CHF", True) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "ord_order", "payment_term_code", 50, vbNullString, False) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "ord_order", "vat_mode", 20, "EXCLUSIVE", True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "ord_order", "vat_code", 30, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureDoubleField(db, "ord_order", "vat_rate", 0, True) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "ord_order", "header_discount_type", 20, "NONE", True) Then GoTo ErrorHandler
     If Not EnsureCurrencyField(db, "ord_order", "header_discount_value", 0, True) Then GoTo ErrorHandler
     If Not EnsureCurrencyField(db, "ord_order", "header_discount_amount", 0, True) Then GoTo ErrorHandler
@@ -536,8 +891,6 @@ Private Function EnsureOrderHeaderSchema(ByVal db As DAO.Database) As Boolean
     If Not EnsureTextField(db, "ord_order", "created_by", 50, "SYSTEM", True) Then GoTo ErrorHandler
     If Not EnsureDateField(db, "ord_order", "updated_at", Now(), True) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "ord_order", "updated_by", 50, "SYSTEM", True) Then GoTo ErrorHandler
-
-    MigrateLegacyOrderHeaderFields db
 
     EnsureOrderHeaderSchema = True
     Exit Function
@@ -570,12 +923,11 @@ Private Function EnsureOrderLineSchema(ByVal db As DAO.Database) As Boolean
     If Not EnsureCurrencyField(db, "ord_order_line", "line_net_amount", 0, True) Then GoTo ErrorHandler
     If Not EnsureCurrencyField(db, "ord_order_line", "line_vat_amount", 0, True) Then GoTo ErrorHandler
     If Not EnsureCurrencyField(db, "ord_order_line", "line_gross_amount", 0, True) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "ord_order_line", "sort_order", 0, False) Then GoTo ErrorHandler
     If Not EnsureDateField(db, "ord_order_line", "created_at", Now(), True) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "ord_order_line", "created_by", 50, "SYSTEM", True) Then GoTo ErrorHandler
     If Not EnsureDateField(db, "ord_order_line", "updated_at", Now(), True) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "ord_order_line", "updated_by", 50, "SYSTEM", True) Then GoTo ErrorHandler
-
-    MigrateLegacyOrderLineFields db
 
     EnsureOrderLineSchema = True
     Exit Function
@@ -584,14 +936,110 @@ ErrorHandler:
     EnsureOrderLineSchema = False
 End Function
 
+Private Function EnsureTemporaryOrderHeaderSchema(ByVal db As DAO.Database) As Boolean
+    On Error GoTo ErrorHandler
+
+    If Not EnsureTextField(db, "tmp_order", "session_id", 100, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "tmp_order", "order_id", 0, False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "order_no", 50, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "tmp_order", "customer_address_id", 0, False) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "tmp_order", "invoice_address_id", 0, False) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "tmp_order", "delivery_address_id", 0, False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "customer_name", 150, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "order_type_code", 30, "SO", True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "order_status_code", 30, "DRAFT", True) Then GoTo ErrorHandler
+    If Not EnsureDateField(db, "tmp_order", "order_date", Date, True) Then GoTo ErrorHandler
+    If Not EnsureDateField(db, "tmp_order", "delivery_date", 0, False) Then GoTo ErrorHandler
+    If Not EnsureDateField(db, "tmp_order", "valid_until", 0, False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "reference_text", 150, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "external_reference", 150, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "language_code", 10, "DE-CH", True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "currency_code", 10, "CHF", True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "payment_term_code", 50, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "vat_mode", 20, "EXCLUSIVE", True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "vat_code", 30, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureDoubleField(db, "tmp_order", "vat_rate", 0, True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "header_discount_type", 20, "NONE", True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order", "header_discount_value", 0, True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order", "header_discount_amount", 0, True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "header_surcharge_type", 20, "NONE", True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order", "header_surcharge_value", 0, True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order", "header_surcharge_amount", 0, True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order", "subtotal_net_amount", 0, True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order", "net_amount", 0, True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order", "vat_amount", 0, True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order", "gross_amount", 0, True) Then GoTo ErrorHandler
+    If Not EnsureLongTextField(db, "tmp_order", "notes_text") Then GoTo ErrorHandler
+    If Not EnsureLongTextField(db, "tmp_order", "internal_notes_text") Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "tmp_order", "result_document_id", 0, False) Then GoTo ErrorHandler
+    If Not EnsureDateField(db, "tmp_order", "created_at", Now(), True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "created_by", 50, "SYSTEM", True) Then GoTo ErrorHandler
+    If Not EnsureDateField(db, "tmp_order", "updated_at", Now(), True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "updated_by", 50, "SYSTEM", True) Then GoTo ErrorHandler
+
+    EnsureTemporaryOrderHeaderSchema = True
+    Exit Function
+
+ErrorHandler:
+    EnsureTemporaryOrderHeaderSchema = False
+End Function
+
+Private Function EnsureTemporaryOrderLineSchema(ByVal db As DAO.Database) As Boolean
+    On Error GoTo ErrorHandler
+
+    If Not EnsureLongField(db, "tmp_order_line", "order_line_id", 0, False) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "tmp_order_line", "order_id", 0, False) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "tmp_order_line", "tmp_order_id", 0, False) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "tmp_order_line", "line_no", 0, False) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "tmp_order_line", "article_id", 0, False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order_line", "article_no", 50, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order_line", "line_type_code", 30, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureLongTextField(db, "tmp_order_line", "description_text") Then GoTo ErrorHandler
+    If Not EnsureDoubleField(db, "tmp_order_line", "quantity", 0, True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order_line", "unit_code", 30, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order_line", "unit_price", 0, True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order_line", "discount_type", 20, "NONE", True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order_line", "discount_value", 0, True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order_line", "line_discount_amount", 0, True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order_line", "surcharge_type", 20, "NONE", True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order_line", "surcharge_value", 0, True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order_line", "line_surcharge_amount", 0, True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order_line", "vat_code", 30, vbNullString, False) Then GoTo ErrorHandler
+    If Not EnsureDoubleField(db, "tmp_order_line", "vat_rate", 0, True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order_line", "line_base_amount", 0, True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order_line", "line_net_amount", 0, True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order_line", "line_vat_amount", 0, True) Then GoTo ErrorHandler
+    If Not EnsureCurrencyField(db, "tmp_order_line", "line_gross_amount", 0, True) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "tmp_order_line", "sort_order", 0, False) Then GoTo ErrorHandler
+    If Not EnsureDateField(db, "tmp_order_line", "created_at", Now(), True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order_line", "created_by", 50, "SYSTEM", True) Then GoTo ErrorHandler
+    If Not EnsureDateField(db, "tmp_order_line", "updated_at", Now(), True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order_line", "updated_by", 50, "SYSTEM", True) Then GoTo ErrorHandler
+
+    EnsureTemporaryOrderLineSchema = True
+    Exit Function
+
+ErrorHandler:
+    EnsureTemporaryOrderLineSchema = False
+End Function
+
 Private Function VerifyRequiredOrderFields(ByVal db As DAO.Database) As Boolean
     On Error GoTo ErrorHandler
 
     VerifyRequiredOrderFields = False
 
     If Not EnsureRequiredFieldExists(db, "ord_order", "customer_address_id") Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "ord_order", "invoice_address_id") Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "ord_order", "delivery_address_id") Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "ord_order", "vat_code") Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "ord_order", "vat_rate") Then Exit Function
     If Not EnsureRequiredFieldExists(db, "ord_order_line", "article_no") Then Exit Function
     If Not EnsureRequiredFieldExists(db, "ord_order_line", "vat_rate") Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "tmp_order", "session_id") Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "tmp_order", "order_no") Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "tmp_order_line", "tmp_order_id") Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "tmp_order_line", "order_line_id") Then Exit Function
+    If Not EnsureRequiredFieldExists(db, "tmp_order_line", "vat_rate") Then Exit Function
 
     VerifyRequiredOrderFields = True
     Exit Function
@@ -600,47 +1048,27 @@ ErrorHandler:
     VerifyRequiredOrderFields = False
 End Function
 
-Private Sub MigrateLegacyOrderHeaderFields(ByVal db As DAO.Database)
-    On Error Resume Next
+Private Function CleanupLegacyOrderSchema(ByVal db As DAO.Database) As Boolean
+    On Error GoTo ErrorHandler
 
-    If FieldExists(db, "ord_order", "address_id") Then
-        db.Execute "UPDATE ord_order SET customer_address_id = address_id WHERE Nz(customer_address_id, 0)=0 AND address_id IS NOT NULL;", dbFailOnError
-    End If
+    CleanupLegacyOrderSchema = False
 
-    If FieldExists(db, "ord_order", "total_discount_amount") Then
-        db.Execute "UPDATE ord_order SET header_discount_amount = total_discount_amount WHERE Nz(header_discount_amount, 0)=0 AND total_discount_amount IS NOT NULL;", dbFailOnError
-    End If
+    DropFieldIfExists db, "ord_order", "address_id"
+    DropFieldIfExists db, "ord_order", "subtotal_amount"
+    DropFieldIfExists db, "ord_order", "total_amount"
+    DropFieldIfExists db, "ord_order", "tenant_code"
 
-    If FieldExists(db, "ord_order", "total_surcharge_amount") Then
-        db.Execute "UPDATE ord_order SET header_surcharge_amount = total_surcharge_amount WHERE Nz(header_surcharge_amount, 0)=0 AND total_surcharge_amount IS NOT NULL;", dbFailOnError
-    End If
+    DropFieldIfExists db, "ord_order_line", "line_description"
+    DropFieldIfExists db, "ord_order_line", "line_total_net"
+    DropFieldIfExists db, "ord_order_line", "line_total_vat"
+    DropFieldIfExists db, "ord_order_line", "line_total_gross"
 
-    If FieldExists(db, "ord_order", "total_vat_amount") Then
-        db.Execute "UPDATE ord_order SET vat_amount = total_vat_amount WHERE Nz(vat_amount, 0)=0 AND total_vat_amount IS NOT NULL;", dbFailOnError
-    End If
+    CleanupLegacyOrderSchema = True
+    Exit Function
 
-    If FieldExists(db, "ord_order", "total_gross_amount") Then
-        db.Execute "UPDATE ord_order SET gross_amount = total_gross_amount WHERE Nz(gross_amount, 0)=0 AND total_gross_amount IS NOT NULL;", dbFailOnError
-    End If
-
-    db.Execute "UPDATE ord_order SET net_amount = subtotal_net_amount WHERE Nz(net_amount, 0)=0 AND subtotal_net_amount IS NOT NULL;", dbFailOnError
-End Sub
-
-Private Sub MigrateLegacyOrderLineFields(ByVal db As DAO.Database)
-    On Error Resume Next
-
-    If FieldExists(db, "ord_order_line", "discount_amount") Then
-        db.Execute "UPDATE ord_order_line SET line_discount_amount = discount_amount WHERE Nz(line_discount_amount, 0)=0 AND discount_amount IS NOT NULL;", dbFailOnError
-    End If
-
-    If FieldExists(db, "ord_order_line", "surcharge_amount") Then
-        db.Execute "UPDATE ord_order_line SET line_surcharge_amount = surcharge_amount WHERE Nz(line_surcharge_amount, 0)=0 AND surcharge_amount IS NOT NULL;", dbFailOnError
-    End If
-
-    If FieldExists(db, "ord_order_line", "line_total") Then
-        db.Execute "UPDATE ord_order_line SET line_net_amount = line_total WHERE Nz(line_net_amount, 0)=0 AND line_total IS NOT NULL;", dbFailOnError
-    End If
-End Sub
+ErrorHandler:
+    CleanupLegacyOrderSchema = False
+End Function
 
 Private Function EnsureOrderHeaderIndexes(ByVal db As DAO.Database) As Boolean
     On Error GoTo ErrorHandler
@@ -649,12 +1077,18 @@ Private Function EnsureOrderHeaderIndexes(ByVal db As DAO.Database) As Boolean
         "CREATE UNIQUE INDEX ux_ord_order_order_no ON ord_order (order_no);"
     EnsureIndexWhenFieldExists db, "ord_order", "customer_address_id", "ix_ord_order_customer_address_id", _
         "CREATE INDEX ix_ord_order_customer_address_id ON ord_order (customer_address_id);"
+    EnsureIndexWhenFieldExists db, "ord_order", "invoice_address_id", "ix_ord_order_invoice_address_id", _
+        "CREATE INDEX ix_ord_order_invoice_address_id ON ord_order (invoice_address_id);"
+    EnsureIndexWhenFieldExists db, "ord_order", "delivery_address_id", "ix_ord_order_delivery_address_id", _
+        "CREATE INDEX ix_ord_order_delivery_address_id ON ord_order (delivery_address_id);"
     EnsureIndexWhenFieldExists db, "ord_order", "order_date", "ix_ord_order_order_date", _
         "CREATE INDEX ix_ord_order_order_date ON ord_order (order_date);"
     EnsureIndexWhenFieldExists db, "ord_order", "order_status_code", "ix_ord_order_order_status_code", _
         "CREATE INDEX ix_ord_order_order_status_code ON ord_order (order_status_code);"
     EnsureIndexWhenFieldExists db, "ord_order", "payment_term_code", "ix_ord_order_payment_term_code", _
         "CREATE INDEX ix_ord_order_payment_term_code ON ord_order (payment_term_code);"
+    EnsureIndexWhenFieldExists db, "ord_order", "vat_code", "ix_ord_order_vat_code", _
+        "CREATE INDEX ix_ord_order_vat_code ON ord_order (vat_code);"
     EnsureIndexWhenFieldExists db, "ord_order", "result_document_id", "ix_ord_order_result_document_id", _
         "CREATE INDEX ix_ord_order_result_document_id ON ord_order (result_document_id);"
 
@@ -686,6 +1120,38 @@ Private Function EnsureOrderLineIndexes(ByVal db As DAO.Database) As Boolean
 
 ErrorHandler:
     EnsureOrderLineIndexes = False
+End Function
+
+Private Function EnsureTemporaryOrderHeaderIndexes(ByVal db As DAO.Database) As Boolean
+    On Error GoTo ErrorHandler
+
+    EnsureIndexWhenFieldExists db, "tmp_order", "session_id", "ix_tmp_order_session_id", _
+        "CREATE INDEX ix_tmp_order_session_id ON tmp_order (session_id);"
+    EnsureIndexWhenFieldExists db, "tmp_order", "customer_address_id", "ix_tmp_order_customer_address_id", _
+        "CREATE INDEX ix_tmp_order_customer_address_id ON tmp_order (customer_address_id);"
+
+    EnsureTemporaryOrderHeaderIndexes = True
+    Exit Function
+
+ErrorHandler:
+    EnsureTemporaryOrderHeaderIndexes = False
+End Function
+
+Private Function EnsureTemporaryOrderLineIndexes(ByVal db As DAO.Database) As Boolean
+    On Error GoTo ErrorHandler
+
+    EnsureIndexWhenFieldExists db, "tmp_order_line", "tmp_order_id", "ix_tmp_order_line_tmp_order_id", _
+        "CREATE INDEX ix_tmp_order_line_tmp_order_id ON tmp_order_line (tmp_order_id);"
+    EnsureIndexWhenFieldExists db, "tmp_order_line", "line_no", "ix_tmp_order_line_line_no", _
+        "CREATE INDEX ix_tmp_order_line_line_no ON tmp_order_line (line_no);"
+    EnsureIndexWhenFieldExists db, "tmp_order_line", "vat_code", "ix_tmp_order_line_vat_code", _
+        "CREATE INDEX ix_tmp_order_line_vat_code ON tmp_order_line (vat_code);"
+
+    EnsureTemporaryOrderLineIndexes = True
+    Exit Function
+
+ErrorHandler:
+    EnsureTemporaryOrderLineIndexes = False
 End Function
 
 Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
@@ -906,6 +1372,26 @@ ErrorHandler:
     EnsureRequiredFieldExists = False
 End Function
 
+Private Sub DropFieldIfExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String)
+    On Error GoTo ErrorHandler
+
+    If db Is Nothing Then
+        Exit Sub
+    End If
+
+    If Not FieldExists(db, tableName, fieldName) Then
+        Exit Sub
+    End If
+
+    db.Execute "ALTER TABLE [" & tableName & "] DROP COLUMN [" & fieldName & "];", dbFailOnError
+    modLoggingHandler.LogInfo MODULE_NAME & ".DropFieldIfExists", "Dropped field: " & tableName & "." & fieldName
+    Exit Sub
+
+ErrorHandler:
+    modLoggingHandler.LogWarning MODULE_NAME & ".DropFieldIfExists", _
+        "Could not drop field " & tableName & "." & fieldName & " (" & Err.Number & " - " & Err.description & ")"
+End Sub
+
 Private Sub EnsureIndexWhenFieldExists( _
     ByVal db As DAO.Database, _
     ByVal tableName As String, _
@@ -971,6 +1457,21 @@ End Function
 
 Private Function NormalizePath(ByVal pathText As String) As String
     NormalizePath = LCase$(Trim$(Replace(pathText, "/", "\")))
+End Function
+
+Private Function OpenOrCreateAccessDatabase(ByVal databasePath As String) As DAO.Database
+    On Error GoTo ErrorHandler
+
+    If LenB(Dir$(databasePath, vbNormal)) = 0 Then
+        Set OpenOrCreateAccessDatabase = DBEngine.CreateDatabase(databasePath, dbLangGeneral)
+    Else
+        Set OpenOrCreateAccessDatabase = DBEngine.OpenDatabase(databasePath)
+    End If
+    Exit Function
+
+ErrorHandler:
+    Set OpenOrCreateAccessDatabase = Nothing
+    Err.Raise Err.Number, MODULE_NAME & ".OpenOrCreateAccessDatabase", Err.description
 End Function
 
 Private Function ResolveDatabasePath(ByVal db As DAO.Database) As String
@@ -1090,3 +1591,7 @@ ErrorHandler:
             Err.Raise Err.Number, MODULE_NAME & ".ExecuteDdl", Err.description
     End Select
 End Sub
+
+Private Function SqlText(ByVal valueText As String) As String
+    SqlText = "'" & Replace(Trim$(valueText), "'", "''") & "'"
+End Function

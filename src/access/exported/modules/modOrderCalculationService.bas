@@ -13,9 +13,14 @@ Private Const MODULE_NAME As String = "modOrderCalculationService"
 
 Private Const TABLE_ORD_ORDER As String = "ord_order"
 Private Const TABLE_ORD_ORDER_LINE As String = "ord_order_line"
+Private Const TABLE_TMP_ORDER As String = "tmp_order"
+Private Const TABLE_TMP_ORDER_LINE As String = "tmp_order_line"
 
 Private Const FIELD_ORDER_ID As String = "order_id"
 Private Const FIELD_ORDER_LINE_ID As String = "order_line_id"
+Private Const FIELD_TMP_ORDER_ID As String = "tmp_order_id"
+Private Const FIELD_TMP_ORDER_LINE_ID As String = "tmp_order_line_id"
+Private Const FIELD_LINE_NO As String = "line_no"
 Private Const FIELD_QUANTITY As String = "quantity"
 Private Const FIELD_UNIT_PRICE As String = "unit_price"
 Private Const FIELD_VAT_RATE As String = "vat_rate"
@@ -46,23 +51,98 @@ Private Const FIELD_GROSS_AMOUNT As String = "gross_amount"
 Private Const ADJUSTMENT_TYPE_NONE As String = "NONE"
 
 Public Function EnsureOrderCalculationSchema() As Boolean
-    On Error GoTo ErrorHandler
-
-    EnsureOrderCalculationSchema = modBasicModuleSchema.EnsureOrderPhase1Schema()
-    Exit Function
-
-ErrorHandler:
-    EnsureOrderCalculationSchema = False
-    modErrorHandler.HandleError MODULE_NAME, "EnsureOrderCalculationSchema", Err
+    EnsureOrderCalculationSchema = True
 End Function
 
 Public Function CalculateOrderLineAmounts(ByVal OrderLineId As Long) As Boolean
+    CalculateOrderLineAmounts = CalculateLineAmountsForContext( _
+        OrderLineId, _
+        TABLE_ORD_ORDER, _
+        TABLE_ORD_ORDER_LINE, _
+        FIELD_ORDER_ID, _
+        FIELD_ORDER_LINE_ID, _
+        FIELD_ORDER_ID)
+End Function
+
+Public Function CalculateTemporaryOrderLineAmounts(ByVal tmpOrderLineId As Long) As Boolean
+    CalculateTemporaryOrderLineAmounts = CalculateLineAmountsForContext( _
+        tmpOrderLineId, _
+        TABLE_TMP_ORDER, _
+        TABLE_TMP_ORDER_LINE, _
+        FIELD_TMP_ORDER_ID, _
+        FIELD_TMP_ORDER_LINE_ID, _
+        FIELD_TMP_ORDER_ID)
+End Function
+
+Public Function CalculateOrderLineAmountsByOrderAndLineNo(ByVal OrderId As Long, ByVal lineNo As Long) As Boolean
+    CalculateOrderLineAmountsByOrderAndLineNo = CalculateLineAmountsByParentAndLineNo( _
+        OrderId, _
+        lineNo, _
+        TABLE_ORD_ORDER_LINE, _
+        FIELD_ORDER_ID, _
+        FIELD_ORDER_LINE_ID)
+End Function
+
+Public Function CalculateTemporaryOrderLineAmountsByOrderAndLineNo(ByVal tmpOrderId As Long, ByVal lineNo As Long) As Boolean
+    CalculateTemporaryOrderLineAmountsByOrderAndLineNo = CalculateLineAmountsByParentAndLineNo( _
+        tmpOrderId, _
+        lineNo, _
+        TABLE_TMP_ORDER_LINE, _
+        FIELD_TMP_ORDER_ID, _
+        FIELD_TMP_ORDER_LINE_ID)
+End Function
+
+Public Function CalculateOrderTotals(ByVal OrderId As Long) As Boolean
+    CalculateOrderTotals = CalculateTotalsForContext( _
+        OrderId, _
+        TABLE_ORD_ORDER, _
+        TABLE_ORD_ORDER_LINE, _
+        FIELD_ORDER_ID, _
+        FIELD_ORDER_ID)
+End Function
+
+Public Function CalculateTemporaryOrderTotals(ByVal tmpOrderId As Long) As Boolean
+    CalculateTemporaryOrderTotals = CalculateTotalsForContext( _
+        tmpOrderId, _
+        TABLE_TMP_ORDER, _
+        TABLE_TMP_ORDER_LINE, _
+        FIELD_TMP_ORDER_ID, _
+        FIELD_TMP_ORDER_ID)
+End Function
+
+Public Function RecalculateOrder(ByVal OrderId As Long) As Boolean
+    RecalculateOrder = RecalculateForContext( _
+        OrderId, _
+        TABLE_ORD_ORDER, _
+        TABLE_ORD_ORDER_LINE, _
+        FIELD_ORDER_ID, _
+        FIELD_ORDER_LINE_ID, _
+        FIELD_ORDER_ID)
+End Function
+
+Public Function RecalculateTemporaryOrder(ByVal tmpOrderId As Long) As Boolean
+    RecalculateTemporaryOrder = RecalculateForContext( _
+        tmpOrderId, _
+        TABLE_TMP_ORDER, _
+        TABLE_TMP_ORDER_LINE, _
+        FIELD_TMP_ORDER_ID, _
+        FIELD_TMP_ORDER_LINE_ID, _
+        FIELD_TMP_ORDER_ID)
+End Function
+
+Private Function CalculateLineAmountsForContext( _
+    ByVal lineId As Long, _
+    ByVal headerTableName As String, _
+    ByVal lineTableName As String, _
+    ByVal headerKeyField As String, _
+    ByVal lineKeyField As String, _
+    ByVal lineParentField As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim rsLine As DAO.Recordset
     Dim SqlText As String
-    Dim OrderId As Long
+    Dim headerId As Long
     Dim quantity As Double
     Dim UnitPrice As Currency
     Dim vatRate As Double
@@ -78,14 +158,12 @@ Public Function CalculateOrderLineAmounts(ByVal OrderLineId As Long) As Boolean
     Dim lineVatAmount As Currency
     Dim lineGrossAmount As Currency
     Dim discountedBaseAmount As Currency
+    Dim calculationBaseAmount As Currency
+    Dim effectiveVatRate As Double
 
-    CalculateOrderLineAmounts = False
+    CalculateLineAmountsForContext = False
 
-    If OrderLineId <= 0 Then
-        Exit Function
-    End If
-
-    If Not EnsureOrderCalculationSchema() Then
+    If lineId <= 0 Then
         Exit Function
     End If
 
@@ -94,22 +172,26 @@ Public Function CalculateOrderLineAmounts(ByVal OrderLineId As Long) As Boolean
         Exit Function
     End If
 
-    SqlText = "SELECT * FROM [" & TABLE_ORD_ORDER_LINE & "] WHERE [" & FIELD_ORDER_LINE_ID & "]=" & CStr(OrderLineId) & ";"
+    SqlText = "SELECT * FROM [" & lineTableName & "] WHERE [" & lineKeyField & "]=" & CStr(lineId) & ";"
     Set rsLine = db.OpenRecordset(SqlText, dbOpenDynaset)
 
     If rsLine.BOF And rsLine.EOF Then
         GoTo CleanExit
     End If
 
-    OrderId = GetRecordsetLongValue(rsLine, FIELD_ORDER_ID, 0)
+    headerId = GetRecordsetLongValue(rsLine, lineParentField, 0)
     quantity = GetRecordsetDoubleValue(rsLine, FIELD_QUANTITY, 0)
     UnitPrice = GetRecordsetCurrencyValue(rsLine, FIELD_UNIT_PRICE, 0)
     vatRate = GetRecordsetDoubleValue(rsLine, FIELD_VAT_RATE, 0)
-    VatMode = ResolveOrderVatMode(OrderId, modVatHandler.GetVatMode())
+    VatMode = ResolveOrderVatModeForContext(headerId, headerTableName, headerKeyField, modVatHandler.GetVatMode())
     discountType = GetRecordsetStringValue(rsLine, FIELD_DISCOUNT_TYPE, ADJUSTMENT_TYPE_NONE)
     discountValue = GetRecordsetCurrencyValue(rsLine, FIELD_DISCOUNT_VALUE, 0)
     surchargeType = GetRecordsetStringValue(rsLine, FIELD_SURCHARGE_TYPE, ADJUSTMENT_TYPE_NONE)
     surchargeValue = GetRecordsetCurrencyValue(rsLine, FIELD_SURCHARGE_VALUE, 0)
+    effectiveVatRate = vatRate
+    If StrComp(modVatHandler.NormalizeVatMode(VatMode), "NONE", vbTextCompare) = 0 Then
+        effectiveVatRate = 0
+    End If
 
     baseAmount = RoundCurrency(CCur(quantity * CDbl(UnitPrice)))
     discountAmount = modDocumentCalculationService.CalculateAdjustmentAmount(baseAmount, discountType, discountValue)
@@ -119,14 +201,25 @@ Public Function CalculateOrderLineAmounts(ByVal OrderLineId As Long) As Boolean
 
     discountedBaseAmount = RoundCurrency(baseAmount - discountAmount)
     surchargeAmount = modDocumentCalculationService.CalculateAdjustmentAmount(discountedBaseAmount, surchargeType, surchargeValue)
+    calculationBaseAmount = RoundCurrency(discountedBaseAmount + surchargeAmount)
 
-    lineNetAmount = RoundCurrency(discountedBaseAmount + surchargeAmount)
-    If lineNetAmount < 0 Then
-        lineNetAmount = 0
-    End If
+    Select Case modVatHandler.NormalizeVatMode(VatMode)
+        Case "INCLUSIVE"
+            lineGrossAmount = calculationBaseAmount
+            lineNetAmount = modVatHandler.CalculateNetFromGross(lineGrossAmount, effectiveVatRate)
+            lineVatAmount = RoundCurrency(lineGrossAmount - lineNetAmount)
+        Case "NONE"
+            lineNetAmount = calculationBaseAmount
+            lineVatAmount = 0
+            lineGrossAmount = lineNetAmount
+        Case Else
+            lineNetAmount = calculationBaseAmount
+            lineVatAmount = modVatHandler.CalculateVatAmount(lineNetAmount, effectiveVatRate, VatMode)
+            lineGrossAmount = ResolveGrossAmount(lineNetAmount, lineVatAmount, effectiveVatRate, VatMode)
+    End Select
 
-    lineVatAmount = modVatHandler.CalculateVatAmount(lineNetAmount, vatRate, VatMode)
-    lineGrossAmount = ResolveGrossAmount(lineNetAmount, lineVatAmount, vatRate, VatMode)
+    If lineNetAmount < 0 Then lineNetAmount = 0
+    If lineGrossAmount < 0 Then lineGrossAmount = 0
 
     rsLine.Edit
     SetRecordsetValue rsLine, FIELD_LINE_BASE_AMOUNT, baseAmount
@@ -137,7 +230,7 @@ Public Function CalculateOrderLineAmounts(ByVal OrderLineId As Long) As Boolean
     SetRecordsetValue rsLine, FIELD_LINE_GROSS_AMOUNT, lineGrossAmount
     rsLine.Update
 
-    CalculateOrderLineAmounts = True
+    CalculateLineAmountsForContext = True
 
 CleanExit:
     On Error Resume Next
@@ -147,12 +240,68 @@ CleanExit:
     Exit Function
 
 ErrorHandler:
-    CalculateOrderLineAmounts = False
-    modErrorHandler.HandleError MODULE_NAME, "CalculateOrderLineAmounts", Err
+    CalculateLineAmountsForContext = False
+    modErrorHandler.HandleError MODULE_NAME, "CalculateLineAmountsForContext", Err
     Resume CleanExit
 End Function
 
-Public Function CalculateOrderTotals(ByVal OrderId As Long) As Boolean
+Private Function CalculateLineAmountsByParentAndLineNo( _
+    ByVal parentId As Long, _
+    ByVal lineNo As Long, _
+    ByVal lineTableName As String, _
+    ByVal lineParentField As String, _
+    ByVal lineKeyField As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim resolvedLineId As Long
+
+    If parentId <= 0 Or lineNo <= 0 Then
+        Exit Function
+    End If
+
+    resolvedLineId = ResolveLineIdByParentAndLineNo(parentId, lineNo, lineTableName, lineParentField, lineKeyField)
+    If resolvedLineId <= 0 Then
+        Exit Function
+    End If
+
+    If StrComp(lineKeyField, FIELD_TMP_ORDER_LINE_ID, vbTextCompare) = 0 Then
+        CalculateLineAmountsByParentAndLineNo = CalculateTemporaryOrderLineAmounts(resolvedLineId)
+    Else
+        CalculateLineAmountsByParentAndLineNo = CalculateOrderLineAmounts(resolvedLineId)
+    End If
+    Exit Function
+
+ErrorHandler:
+    CalculateLineAmountsByParentAndLineNo = False
+    modErrorHandler.HandleError MODULE_NAME, "CalculateLineAmountsByParentAndLineNo", Err
+End Function
+
+Private Function ResolveLineIdByParentAndLineNo( _
+    ByVal parentId As Long, _
+    ByVal lineNo As Long, _
+    ByVal lineTableName As String, _
+    ByVal lineParentField As String, _
+    ByVal lineKeyField As String) As Long
+    On Error GoTo ErrorHandler
+
+    ResolveLineIdByParentAndLineNo = modDaoHelper.NzLong( _
+        DMax( _
+            lineKeyField, _
+            lineTableName, _
+            "[" & lineParentField & "]=" & CStr(parentId) & " AND [" & FIELD_LINE_NO & "]=" & CStr(lineNo)), _
+        0)
+    Exit Function
+
+ErrorHandler:
+    ResolveLineIdByParentAndLineNo = 0
+End Function
+
+Private Function CalculateTotalsForContext( _
+    ByVal headerId As Long, _
+    ByVal headerTableName As String, _
+    ByVal lineTableName As String, _
+    ByVal headerKeyField As String, _
+    ByVal lineParentField As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
@@ -167,13 +316,9 @@ Public Function CalculateOrderTotals(ByVal OrderId As Long) As Boolean
     Dim headerSurchargeType As String
     Dim headerSurchargeValue As Currency
 
-    CalculateOrderTotals = False
+    CalculateTotalsForContext = False
 
-    If OrderId <= 0 Then
-        Exit Function
-    End If
-
-    If Not EnsureOrderCalculationSchema() Then
+    If headerId <= 0 Then
         Exit Function
     End If
 
@@ -182,13 +327,13 @@ Public Function CalculateOrderTotals(ByVal OrderId As Long) As Boolean
         Exit Function
     End If
 
-    SqlText = "SELECT * FROM [" & TABLE_ORD_ORDER & "] WHERE [" & FIELD_ORDER_ID & "]=" & CStr(OrderId) & ";"
+    SqlText = "SELECT * FROM [" & headerTableName & "] WHERE [" & headerKeyField & "]=" & CStr(headerId) & ";"
     Set rsOrder = db.OpenRecordset(SqlText, dbOpenDynaset)
     If rsOrder.BOF And rsOrder.EOF Then
         GoTo CleanExit
     End If
 
-    SqlText = "SELECT * FROM [" & TABLE_ORD_ORDER_LINE & "] WHERE [" & FIELD_ORDER_ID & "]=" & CStr(OrderId) & ";"
+    SqlText = "SELECT * FROM [" & lineTableName & "] WHERE [" & lineParentField & "]=" & CStr(headerId) & ";"
     Set rsLines = db.OpenRecordset(SqlText, dbOpenSnapshot)
 
     If Not (rsLines.BOF And rsLines.EOF) Then
@@ -208,7 +353,7 @@ Public Function CalculateOrderTotals(ByVal OrderId As Long) As Boolean
 
     If Not HeaderAdjustmentsAreInactive(headerDiscountType, headerDiscountValue, headerSurchargeType, headerSurchargeValue) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CalculateOrderTotals", _
-            "Header adjustments are stored but not applied yet for OrderId=" & CStr(OrderId) & "."
+            "Header adjustments are stored but not applied yet for header_id=" & CStr(headerId) & "."
     End If
 
     rsOrder.Edit
@@ -220,7 +365,7 @@ Public Function CalculateOrderTotals(ByVal OrderId As Long) As Boolean
     SetRecordsetValue rsOrder, FIELD_GROSS_AMOUNT, totalGrossAmount
     rsOrder.Update
 
-    CalculateOrderTotals = True
+    CalculateTotalsForContext = True
 
 CleanExit:
     On Error Resume Next
@@ -232,30 +377,28 @@ CleanExit:
     Exit Function
 
 ErrorHandler:
-    CalculateOrderTotals = False
-    modErrorHandler.HandleError MODULE_NAME, "CalculateOrderTotals", Err
+    CalculateTotalsForContext = False
+    modErrorHandler.HandleError MODULE_NAME, "CalculateTotalsForContext", Err
     Resume CleanExit
 End Function
 
-Public Function RecalculateOrder(ByVal OrderId As Long) As Boolean
+Private Function RecalculateForContext( _
+    ByVal headerId As Long, _
+    ByVal headerTableName As String, _
+    ByVal lineTableName As String, _
+    ByVal headerKeyField As String, _
+    ByVal lineKeyField As String, _
+    ByVal lineParentField As String) As Boolean
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim rsLines As DAO.Recordset
     Dim SqlText As String
-    Dim OrderLineId As Long
+    Dim currentLineId As Long
 
-    RecalculateOrder = False
+    RecalculateForContext = False
 
-    If OrderId <= 0 Then
-        Exit Function
-    End If
-
-    If Not EnsureOrderCalculationSchema() Then
-        Exit Function
-    End If
-
-    If Not modOrderRepository.OrderExists(OrderId) Then
+    If headerId <= 0 Then
         Exit Function
     End If
 
@@ -264,15 +407,15 @@ Public Function RecalculateOrder(ByVal OrderId As Long) As Boolean
         Exit Function
     End If
 
-    SqlText = "SELECT [" & FIELD_ORDER_LINE_ID & "] FROM [" & TABLE_ORD_ORDER_LINE & "] WHERE [" & FIELD_ORDER_ID & "]=" & CStr(OrderId) & ";"
+    SqlText = "SELECT [" & lineKeyField & "] FROM [" & lineTableName & "] WHERE [" & lineParentField & "]=" & CStr(headerId) & ";"
     Set rsLines = db.OpenRecordset(SqlText, dbOpenSnapshot)
 
     If Not (rsLines.BOF And rsLines.EOF) Then
         rsLines.MoveFirst
         Do Until rsLines.EOF
-            OrderLineId = GetRecordsetLongValue(rsLines, FIELD_ORDER_LINE_ID, 0)
-            If OrderLineId > 0 Then
-                If Not CalculateOrderLineAmounts(OrderLineId) Then
+            currentLineId = GetRecordsetLongValue(rsLines, lineKeyField, 0)
+            If currentLineId > 0 Then
+                If Not CalculateLineAmountsForContext(currentLineId, headerTableName, lineTableName, headerKeyField, lineKeyField, lineParentField) Then
                     GoTo CleanExit
                 End If
             End If
@@ -280,7 +423,7 @@ Public Function RecalculateOrder(ByVal OrderId As Long) As Boolean
         Loop
     End If
 
-    RecalculateOrder = CalculateOrderTotals(OrderId)
+    RecalculateForContext = CalculateTotalsForContext(headerId, headerTableName, lineTableName, headerKeyField, lineParentField)
 
 CleanExit:
     On Error Resume Next
@@ -290,8 +433,8 @@ CleanExit:
     Exit Function
 
 ErrorHandler:
-    RecalculateOrder = False
-    modErrorHandler.HandleError MODULE_NAME, "RecalculateOrder", Err
+    RecalculateForContext = False
+    modErrorHandler.HandleError MODULE_NAME, "RecalculateForContext", Err
     Resume CleanExit
 End Function
 
@@ -316,16 +459,20 @@ Private Function ResolveGrossAmount(ByVal NetAmount As Currency, ByVal VatAmount
     End Select
 End Function
 
-Private Function ResolveOrderVatMode(ByVal OrderId As Long, ByVal defaultValue As String) As String
+Private Function ResolveOrderVatModeForContext( _
+    ByVal headerId As Long, _
+    ByVal headerTableName As String, _
+    ByVal headerKeyField As String, _
+    ByVal defaultValue As String) As String
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
     Dim rsOrder As DAO.Recordset
     Dim SqlText As String
 
-    ResolveOrderVatMode = defaultValue
+    ResolveOrderVatModeForContext = defaultValue
 
-    If OrderId <= 0 Then
+    If headerId <= 0 Then
         Exit Function
     End If
 
@@ -334,11 +481,11 @@ Private Function ResolveOrderVatMode(ByVal OrderId As Long, ByVal defaultValue A
         Exit Function
     End If
 
-    SqlText = "SELECT [" & FIELD_VAT_MODE & "] FROM [" & TABLE_ORD_ORDER & "] WHERE [" & FIELD_ORDER_ID & "]=" & CStr(OrderId) & ";"
+    SqlText = "SELECT [" & FIELD_VAT_MODE & "] FROM [" & headerTableName & "] WHERE [" & headerKeyField & "]=" & CStr(headerId) & ";"
     Set rsOrder = db.OpenRecordset(SqlText, dbOpenSnapshot)
 
     If Not (rsOrder.BOF And rsOrder.EOF) Then
-        ResolveOrderVatMode = GetRecordsetStringValue(rsOrder, FIELD_VAT_MODE, defaultValue)
+        ResolveOrderVatModeForContext = GetRecordsetStringValue(rsOrder, FIELD_VAT_MODE, defaultValue)
     End If
 
 CleanExit:
@@ -349,8 +496,8 @@ CleanExit:
     Exit Function
 
 ErrorHandler:
-    ResolveOrderVatMode = defaultValue
-    modErrorHandler.HandleError MODULE_NAME, "ResolveOrderVatMode", Err
+    ResolveOrderVatModeForContext = defaultValue
+    modErrorHandler.HandleError MODULE_NAME, "ResolveOrderVatModeForContext", Err
     Resume CleanExit
 End Function
 

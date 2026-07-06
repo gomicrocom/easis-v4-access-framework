@@ -1,3 +1,3 @@
-SELECT l.order_line_id, l.order_id, l.line_no, l.article_id, l.article_no, l.line_type_code, l.description_text, l.quantity, l.unit_code, l.unit_price, l.discount_type, l.discount_value, l.line_discount_amount, l.surcharge_type, l.surcharge_value, l.line_surcharge_amount, l.vat_code, l.vat_rate, l.line_base_amount, l.line_net_amount, l.line_vat_amount, l.line_gross_amount
-FROM ord_order_line AS l
+SELECT l.order_line_id, l.order_id, o.vat_mode AS order_vat_mode, o.invoice_address_id, o.delivery_address_id, o.vat_code AS order_vat_code, o.vat_rate AS order_vat_rate, l.sort_order, l.line_no, l.article_id, l.article_no, l.line_type_code, l.description_text, l.quantity, l.unit_code, l.unit_price, l.discount_type, l.discount_value, l.line_discount_amount, l.surcharge_type, l.surcharge_value, l.line_surcharge_amount, l.vat_code, l.vat_rate, l.line_base_amount, l.line_net_amount, l.line_vat_amount, l.line_gross_amount
+FROM ord_order_line AS l LEFT JOIN ord_order AS o ON l.order_id = o.order_id
 ORDER BY l.order_id, l.line_no, l.order_line_id;

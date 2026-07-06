@@ -66,6 +66,7 @@ Public Const WCMD_LIST_REFRESH As String = "LIST_REFRESH"
 Public Const WCMD_ADDRESS_COCKPIT As String = "ADDRESS_COCKPIT"
 Public Const WCMD_NAV_HOME As String = "NAV_HOME"
 Public Const WCMD_NAV_BACK As String = "NAV_BACK"
+Public Const WCMD_DETAIL_APPLY As String = "DETAIL_APPLY"
 Public Const WCMD_DETAIL_SAVE As String = "DETAIL_SAVE"
 Public Const WCMD_DETAIL_CANCEL As String = "DETAIL_CANCEL"
 

@@ -29,9 +29,13 @@ Public Function EnsureOrderSchema() As Boolean
         Exit Function
     End If
 
+    If Not modBasicModuleSchema.EnsureSystemLanguageReferenceSchema() Then
+        Exit Function
+    End If
+
     EnsureOrderSchema = True
     modLoggingHandler.LogInfo MODULE_NAME & ".EnsureOrderSchema", _
-        "Sales-order schema and SO number range ensured successfully."
+        "Sales-order schema, SO number range, and ref_language ensured successfully."
     Exit Function
 
 ErrorHandler:

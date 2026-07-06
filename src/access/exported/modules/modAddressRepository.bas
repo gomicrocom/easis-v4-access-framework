@@ -248,3 +248,42 @@ Private Function ResolveCreatedBy() As String
         ResolveCreatedBy = "SYSTEM"
     End If
 End Function
+
+Public Function GetAddressCountryCode(ByVal addressId As Long, Optional ByVal defaultValue As String = "") As String
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+
+    GetAddressCountryCode = UCase$(Trim$(defaultValue))
+
+    If addressId <= 0 Then
+        Exit Function
+    End If
+
+    If Not CanReadAddresses() Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    Set rs = db.OpenRecordset( _
+        "SELECT [" & FIELD_COUNTRY_CODE & "] FROM [" & TABLE_ADR_ADDRESS & "] " & _
+        "WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", _
+        dbOpenSnapshot)
+
+    If Not (rs.BOF And rs.EOF) Then
+        GetAddressCountryCode = UCase$(Trim$(ResolveFieldValue(rs, FIELD_COUNTRY_CODE, GetAddressCountryCode)))
+    End If
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    GetAddressCountryCode = UCase$(Trim$(defaultValue))
+    modErrorHandler.HandleError MODULE_NAME, "GetAddressCountryCode", Err
+    Resume CleanExit
+End Function

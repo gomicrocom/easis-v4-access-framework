@@ -128,5 +128,10 @@ Private Function ShouldSkipTable(ByVal tableName As String) As Boolean
 
     If Left$(normalizedName, 4) = "TMP_" Or Left$(normalizedName, 5) = "TEMP_" Then
         ShouldSkipTable = True
+        Exit Function
+    End If
+
+    If normalizedName = "REF_LANGUAGE" Then
+        ShouldSkipTable = True
     End If
 End Function
