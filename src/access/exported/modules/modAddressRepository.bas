@@ -73,7 +73,7 @@ Public Function CreateAddress( _
     SetRecordsetValue rs, FIELD_PREFERRED_NAME, Trim$(preferredName)
     SetRecordsetValue rs, FIELD_IS_ACTIVE, True
     SetRecordsetValue rs, FIELD_CREATED_AT, Now()
-    SetRecordsetValue rs, FIELD_CREATED_BY, ResolveCreatedBy()
+    SetRecordsetValue rs, FIELD_CREATED_BY, modSessionContext.ResolveCreatedBy()
     rs.Update
 
     rs.Bookmark = rs.LastModified
@@ -155,14 +155,14 @@ Public Function GetAddressDisplayName(ByVal addressId As Long, Optional ByVal de
         Exit Function
     End If
 
-    CompanyName = ResolveFieldValue(rs, FIELD_COMPANY_NAME, vbNullString)
+    CompanyName = modDaoHelper.ResolveFieldValue(rs, FIELD_COMPANY_NAME, vbNullString)
     If LenB(Trim$(CompanyName)) > 0 Then
         GetAddressDisplayName = Trim$(CompanyName)
         GoTo CleanExit
     End If
 
-    FirstName = ResolveFieldValue(rs, FIELD_FIRST_NAME, vbNullString)
-    LastName = ResolveFieldValue(rs, FIELD_LAST_NAME, vbNullString)
+    FirstName = modDaoHelper.ResolveFieldValue(rs, FIELD_FIRST_NAME, vbNullString)
+    LastName = modDaoHelper.ResolveFieldValue(rs, FIELD_LAST_NAME, vbNullString)
     GetAddressDisplayName = Trim$(FirstName & " " & LastName)
 
     If LenB(GetAddressDisplayName) = 0 Then
@@ -233,21 +233,6 @@ Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal fieldName As Stri
     End If
 End Sub
 
-Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal defaultValue As String) As String
-    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
-        ResolveFieldValue = modDaoHelper.NzString(rs.Fields(fieldName).Value, defaultValue)
-    Else
-        ResolveFieldValue = defaultValue
-    End If
-End Function
-
-Private Function ResolveCreatedBy() As String
-    If IsSessionInitialized() Then
-        ResolveCreatedBy = currentUserId
-    Else
-        ResolveCreatedBy = "SYSTEM"
-    End If
-End Function
 
 Public Function GetAddressCountryCode(ByVal addressId As Long, Optional ByVal defaultValue As String = "") As String
     On Error GoTo ErrorHandler
@@ -272,7 +257,7 @@ Public Function GetAddressCountryCode(ByVal addressId As Long, Optional ByVal de
         dbOpenSnapshot)
 
     If Not (rs.BOF And rs.EOF) Then
-        GetAddressCountryCode = UCase$(Trim$(ResolveFieldValue(rs, FIELD_COUNTRY_CODE, GetAddressCountryCode)))
+        GetAddressCountryCode = UCase$(Trim$(modDaoHelper.ResolveFieldValue(rs, FIELD_COUNTRY_CODE, GetAddressCountryCode)))
     End If
 
 CleanExit:

@@ -128,6 +128,14 @@ Public Property Get SessionStartedAt() As Date
     SessionStartedAt = mSessionStartedAt
 End Property
 
+Public Function ResolveCreatedBy() As String
+    If IsSessionInitialized() Then
+        ResolveCreatedBy = currentUserId
+    Else
+        ResolveCreatedBy = "SYSTEM"
+    End If
+End Function
+
 Private Sub InitializeCurrentRoles(ByVal RoleList As String)
     On Error GoTo ErrorHandler
 

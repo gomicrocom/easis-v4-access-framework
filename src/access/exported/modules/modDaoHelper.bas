@@ -88,3 +88,14 @@ ErrorHandler:
     RecordsetHasField = False
     modErrorHandler.HandleError MODULE_NAME, "RecordsetHasField", Err
 End Function
+
+Public Function ResolveFieldValue( _
+    ByVal rs As DAO.Recordset, _
+    ByVal fieldName As String, _
+    ByVal defaultValue As String) As String
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        ResolveFieldValue = modDaoHelper.NzString(rs.Fields(fieldName).Value, defaultValue)
+    Else
+        ResolveFieldValue = defaultValue
+    End If
+End Function

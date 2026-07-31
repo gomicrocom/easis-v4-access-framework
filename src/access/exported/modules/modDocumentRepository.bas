@@ -111,7 +111,7 @@ Public Function CreateDocumentHeader( _
     SetRecordsetValue rs, FIELD_TOTAL_GROSS, totalGross
     SetRecordsetValue rs, FIELD_REMARKS, Trim$(remarks)
     SetRecordsetValue rs, FIELD_CREATED_AT, Now()
-    SetRecordsetValue rs, FIELD_CREATED_BY, ResolveCreatedBy()
+    SetRecordsetValue rs, FIELD_CREATED_BY, modSessionContext.ResolveCreatedBy()
     rs.Update
 
     rs.Bookmark = rs.LastModified
@@ -683,13 +683,6 @@ Private Function ResolveCurrencyCode() As String
     ResolveCurrencyCode = modTenantRepository.GetTenantParameter("CURRENCY_CODE", "CHF")
 End Function
 
-Private Function ResolveCreatedBy() As String
-    If IsSessionInitialized() Then
-        ResolveCreatedBy = currentUserId
-    Else
-        ResolveCreatedBy = "SYSTEM"
-    End If
-End Function
 
 Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal fieldName As String, ByVal defaultValue As String) As String
     On Error GoTo ErrorHandler

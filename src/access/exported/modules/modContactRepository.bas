@@ -51,7 +51,7 @@ Public Function CreateContact( _
     SetRecordsetValue rs, FIELD_IS_PRIMARY, IsPrimary
     SetRecordsetValue rs, FIELD_REMARKS, Trim$(remarks)
     SetRecordsetValue rs, FIELD_CREATED_AT, Now()
-    SetRecordsetValue rs, FIELD_CREATED_BY, ResolveCreatedBy()
+    SetRecordsetValue rs, FIELD_CREATED_BY, modSessionContext.ResolveCreatedBy()
     rs.Update
 
     rs.Bookmark = rs.LastModified
@@ -102,10 +102,10 @@ Public Function GetPrimaryContactValue(ByVal addressId As Long, ByVal contactTyp
 
     rs.MoveFirst
     Do Until rs.EOF
-        If UCase$(Trim$(ResolveFieldValue(rs, FIELD_CONTACT_TYPE_CODE, vbNullString))) = targetType Then
+        If UCase$(Trim$(modDaoHelper.ResolveFieldValue(rs, FIELD_CONTACT_TYPE_CODE, vbNullString))) = targetType Then
             If modDaoHelper.RecordsetHasField(rs, FIELD_IS_PRIMARY) Then
                 If modDaoHelper.NzBoolean(rs.Fields(FIELD_IS_PRIMARY).Value, False) Then
-                    GetPrimaryContactValue = ResolveFieldValue(rs, FIELD_CONTACT_VALUE, defaultValue)
+                    GetPrimaryContactValue = modDaoHelper.ResolveFieldValue(rs, FIELD_CONTACT_VALUE, defaultValue)
                     Exit Do
                 End If
             End If
@@ -208,19 +208,3 @@ Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal fieldName As Stri
         rs.Fields(fieldName).Value = fieldValue
     End If
 End Sub
-
-Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal defaultValue As String) As String
-    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
-        ResolveFieldValue = modDaoHelper.NzString(rs.Fields(fieldName).Value, defaultValue)
-    Else
-        ResolveFieldValue = defaultValue
-    End If
-End Function
-
-Private Function ResolveCreatedBy() As String
-    If IsSessionInitialized() Then
-        ResolveCreatedBy = currentUserId
-    Else
-        ResolveCreatedBy = "SYSTEM"
-    End If
-End Function
