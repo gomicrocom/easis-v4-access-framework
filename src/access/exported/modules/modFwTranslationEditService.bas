@@ -1,4 +1,4 @@
-Attribute VB_Name = "modFwTranslationEditService"
+﻿Attribute VB_Name = "modFwTranslationEditService"
 Option Compare Database
 Option Explicit
 
@@ -31,9 +31,9 @@ Private Const FIELD_SOURCE_OBJECT As String = "source_object"
 Private Const FIELD_SOURCE_CONTROL As String = "source_control"
 Private Const FIELD_FALLBACK_TEXT As String = "fallback_text"
 
-Private Const LANGUAGE_DE_CH As String = "DE-CH"
-Private Const LANGUAGE_EN_US As String = "EN-US"
-Private Const LANGUAGE_FR_FR As String = "FR-FR"
+Private Const LANGUAGE_DE_CH As String = "de-CH"
+Private Const LANGUAGE_EN_US As String = "en-US"
+Private Const LANGUAGE_FR_CH As String = "fr-CH"
 
 Public Sub LoadTranslationEditContext(ByVal targetForm As Access.Form, ByVal translationKey As String)
     On Error GoTo ErrorHandler
@@ -70,7 +70,7 @@ Public Sub LoadTranslationEditContext(ByVal targetForm As Access.Form, ByVal tra
     SetControlValueIfPresent targetForm, "txtFallbackText", ResolveMetadataValue(metadataText, FIELD_FALLBACK_TEXT)
     SetControlValueIfPresent targetForm, "txtTranslationDeCh", LookupTranslationValue(db, translationKey, LANGUAGE_DE_CH)
     SetControlValueIfPresent targetForm, "txtTranslationEnUs", LookupTranslationValue(db, translationKey, LANGUAGE_EN_US)
-    SetControlValueIfPresent targetForm, "txtTranslationFrFr", LookupTranslationValue(db, translationKey, LANGUAGE_FR_FR)
+    SetControlValueIfPresent targetForm, "txtTranslationFrFr", LookupTranslationValue(db, translationKey, LANGUAGE_FR_CH)
 
     modLoggingHandler.LogInfo MODULE_NAME & ".LoadTranslationEditContext", _
         "Loaded translation edit context for key '" & translationKey & "'."
@@ -136,7 +136,7 @@ Public Sub SaveTranslationValues(ByVal targetForm As Access.Form, ByVal translat
 
     SaveSingleTranslationValue db, translationKey, LANGUAGE_DE_CH, GetControlText(targetForm, "txtTranslationDeCh"), scopeCode
     SaveSingleTranslationValue db, translationKey, LANGUAGE_EN_US, GetControlText(targetForm, "txtTranslationEnUs"), scopeCode
-    SaveSingleTranslationValue db, translationKey, LANGUAGE_FR_FR, GetControlText(targetForm, "txtTranslationFrFr"), scopeCode
+    SaveSingleTranslationValue db, translationKey, LANGUAGE_FR_CH, GetControlText(targetForm, "txtTranslationFrFr"), scopeCode
 
     modLoggingHandler.LogInfo MODULE_NAME & ".SaveTranslationValues", _
         "Saved translation values for key '" & translationKey & "'."
@@ -165,7 +165,7 @@ Public Function ResolveAuditMetadata(ByVal translationKey As String) As String
     metadataText = AddMetadataPair(metadataText, FIELD_SCOPE_CODE, scopeCode)
 
     Set db = currentDb
-    If Not TableExists(db, TABLE_AUDIT) Then
+    If Not modDbSchema.TableExists(db, TABLE_AUDIT) Then
         ResolveAuditMetadata = metadataText
         Exit Function
     End If
@@ -341,7 +341,7 @@ ErrorHandler:
 End Function
 
 Private Function RequiredLanguageCodes() As Variant
-    RequiredLanguageCodes = Array(LANGUAGE_DE_CH, LANGUAGE_EN_US, LANGUAGE_FR_FR)
+    RequiredLanguageCodes = Array(LANGUAGE_DE_CH, LANGUAGE_EN_US, LANGUAGE_FR_CH)
 End Function
 
 Private Function ResolveScopeFromTranslationKey(ByVal translationKey As String) As String
@@ -454,18 +454,6 @@ Private Function HasControl(ByVal targetForm As Access.Form, ByVal ControlName A
 SafeExit:
 End Function
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
-    On Error GoTo SafeExit
 
-    Dim tableDefinition As DAO.tableDef
 
-    For Each tableDefinition In db.TableDefs
-        If StrComp(tableDefinition.Name, tableName, vbTextCompare) = 0 Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tableDefinition
 
-SafeExit:
-    Set tableDefinition = Nothing
-End Function

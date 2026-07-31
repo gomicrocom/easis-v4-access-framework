@@ -118,45 +118,23 @@ ErrorHandler:
 End Function
 
 Private Function CanReadUsers() As Boolean
+    Dim db As DAO.Database
+
     If Not modDb.ValidateBackendConfiguration() Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CanReadUsers", _
             "Backend configuration is not ready for user lookup."
         Exit Function
     End If
 
-    If Not TableExists(TABLE_USR_USER) Then
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_USR_USER) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CanReadUsers", _
             "Table '" & TABLE_USR_USER & "' is not available yet for tenant '" & ResolveTenantCode() & "'."
         Exit Function
     End If
 
     CanReadUsers = True
-End Function
-
-Private Function TableExists(ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim db As DAO.Database
-    Dim tdf As DAO.tableDef
-
-    Set db = modDb.GetCurrentDatabase()
-
-    For Each tdf In db.TableDefs
-        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
-            TableExists = True
-            Exit For
-        End If
-    Next tdf
-
-CleanExit:
-    Set tdf = Nothing
-    Set db = Nothing
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-    modErrorHandler.HandleError MODULE_NAME, "TableExists", Err
-    Resume CleanExit
 End Function
 
 Private Function ResolveTenantCode() As String

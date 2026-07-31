@@ -473,11 +473,10 @@ Private Sub PopulateLanguageCombo()
     Me!cboLanguageCode.RowSourceType = "Value List"
     Me!cboLanguageCode.rowSource = BuildValueList( _
         LANGUAGE_ALL, modFwTranslationRuntime.ResolveText("COMMON.ALL", "Alle"), _
-        "DE-CH", "DE-CH", _
-        "EN-US", "EN-US", _
-        "FR-FR", "FR-FR", _
-        "DE", "DE", _
-        "EN", "EN")
+        "de-CH", "de-CH", _
+        "en-US", "en-US", _
+        "fr-CH", "fr-CH", _
+        "it-CH", "it-CH")
     Me!cboLanguageCode.BoundColumn = 1
     Me!cboLanguageCode.columnCount = 2
     Me!cboLanguageCode.columnWidths = "0cm;3cm"

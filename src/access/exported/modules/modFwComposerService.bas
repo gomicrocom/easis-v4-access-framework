@@ -1,4 +1,4 @@
-Attribute VB_Name = "modFwComposerService"
+﻿Attribute VB_Name = "modFwComposerService"
 Option Compare Database
 Option Explicit
 
@@ -318,13 +318,13 @@ Public Function EnsureTranslationPlaceholders(ByVal translationKey As String) As
     End If
 
     Set db = currentDb
-    If Not TableExists(db, TRANSLATION_TABLE_NAME) Then
+    If Not modDbSchema.TableExists(db, TRANSLATION_TABLE_NAME) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".EnsureTranslationPlaceholders", _
             "Translation table not found: " & TRANSLATION_TABLE_NAME & "."
         Exit Function
     End If
 
-    languageCodes = Array("DE-CH", "FR-FR", "EN-US")
+    languageCodes = Array("de-CH", "fr-CH", "en-US")
 
     For Each languageCode In languageCodes
         If EnsureTranslationPlaceholderRow(db, translationKey, CStr(languageCode)) Then
@@ -358,7 +358,7 @@ Public Function ValidateTranslationsReady( _
 
     Set db = currentDb
 
-    If Not TableExists(db, TRANSLATION_TABLE_NAME) Then
+    If Not modDbSchema.TableExists(db, TRANSLATION_TABLE_NAME) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".ValidateTranslationsReady", _
             "Translation table not found: " & TRANSLATION_TABLE_NAME & "."
         Exit Function
@@ -1367,24 +1367,6 @@ Private Function BuildValidationScopeDescription( _
     End If
 End Function
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
 
-    Dim tdf As DAO.tableDef
 
-    If db Is Nothing Then
-        Exit Function
-    End If
 
-    For Each tdf In db.TableDefs
-        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tdf
-
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-End Function

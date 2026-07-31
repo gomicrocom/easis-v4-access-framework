@@ -119,44 +119,23 @@ ErrorHandler:
 End Function
 
 Private Function CanReadNumberRanges() As Boolean
+    Dim db As DAO.Database
+
     If Not modDb.ValidateBackendConfiguration() Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CanReadNumberRanges", _
             "Backend configuration is not ready for number range lookup."
         Exit Function
     End If
 
-    If Not TableExists(TABLE_TEN_NUMBERRANGE) Then
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_TEN_NUMBERRANGE) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CanReadNumberRanges", _
             "Table '" & TABLE_TEN_NUMBERRANGE & "' is not available yet."
         Exit Function
     End If
 
     CanReadNumberRanges = True
-End Function
-
-Private Function TableExists(ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim db As DAO.Database
-    Dim tdf As DAO.tableDef
-
-    Set db = modDb.GetCurrentDatabase()
-    For Each tdf In db.TableDefs
-        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
-            TableExists = True
-            Exit For
-        End If
-    Next tdf
-
-CleanExit:
-    Set tdf = Nothing
-    Set db = Nothing
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-    modErrorHandler.HandleError MODULE_NAME, "TableExists", Err
-    Resume CleanExit
 End Function
 
 Private Function FindNumberRangeRow(ByVal rs As DAO.Recordset, ByVal DocumentTypeCode As String, ByVal FiscalYear As Long) As Boolean

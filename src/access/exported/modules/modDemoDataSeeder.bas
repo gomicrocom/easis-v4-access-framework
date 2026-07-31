@@ -1,4 +1,4 @@
-Attribute VB_Name = "modDemoDataSeeder"
+﻿Attribute VB_Name = "modDemoDataSeeder"
 Option Compare Database
 Option Explicit
 
@@ -205,7 +205,7 @@ Public Sub SeedArticles()
 
     Set db = currentDb
 
-    If Not TableExists(db, TBL_ART_PRODUCT_GROUP) Then
+    If Not modDbSchema.TableExists(db, TBL_ART_PRODUCT_GROUP) Then
         SeedProductGroups
     ElseIf DCount("*", TBL_ART_PRODUCT_GROUP) = 0 Then
         SeedProductGroups
@@ -307,7 +307,7 @@ Public Sub SeedDemoSalesOrder()
             ValidUntil:=DateSerial(2026, 6, 30), _
             ReferenceText:="Smoke-Test Sales Order", _
             ExternalReference:=DEMO_EXTERNAL_REFERENCE, _
-            languageCode:="DE-CH", _
+            languageCode:="de-CH", _
             CurrencyCode:="CHF", _
             PaymentTermCode:="NET_30", _
             VatMode:="EXCLUSIVE", _
@@ -395,7 +395,7 @@ Private Sub ValidateRequiredSchema(ByVal db As DAO.Database)
 End Sub
 
 Private Sub EnsureTenantParameters(ByVal db As DAO.Database, ByVal TenantCode As String)
-    If Not TableExists(db, TBL_TEN_PARAMETER) Then Exit Sub
+    If Not modDbSchema.TableExists(db, TBL_TEN_PARAMETER) Then Exit Sub
 
     EnsureTenantParameter db, TenantCode, "TENANT_CODE", TenantCode
     EnsureTenantParameter db, TenantCode, "TENANT_NAME", "Easis Demo Schweiz AG"
@@ -416,12 +416,12 @@ Private Sub EnsureAddresses(ByVal db As DAO.Database)
     mAddressBillingCh = EnsureAddress(db, "BILLING", "Muster Handel AG", "Anna", "Keller", "Industriestrasse", "15", "6300", "Zug", "CH", "de-CH")
     mAddressShippingCh = EnsureAddress(db, "SHIPPING", "Muster Handel AG - Lager Genf", "Marc", "Dubois", "Route de Meyrin", "88", "1203", DemoCityGeneva(), "CH", "fr-CH")
     mAddressBillingDe = EnsureAddress(db, "BILLING", "Beispiel GmbH", "Thomas", "Schneider", "Hauptstrasse", "22", "80331", DemoCityMunich(), "DE", "de-DE")
-    mAddressShippingFr = EnsureAddress(db, "SHIPPING", "Beispiel GmbH - Site Paris", "Claire", "Martin", "Rue Lafayette", "12", "75009", "Paris", "FR", "fr-FR")
+    mAddressShippingFr = EnsureAddress(db, "SHIPPING", "Beispiel GmbH - Site Paris", "Claire", "Martin", "Rue Lafayette", "12", "75009", "Paris", "FR", "fr-CH")
     mAddressBillingUs = EnsureAddress(db, "BILLING", "Global Components Inc.", "John", "Miller", "Market Street", "500", "94105", "San Francisco", "US", "en-US")
 End Sub
 
 Private Sub EnsureContacts(ByVal db As DAO.Database)
-    If Not TableExists(db, TBL_ADR_CONTACT) Then Exit Sub
+    If Not modDbSchema.TableExists(db, TBL_ADR_CONTACT) Then Exit Sub
 
     EnsureContact db, mAddressBillingCh, "EMAIL", "buchhaltung@muster-handel.ch", True, "Demo billing contact"
     EnsureContact db, mAddressShippingCh, "EMAIL", "lager@muster-handel.ch", True, "Demo shipping contact"
@@ -851,10 +851,10 @@ Private Sub EnsureTenantParameter(ByVal db As DAO.Database, ByVal TenantCode As 
     Dim hasTenantCodeField As Boolean
     Dim wasUpdated As Boolean
 
-    If Not FieldExists(db, TBL_TEN_PARAMETER, "param_key") Then Exit Sub
-    If Not FieldExists(db, TBL_TEN_PARAMETER, "param_value") Then Exit Sub
+    If Not modDbSchema.FieldExists(db, TBL_TEN_PARAMETER, "param_key") Then Exit Sub
+    If Not modDbSchema.FieldExists(db, TBL_TEN_PARAMETER, "param_value") Then Exit Sub
 
-    hasTenantCodeField = FieldExists(db, TBL_TEN_PARAMETER, "tenant_code")
+    hasTenantCodeField = modDbSchema.FieldExists(db, TBL_TEN_PARAMETER, "tenant_code")
 
     sql = "SELECT * FROM [" & TBL_TEN_PARAMETER & "] WHERE [param_key]=" & SqlText(UCase$(Trim$(ParamKey)))
     If hasTenantCodeField Then
@@ -1176,7 +1176,7 @@ Private Sub DeleteDocumentWithPositions(ByVal db As DAO.Database, ByVal Document
 End Sub
 
 Private Sub DeleteContactByAddressAndValue(ByVal db As DAO.Database, ByVal addressId As Long, ByVal contactTypeCode As String, ByVal ContactValue As String)
-    If Not TableExists(db, TBL_ADR_CONTACT) Then Exit Sub
+    If Not modDbSchema.TableExists(db, TBL_ADR_CONTACT) Then Exit Sub
     If addressId <= 0 Then Exit Sub
     mDeletedCount = mDeletedCount + ExecuteDelete( _
         db, _
@@ -1255,46 +1255,18 @@ ErrorHandler:
 End Function
 
 Private Sub RequireTable(ByVal db As DAO.Database, ByVal tableName As String)
-    If Not TableExists(db, tableName) Then
+    If Not modDbSchema.TableExists(db, tableName) Then
         Err.Raise vbObjectError + 701, MODULE_NAME, "Required table missing: " & tableName
     End If
 End Sub
 
 Private Sub RequireField(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String)
-    If Not FieldExists(db, tableName, fieldName) Then
+    If Not modDbSchema.FieldExists(db, tableName, fieldName) Then
         Err.Raise vbObjectError + 702, MODULE_NAME, "Required field missing: " & tableName & "." & fieldName
     End If
 End Sub
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
 
-    Dim tdf As DAO.tableDef
-
-    For Each tdf In db.TableDefs
-        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tdf
-
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-End Function
-
-Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim tmp As String
-    tmp = db.TableDefs(tableName).Fields(fieldName).Name
-    FieldExists = True
-    Exit Function
-
-ErrorHandler:
-    FieldExists = False
-End Function
 
 Private Sub ExecSql(ByVal db As DAO.Database, ByVal sql As String)
     Debug.Print sql
@@ -1428,7 +1400,7 @@ Private Function ResolveOrderIdByExternalReference(ByVal db As DAO.Database, ByV
 End Function
 
 Private Function ResolveArticleIdByNo(ByVal db As DAO.Database, ByVal ArticleNo As String) As Long
-    If Not TableExists(db, TBL_ART_ARTICLE) Then Exit Function
+    If Not modDbSchema.TableExists(db, TBL_ART_ARTICLE) Then Exit Function
 
     ResolveArticleIdByNo = LookupLongValue( _
         db, _
@@ -1497,3 +1469,6 @@ Private Sub UpdateOrderStatusCode(ByVal db As DAO.Database, ByVal OrderId As Lon
         ", [updated_at]=Now(), [updated_by]=" & SqlText(created_by) & _
         " WHERE [order_id]=" & CStr(OrderId) & ";"
 End Sub
+
+
+

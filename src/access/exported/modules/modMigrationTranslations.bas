@@ -1,4 +1,4 @@
-Attribute VB_Name = "modMigrationTranslations"
+﻿Attribute VB_Name = "modMigrationTranslations"
 Option Compare Database
 Option Explicit
 
@@ -34,22 +34,22 @@ Public Sub ApplyTranslationSeed()
 
     Set db = currentDb
 
-    If Not TableExists(db, TABLE_FW_TRANSLATIONS) Then
+    If Not modDbSchema.TableExists(db, TABLE_FW_TRANSLATIONS) Then
         Err.Raise vbObjectError + 3100, MODULE_NAME, _
             "Required table not found: " & TABLE_FW_TRANSLATIONS
     End If
 
-    If Not FieldExists(db, TABLE_FW_TRANSLATIONS, FIELD_TRANSLATION_KEY) Then
+    If Not modDbSchema.FieldExists(db, TABLE_FW_TRANSLATIONS, FIELD_TRANSLATION_KEY) Then
         Err.Raise vbObjectError + 3101, MODULE_NAME, _
             "Required field missing: " & TABLE_FW_TRANSLATIONS & "." & FIELD_TRANSLATION_KEY
     End If
 
-    If Not FieldExists(db, TABLE_FW_TRANSLATIONS, FIELD_LANGUAGE_CODE) Then
+    If Not modDbSchema.FieldExists(db, TABLE_FW_TRANSLATIONS, FIELD_LANGUAGE_CODE) Then
         Err.Raise vbObjectError + 3102, MODULE_NAME, _
             "Required field missing: " & TABLE_FW_TRANSLATIONS & "." & FIELD_LANGUAGE_CODE
     End If
 
-    If Not FieldExists(db, TABLE_FW_TRANSLATIONS, FIELD_TRANSLATION_VALUE) Then
+    If Not modDbSchema.FieldExists(db, TABLE_FW_TRANSLATIONS, FIELD_TRANSLATION_VALUE) Then
         Err.Raise vbObjectError + 3103, MODULE_NAME, _
             "Required field missing: " & TABLE_FW_TRANSLATIONS & "." & FIELD_TRANSLATION_VALUE
     End If
@@ -263,59 +263,12 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
 
-    Dim tdf As DAO.tableDef
-
-    If db Is Nothing Then
-        Exit Function
-    End If
-
-    For Each tdf In db.TableDefs
-        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tdf
-
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-End Function
-
-Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim tdf As DAO.tableDef
-    Dim fld As DAO.Field
-
-    If db Is Nothing Then
-        Exit Function
-    End If
-
-    If Not TableExists(db, tableName) Then
-        Exit Function
-    End If
-
-    Set tdf = db.TableDefs(tableName)
-
-    For Each fld In tdf.Fields
-        If StrComp(fld.Name, fieldName, vbTextCompare) = 0 Then
-            FieldExists = True
-            Exit Function
-        End If
-    Next fld
-
-    Exit Function
-
-ErrorHandler:
-    FieldExists = False
-End Function
 
 Private Sub SetFieldIfExists(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal Value As Variant)
     If modDaoHelper.RecordsetHasField(rs, fieldName) Then
         rs.Fields(fieldName).Value = Value
     End If
 End Sub
+
+

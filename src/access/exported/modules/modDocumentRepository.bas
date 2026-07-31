@@ -78,7 +78,9 @@ Public Function CreateDocumentHeader( _
         Exit Function
     End If
 
-    If Not TableExists(TABLE_DOC_DOCUMENT) Then
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CreateDocumentHeader", _
             "Table '" & TABLE_DOC_DOCUMENT & "' is not available yet."
         Exit Function
@@ -93,7 +95,6 @@ Public Function CreateDocumentHeader( _
         End If
     End If
 
-    Set db = modDb.GetCurrentDatabase()
     Set rs = db.OpenRecordset(TABLE_DOC_DOCUMENT, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
@@ -154,13 +155,14 @@ Public Function DeleteDocumentPositions(ByVal DocumentId As Long) As Boolean
         Exit Function
     End If
 
-    If Not TableExists(TABLE_DOC_DOCUMENT_POSITION) Then
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT_POSITION) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".DeleteDocumentPositions", _
             "Table '" & TABLE_DOC_DOCUMENT_POSITION & "' is not available yet."
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
     SqlText = "DELETE FROM [" & TABLE_DOC_DOCUMENT_POSITION & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
     db.Execute SqlText, dbFailOnError
 
@@ -212,7 +214,9 @@ Public Function CreateDocumentPosition( _
         Exit Function
     End If
 
-    If Not TableExists(TABLE_DOC_DOCUMENT_POSITION) Then
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT_POSITION) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CreateDocumentPosition", _
             "Table '" & TABLE_DOC_DOCUMENT_POSITION & "' is not available yet."
         Exit Function
@@ -234,7 +238,6 @@ Public Function CreateDocumentPosition( _
     lineVat = modDocumentService.CalculateDocumentLineVat(quantity, UnitPrice, effectiveVatRate, effectiveVatMode)
     lineGross = modDocumentService.CalculateDocumentLineGross(quantity, UnitPrice, effectiveVatRate, effectiveVatMode)
 
-    Set db = modDb.GetCurrentDatabase()
     Set rs = db.OpenRecordset(TABLE_DOC_DOCUMENT_POSITION, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
@@ -292,13 +295,13 @@ Public Function UpdateDocumentTotals(ByVal DocumentId As Long) As Boolean
         Exit Function
     End If
 
-    If Not TableExists(TABLE_DOC_DOCUMENT) Or Not TableExists(TABLE_DOC_DOCUMENT_POSITION) Then
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Or Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT_POSITION) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".UpdateDocumentTotals", _
             "Document total update skipped because required document tables are not available yet."
         Exit Function
     End If
-
-    Set db = modDb.GetCurrentDatabase()
 
     SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
     Set rsHeader = db.OpenRecordset(SqlText, dbOpenDynaset)
@@ -382,13 +385,14 @@ Public Function DocumentExists(ByVal DocumentId As Long) As Boolean
         Exit Function
     End If
 
-    If Not TableExists(TABLE_DOC_DOCUMENT) Then
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".DocumentExists", _
             "Table '" & TABLE_DOC_DOCUMENT & "' is not available yet."
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
     SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
     Set rsHeader = db.OpenRecordset(SqlText, dbOpenSnapshot)
 
@@ -491,13 +495,14 @@ Public Function AssignDocumentNumber(ByVal DocumentId As Long) As Boolean
         Exit Function
     End If
 
-    If Not TableExists(TABLE_DOC_DOCUMENT) Then
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".AssignDocumentNumber", _
             "Table '" & TABLE_DOC_DOCUMENT & "' is not available yet."
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
     SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
     Set rsHeader = db.OpenRecordset(SqlText, dbOpenDynaset)
 
@@ -571,13 +576,14 @@ Public Function SetDocumentStatus(ByVal DocumentId As Long, ByVal StatusCode As 
         Exit Function
     End If
 
-    If Not TableExists(TABLE_DOC_DOCUMENT) Then
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".SetDocumentStatus", _
             "Table '" & TABLE_DOC_DOCUMENT & "' is not available yet."
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
     SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
     Set rsHeader = db.OpenRecordset(SqlText, dbOpenDynaset)
 
@@ -619,13 +625,14 @@ Public Function CountDocumentPositions(ByVal DocumentId As Long) As Long
         Exit Function
     End If
 
-    If Not TableExists(TABLE_DOC_DOCUMENT_POSITION) Then
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT_POSITION) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CountDocumentPositions", _
             "Table '" & TABLE_DOC_DOCUMENT_POSITION & "' is not available yet."
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
     SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT_POSITION & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
     Set rsPositions = db.OpenRecordset(SqlText, dbOpenSnapshot)
 
@@ -647,32 +654,6 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
-Private Function TableExists(ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim db As DAO.Database
-    Dim tdf As DAO.tableDef
-
-    Set db = modDb.GetCurrentDatabase()
-
-    For Each tdf In db.TableDefs
-        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
-            TableExists = True
-            Exit For
-        End If
-    Next tdf
-
-CleanExit:
-    Set tdf = Nothing
-    Set db = Nothing
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-    modErrorHandler.HandleError MODULE_NAME, "TableExists", Err
-    Resume CleanExit
-End Function
-
 Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal fieldValue As Variant)
     If modDaoHelper.RecordsetHasField(rs, fieldName) Then
         rs.Fields(fieldName).Value = fieldValue
@@ -682,7 +663,6 @@ End Sub
 Private Function ResolveCurrencyCode() As String
     ResolveCurrencyCode = modTenantRepository.GetTenantParameter("CURRENCY_CODE", "CHF")
 End Function
-
 
 Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal fieldName As String, ByVal defaultValue As String) As String
     On Error GoTo ErrorHandler
@@ -701,11 +681,12 @@ Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal field
         Exit Function
     End If
 
-    If Not TableExists(TABLE_DOC_DOCUMENT) Then
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
     SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
     Set rsHeader = db.OpenRecordset(SqlText, dbOpenSnapshot)
 
@@ -747,11 +728,12 @@ Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal fieldN
         Exit Function
     End If
 
-    If Not TableExists(TABLE_DOC_DOCUMENT) Then
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
     SqlText = "SELECT * FROM [" & TABLE_DOC_DOCUMENT & "] WHERE [" & FIELD_DOCUMENT_ID & "]=" & CStr(DocumentId) & ";"
     Set rsHeader = db.OpenRecordset(SqlText, dbOpenSnapshot)
 

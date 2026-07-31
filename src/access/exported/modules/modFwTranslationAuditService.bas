@@ -1,4 +1,4 @@
-Attribute VB_Name = "modFwTranslationAuditService"
+﻿Attribute VB_Name = "modFwTranslationAuditService"
 Option Compare Database
 Option Explicit
 
@@ -68,7 +68,7 @@ Public Sub EnsureTranslationAuditTable()
     Dim db As DAO.Database
     Set db = currentDb
 
-    If TableExists(db, TABLE_AUDIT) Then
+    If modDbSchema.TableExists(db, TABLE_AUDIT) Then
         Exit Sub
     End If
 
@@ -102,7 +102,7 @@ Public Sub EnsureTranslationExpectedTable()
     Dim db As DAO.Database
     Set db = currentDb
 
-    If TableExists(db, TABLE_EXPECTED) Then
+    If modDbSchema.TableExists(db, TABLE_EXPECTED) Then
         Exit Sub
     End If
 
@@ -222,7 +222,7 @@ Public Function GetTranslationCoverageSummary() As String
     Dim summaryText As String
 
     Set db = currentDb
-    If Not TableExists(db, TABLE_AUDIT) Then
+    If Not modDbSchema.TableExists(db, TABLE_AUDIT) Then
         Exit Function
     End If
 
@@ -320,7 +320,7 @@ Private Function CollectRegistryExpectedKeys(ByVal db As DAO.Database, ByRef exp
     Dim sourceObject As String
     Dim fallbackText As String
 
-    If Not TableExists(db, TABLE_EXPECTED) Then
+    If Not modDbSchema.TableExists(db, TABLE_EXPECTED) Then
         Exit Function
     End If
 
@@ -368,7 +368,7 @@ Private Function CollectNavigationExpectedKeys(ByVal db As DAO.Database, ByRef e
     Dim fallbackText As String
     Dim sourceObject As String
 
-    If Not TableExists(db, TABLE_NAVIGATION) Then
+    If Not modDbSchema.TableExists(db, TABLE_NAVIGATION) Then
         Exit Function
     End If
 
@@ -420,7 +420,7 @@ Private Function CollectReferenceExpectedKeys( _
     Dim fallbackText As String
     Dim readableFieldName As String
 
-    If Not TableExists(db, tableName) Then
+    If Not modDbSchema.TableExists(db, tableName) Then
         Exit Function
     End If
 
@@ -497,7 +497,7 @@ Private Function AppendOrphanAuditRows(ByVal db As DAO.Database, ByRef expectedK
     Dim TranslationValue As Variant
     Dim sourceObject As String
 
-    If Not TableExists(db, TABLE_TRANSLATION) Then
+    If Not modDbSchema.TableExists(db, TABLE_TRANSLATION) Then
         Exit Function
     End If
 
@@ -551,7 +551,7 @@ Private Sub EnsureRegistryExpectedKeysFromActiveTranslations()
     EnsureTranslationExpectedTable
 
     Set db = currentDb
-    If Not TableExists(db, TABLE_TRANSLATION) Then
+    If Not modDbSchema.TableExists(db, TABLE_TRANSLATION) Then
         Exit Sub
     End If
 
@@ -635,7 +635,7 @@ Private Function TryGetTranslationValue( _
     Dim rs As DAO.Recordset
     Dim sqlStatement As String
 
-    If Not TableExists(db, TABLE_TRANSLATION) Then
+    If Not modDbSchema.TableExists(db, TABLE_TRANSLATION) Then
         Exit Function
     End If
 
@@ -664,7 +664,7 @@ End Function
 Private Function TranslationRowExists(ByVal db As DAO.Database, ByVal translationKey As String, ByVal languageCode As String) As Boolean
     On Error GoTo ErrorHandler
 
-    If Not TableExists(db, TABLE_TRANSLATION) Then
+    If Not modDbSchema.TableExists(db, TABLE_TRANSLATION) Then
         Exit Function
     End If
 
@@ -800,7 +800,7 @@ Private Function NormalizeExpectedKey(ByVal translationKey As String) As String
 End Function
 
 Private Function RequiredLanguages() As Variant
-    RequiredLanguages = Array("DE-CH", "EN-US", "FR-FR")
+    RequiredLanguages = modFwTranslationRuntime.GetSupportedTranslationLanguages()
 End Function
 
 Private Function ResolveScopeCodeFromKey(ByVal translationKey As String) As String
@@ -928,22 +928,6 @@ Private Function SqlLongText(ByVal fieldValue As Variant) As String
     End If
 End Function
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim tableDefinition As DAO.tableDef
-
-    For Each tableDefinition In db.TableDefs
-        If StrComp(tableDefinition.Name, tableName, vbTextCompare) = 0 Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tableDefinition
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-End Function
 
 Private Function OpenFormHiddenDesignIfNeeded(ByVal FormName As String, Optional ByVal wasAlreadyOpen As Boolean = False) As Boolean
     On Error GoTo ErrorHandler
@@ -1114,3 +1098,6 @@ SafeExit:
         GetControlFallbackText = defaultValue
     End If
 End Function
+
+
+

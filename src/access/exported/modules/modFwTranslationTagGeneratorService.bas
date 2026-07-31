@@ -1,4 +1,4 @@
-Attribute VB_Name = "modFwTranslationTagGeneratorService"
+﻿Attribute VB_Name = "modFwTranslationTagGeneratorService"
 Option Compare Database
 Option Explicit
 
@@ -40,7 +40,7 @@ Public Sub EnsureTranslationTagGeneratorTable()
     Dim db As DAO.Database
     Set db = currentDb
 
-    If TableExists(db, TABLE_TAG_GENERATOR) Then
+    If modDbSchema.TableExists(db, TABLE_TAG_GENERATOR) Then
         Exit Sub
     End If
 
@@ -400,7 +400,7 @@ Public Function HasPendingChanges(ByVal sessionId As String) As Boolean
     End If
 
     Set db = currentDb
-    If Not TableExists(db, TABLE_TAG_GENERATOR) Then
+    If Not modDbSchema.TableExists(db, TABLE_TAG_GENERATOR) Then
         Exit Function
     End If
 
@@ -426,7 +426,7 @@ Public Sub ClearSession(ByVal sessionId As String)
     End If
 
     Set db = currentDb
-    If Not TableExists(db, TABLE_TAG_GENERATOR) Then
+    If Not modDbSchema.TableExists(db, TABLE_TAG_GENERATOR) Then
         Exit Sub
     End If
 
@@ -552,24 +552,5 @@ Private Function NullIfEmpty(ByVal valueText As String) As Variant
     End If
 End Function
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
 
-    Dim tdf As DAO.tableDef
 
-    If db Is Nothing Then
-        Exit Function
-    End If
-
-    For Each tdf In db.TableDefs
-        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tdf
-
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-End Function

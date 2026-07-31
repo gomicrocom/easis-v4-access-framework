@@ -338,7 +338,11 @@ Private Function BuildNavigationRowSource(ByVal onlyVisibleRows As Boolean, ByVa
 End Function
 
 Private Sub EnsureNavigationTable()
-    If Not TableExists(TABLE_NAVIGATION) Then
+    Dim db As DAO.Database
+
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_NAVIGATION) Then
         ExecuteSql "CREATE TABLE " & TABLE_NAVIGATION & " (" & _
                    "navigation_id AUTOINCREMENT CONSTRAINT pk_fw_navigation PRIMARY KEY, " & _
                    "parent_navigation_id LONG, " & _
@@ -359,22 +363,22 @@ Private Sub EnsureNavigationTable()
                    "updated_by TEXT(100));"
     End If
 
-    EnsureFieldExists TABLE_NAVIGATION, "parent_navigation_id", "LONG"
-    EnsureFieldExists TABLE_NAVIGATION, "navigation_group", "TEXT(100)"
-    EnsureFieldExists TABLE_NAVIGATION, "caption_key", "TEXT(150)"
-    EnsureFieldExists TABLE_NAVIGATION, "fallback_caption", "TEXT(150)"
-    EnsureFieldExists TABLE_NAVIGATION, "object_name", "TEXT(150)"
-    EnsureFieldExists TABLE_NAVIGATION, "object_type", "TEXT(30)"
-    EnsureFieldExists TABLE_NAVIGATION, "open_mode", "TEXT(30)"
-    EnsureFieldExists TABLE_NAVIGATION, "icon_key", "TEXT(100)"
-    EnsureFieldExists TABLE_NAVIGATION, "sort_order", "LONG"
-    EnsureFieldExists TABLE_NAVIGATION, "is_active", "YESNO"
-    EnsureFieldExists TABLE_NAVIGATION, "is_expanded", "YESNO"
-    EnsureFieldExists TABLE_NAVIGATION, "is_visible", "YESNO"
-    EnsureFieldExists TABLE_NAVIGATION, "created_at", "DATETIME"
-    EnsureFieldExists TABLE_NAVIGATION, "created_by", "TEXT(100)"
-    EnsureFieldExists TABLE_NAVIGATION, "updated_at", "DATETIME"
-    EnsureFieldExists TABLE_NAVIGATION, "updated_by", "TEXT(100)"
+    EnsureFieldExists db, TABLE_NAVIGATION, "parent_navigation_id", "LONG"
+    EnsureFieldExists db, TABLE_NAVIGATION, "navigation_group", "TEXT(100)"
+    EnsureFieldExists db, TABLE_NAVIGATION, "caption_key", "TEXT(150)"
+    EnsureFieldExists db, TABLE_NAVIGATION, "fallback_caption", "TEXT(150)"
+    EnsureFieldExists db, TABLE_NAVIGATION, "object_name", "TEXT(150)"
+    EnsureFieldExists db, TABLE_NAVIGATION, "object_type", "TEXT(30)"
+    EnsureFieldExists db, TABLE_NAVIGATION, "open_mode", "TEXT(30)"
+    EnsureFieldExists db, TABLE_NAVIGATION, "icon_key", "TEXT(100)"
+    EnsureFieldExists db, TABLE_NAVIGATION, "sort_order", "LONG"
+    EnsureFieldExists db, TABLE_NAVIGATION, "is_active", "YESNO"
+    EnsureFieldExists db, TABLE_NAVIGATION, "is_expanded", "YESNO"
+    EnsureFieldExists db, TABLE_NAVIGATION, "is_visible", "YESNO"
+    EnsureFieldExists db, TABLE_NAVIGATION, "created_at", "DATETIME"
+    EnsureFieldExists db, TABLE_NAVIGATION, "created_by", "TEXT(100)"
+    EnsureFieldExists db, TABLE_NAVIGATION, "updated_at", "DATETIME"
+    EnsureFieldExists db, TABLE_NAVIGATION, "updated_by", "TEXT(100)"
 
     ExecuteSql "UPDATE " & TABLE_NAVIGATION & " " & _
                "SET open_mode = " & SqlText(OPEN_MODE_NORMAL) & " " & _
@@ -400,7 +404,11 @@ Private Sub EnsureNavigationTable()
 End Sub
 
 Private Sub EnsureNavigationRoleTable()
-    If Not TableExists(TABLE_NAVIGATION_ROLE) Then
+    Dim db As DAO.Database
+
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_NAVIGATION_ROLE) Then
         ExecuteSql "CREATE TABLE " & TABLE_NAVIGATION_ROLE & " (" & _
                    "navigation_role_id AUTOINCREMENT CONSTRAINT pk_fw_navigation_role PRIMARY KEY, " & _
                    "navigation_id LONG, " & _
@@ -412,13 +420,13 @@ Private Sub EnsureNavigationRoleTable()
                    "updated_by TEXT(100));"
     End If
 
-    EnsureFieldExists TABLE_NAVIGATION_ROLE, "navigation_id", "LONG"
-    EnsureFieldExists TABLE_NAVIGATION_ROLE, "role_code", "TEXT(50)"
-    EnsureFieldExists TABLE_NAVIGATION_ROLE, "is_active", "YESNO"
-    EnsureFieldExists TABLE_NAVIGATION_ROLE, "created_at", "DATETIME"
-    EnsureFieldExists TABLE_NAVIGATION_ROLE, "created_by", "TEXT(100)"
-    EnsureFieldExists TABLE_NAVIGATION_ROLE, "updated_at", "DATETIME"
-    EnsureFieldExists TABLE_NAVIGATION_ROLE, "updated_by", "TEXT(100)"
+    EnsureFieldExists db, TABLE_NAVIGATION_ROLE, "navigation_id", "LONG"
+    EnsureFieldExists db, TABLE_NAVIGATION_ROLE, "role_code", "TEXT(50)"
+    EnsureFieldExists db, TABLE_NAVIGATION_ROLE, "is_active", "YESNO"
+    EnsureFieldExists db, TABLE_NAVIGATION_ROLE, "created_at", "DATETIME"
+    EnsureFieldExists db, TABLE_NAVIGATION_ROLE, "created_by", "TEXT(100)"
+    EnsureFieldExists db, TABLE_NAVIGATION_ROLE, "updated_at", "DATETIME"
+    EnsureFieldExists db, TABLE_NAVIGATION_ROLE, "updated_by", "TEXT(100)"
 
     EnsureIndexExists TABLE_NAVIGATION_ROLE, "ix_fw_navigation_role_navigation_id", _
         "CREATE INDEX ix_fw_navigation_role_navigation_id ON fw_navigation_role (navigation_id);"
@@ -653,8 +661,8 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "GetNavigationExpandedState", Err
 End Function
 
-Private Sub EnsureFieldExists(ByVal table_name As String, ByVal field_name As String, ByVal ddlType As String)
-    If Not FieldExists(table_name, field_name) Then
+Private Sub EnsureFieldExists(ByVal db As DAO.Database, ByVal table_name As String, ByVal field_name As String, ByVal ddlType As String)
+    If Not modDbSchema.FieldExists(db, table_name, field_name) Then
         ExecuteSql "ALTER TABLE " & table_name & " ADD COLUMN " & field_name & " " & ddlType & ";"
     End If
 End Sub
@@ -664,49 +672,6 @@ Private Sub EnsureIndexExists(ByVal table_name As String, ByVal indexName As Str
         ExecuteSql createSql
     End If
 End Sub
-
-Private Function TableExists(ByVal table_name As String) As Boolean
-    On Error GoTo SafeExit
-
-    Dim db As DAO.Database
-    Dim tdf As DAO.tableDef
-
-    Set db = currentDb
-
-    For Each tdf In db.TableDefs
-        If StrComp(tdf.Name, table_name, vbTextCompare) = 0 Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tdf
-
-SafeExit:
-    Set tdf = Nothing
-    Set db = Nothing
-End Function
-
-Private Function FieldExists(ByVal table_name As String, ByVal field_name As String) As Boolean
-    On Error GoTo SafeExit
-
-    Dim db As DAO.Database
-    Dim tdf As DAO.tableDef
-    Dim fld As DAO.Field
-
-    Set db = currentDb
-    Set tdf = db.TableDefs(table_name)
-
-    For Each fld In tdf.Fields
-        If StrComp(fld.Name, field_name, vbTextCompare) = 0 Then
-            FieldExists = True
-            Exit Function
-        End If
-    Next fld
-
-SafeExit:
-    Set fld = Nothing
-    Set tdf = Nothing
-    Set db = Nothing
-End Function
 
 Private Function IndexExists(ByVal table_name As String, ByVal indexName As String) As Boolean
     On Error GoTo SafeExit

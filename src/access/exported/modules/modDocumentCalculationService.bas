@@ -1,4 +1,4 @@
-Attribute VB_Name = "modDocumentCalculationService"
+﻿Attribute VB_Name = "modDocumentCalculationService"
 Option Compare Database
 Option Explicit
 
@@ -71,13 +71,13 @@ Public Function EnsureDocumentCalculationSchema() As Boolean
         Exit Function
     End If
 
-    If Not TableExists(db, TABLE_DOC_DOCUMENT_POSITION) Then
+    If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT_POSITION) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".EnsureDocumentCalculationSchema", _
             "Table '" & TABLE_DOC_DOCUMENT_POSITION & "' is not available."
         Exit Function
     End If
 
-    If Not TableExists(db, TABLE_DOC_DOCUMENT) Then
+    If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".EnsureDocumentCalculationSchema", _
             "Table '" & TABLE_DOC_DOCUMENT & "' is not available."
         Exit Function
@@ -530,7 +530,7 @@ End Function
 Private Function EnsureTextField(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String, ByVal FieldSize As Long, ByVal defaultValue As String) As Boolean
     On Error GoTo ErrorHandler
 
-    If Not FieldExists(db, tableName, fieldName) Then
+    If Not modDbSchema.FieldExists(db, tableName, fieldName) Then
         db.Execute "ALTER TABLE [" & tableName & "] ADD COLUMN [" & fieldName & "] TEXT(" & CStr(FieldSize) & ");", dbFailOnError
         modLoggingHandler.LogInfo MODULE_NAME & ".EnsureTextField", _
             "Added field '" & fieldName & "' to table '" & tableName & "'."
@@ -550,7 +550,7 @@ End Function
 Private Function EnsureCurrencyField(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String, ByVal defaultValue As Currency) As Boolean
     On Error GoTo ErrorHandler
 
-    If Not FieldExists(db, tableName, fieldName) Then
+    If Not modDbSchema.FieldExists(db, tableName, fieldName) Then
         db.Execute "ALTER TABLE [" & tableName & "] ADD COLUMN [" & fieldName & "] CURRENCY;", dbFailOnError
         modLoggingHandler.LogInfo MODULE_NAME & ".EnsureCurrencyField", _
             "Added field '" & fieldName & "' to table '" & tableName & "'."
@@ -573,44 +573,7 @@ Private Sub ApplyFieldDefaultValue(ByVal db As DAO.Database, ByVal tableName As 
     db.TableDefs(tableName).Fields(fieldName).defaultValue = DefaultValueExpression
 End Sub
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
 
-    Dim tdf As DAO.tableDef
-
-    For Each tdf In db.TableDefs
-        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tdf
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-    modErrorHandler.HandleError MODULE_NAME, "TableExists", Err
-End Function
-
-Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim tdf As DAO.tableDef
-    Dim fld As DAO.Field
-
-    Set tdf = db.TableDefs(tableName)
-
-    For Each fld In tdf.Fields
-        If UCase$(Trim$(fld.Name)) = UCase$(Trim$(fieldName)) Then
-            FieldExists = True
-            Exit Function
-        End If
-    Next fld
-    Exit Function
-
-ErrorHandler:
-    FieldExists = False
-    modErrorHandler.HandleError MODULE_NAME, "FieldExists", Err
-End Function
 
 Private Function GetRecordsetStringValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal defaultValue As String) As String
     If modDaoHelper.RecordsetHasField(rs, fieldName) Then
@@ -667,3 +630,5 @@ End Sub
 Private Function RoundCurrency(ByVal Amount As Currency) As Currency
     RoundCurrency = CCur(Round(CDbl(Amount), 2))
 End Function
+
+

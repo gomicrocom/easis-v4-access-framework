@@ -444,10 +444,10 @@ Private Sub ConfigureSourceLanguageCombo()
     End If
 
     Me!cboSourceLanguage.RowSourceType = "Value List"
-    Me!cboSourceLanguage.rowSource = "DE-CH;EN-US;FR-FR"
+    Me!cboSourceLanguage.rowSource = "de-CH;en-US;fr-CH"
 
     If LenB(Trim$(modDaoHelper.NzString(Me!cboSourceLanguage.Value))) = 0 Then
-        Me!cboSourceLanguage.Value = "DE-CH"
+        Me!cboSourceLanguage.Value = "de-CH"
     End If
 
 SafeExit:
@@ -643,10 +643,10 @@ Private Function ResolveSelectedSourceLanguage() As String
     sourceLanguageCode = UCase$(Trim$(GetControlText("cboSourceLanguage")))
 
     Select Case sourceLanguageCode
-        Case "DE-CH", "EN-US", "FR-FR"
+        Case "de-CH", "en-US", "fr-CH"
             ResolveSelectedSourceLanguage = sourceLanguageCode
         Case Else
-            ResolveSelectedSourceLanguage = "DE-CH"
+            ResolveSelectedSourceLanguage = "de-CH"
     End Select
 End Function
 
@@ -655,16 +655,16 @@ Private Function BuildTargetLanguageCodes(ByVal sourceLanguageCode As String) As
 
     Set languageCodes = New Collection
 
-    If StrComp(sourceLanguageCode, "DE-CH", vbTextCompare) <> 0 Then
-        languageCodes.Add "DE-CH"
+    If StrComp(sourceLanguageCode, "de-CH", vbTextCompare) <> 0 Then
+        languageCodes.Add "de-CH"
     End If
 
-    If StrComp(sourceLanguageCode, "EN-US", vbTextCompare) <> 0 Then
-        languageCodes.Add "EN-US"
+    If StrComp(sourceLanguageCode, "en-US", vbTextCompare) <> 0 Then
+        languageCodes.Add "en-US"
     End If
 
-    If StrComp(sourceLanguageCode, "FR-FR", vbTextCompare) <> 0 Then
-        languageCodes.Add "FR-FR"
+    If StrComp(sourceLanguageCode, "fr-CH", vbTextCompare) <> 0 Then
+        languageCodes.Add "fr-CH"
     End If
 
     Set BuildTargetLanguageCodes = languageCodes
@@ -672,11 +672,11 @@ End Function
 
 Private Function GetTranslationControlName(ByVal languageCode As String) As String
     Select Case UCase$(Trim$(languageCode))
-        Case "DE-CH"
+        Case "de-CH"
             GetTranslationControlName = "txtTranslationDeCh"
-        Case "EN-US"
+        Case "en-US"
             GetTranslationControlName = "txtTranslationEnUs"
-        Case "FR-FR"
+        Case "fr-CH"
             GetTranslationControlName = "txtTranslationFrFr"
     End Select
 End Function

@@ -29,7 +29,7 @@ Private Const FIELD_IS_ACTIVE As String = "is_active"
 Private Const FIELD_SORT_ORDER As String = "sort_order"
 Private Const FIELD_UPDATED_AT As String = "updated_at"
 Private Const FIELD_UPDATED_BY As String = "updated_by"
-Private Const DEFAULT_LANGUAGE_CODE As String = "DE-CH"
+Private Const DEFAULT_LANGUAGE_CODE As String = "de-CH"
 
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
@@ -39,7 +39,7 @@ Private Sub Form_Load()
     Me.AllowDeletions = True
 
     Me!cboLanguageCode.RowSourceType = "Value List"
-    Me!cboLanguageCode.rowSource = "DE-CH;DE-DE;EN-US;FR-FR;IT-CH"
+    Me!cboLanguageCode.rowSource = "de-CH;de-DE;en-US;fr-CH;it-CH"
 
     EnsureCurrentTranslationDefaults
     Exit Sub

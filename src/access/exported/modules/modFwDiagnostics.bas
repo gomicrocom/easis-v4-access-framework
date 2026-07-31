@@ -117,8 +117,8 @@ Public Sub LogTranslationRuntimeState(ByVal contextName As String)
     userLanguage = ResolveUserLanguageCode()
     translationCount = ResolveTranslationCount()
 
-    If StrComp(currentLanguageCode, "DE-CH", vbTextCompare) = 0 Then
-        noteText = AppendNote(noteText, "Current language resolves to DE-CH.")
+    If StrComp(currentLanguageCode, "de-CH", vbTextCompare) = 0 Then
+        noteText = AppendNote(noteText, "Current language resolves to de-CH.")
     End If
     If LenB(Trim$(userLanguage)) = 0 Then
         noteText = AppendNote(noteText, "No user language resolved.")

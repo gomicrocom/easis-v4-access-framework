@@ -1,4 +1,4 @@
-Attribute VB_Name = "modFwTranslationRuntime"
+﻿Attribute VB_Name = "modFwTranslationRuntime"
 Option Compare Database
 Option Explicit
 
@@ -17,9 +17,13 @@ Private Const FIELD_TRANSLATION_KEY As String = "translation_key"
 Private Const FIELD_LANGUAGE_CODE As String = "language_code"
 Private Const FIELD_TRANSLATION_VALUE As String = "translation_value"
 Private Const TR_PREFIX As String = "TR:"
-Private Const DEFAULT_LANGUAGE_CODE As String = "DE-CH"
-Private Const FALLBACK_LANGUAGE_CODE As String = "EN"
+Private Const DEFAULT_LANGUAGE_CODE As String = "en-US"
+Private Const FALLBACK_LANGUAGE_CODE As String = "en-US"
 Private Const TENANT_PARAMETER_DEFAULT_LANGUAGE As String = "DEFAULT_LANGUAGE"
+Private Const SUPPORTED_TRANSLATION_LANGUAGE_DE_CH As String = "de-CH"
+Private Const SUPPORTED_TRANSLATION_LANGUAGE_FR_CH As String = "fr-CH"
+Private Const SUPPORTED_TRANSLATION_LANGUAGE_EN_US As String = "en-US"
+Private Const KNOWN_LANGUAGE_IT_CH As String = "it-CH"
 
 Public Sub ApplyTranslations(ByVal TargetObject As Object)
     On Error GoTo ErrorHandler
@@ -106,7 +110,7 @@ Public Function ResolveTranslation(ByVal translationKey As String, Optional ByVa
     End If
 
     Set db = currentDb
-    If Not TableExists(db, TABLE_FW_TRANSLATIONS) Then
+    If Not modDbSchema.TableExists(db, TABLE_FW_TRANSLATIONS) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".ResolveTranslation", _
             "Translation table not found: " & TABLE_FW_TRANSLATIONS & "."
         ResolveTranslation = originalValue
@@ -203,7 +207,7 @@ Public Function ResolveText( _
     End If
 
     Set db = currentDb
-    If Not TableExists(db, TABLE_FW_TRANSLATIONS) Then
+    If Not modDbSchema.TableExists(db, TABLE_FW_TRANSLATIONS) Then
         ResolveText = NzString(fallbackText)
         Exit Function
     End If
@@ -503,9 +507,9 @@ Private Function NormalizeLanguageCode(ByVal languageCode As String) As String
     parts = Split(languageCode, "-")
 
     If UBound(parts) = 0 Then
-        NormalizeLanguageCode = UCase$(parts(0))
+        NormalizeLanguageCode = NormalizeLegacyLanguageAlias(LCase$(parts(0)))
     Else
-        NormalizeLanguageCode = UCase$(parts(0)) & "-" & UCase$(parts(1))
+        NormalizeLanguageCode = NormalizeLegacyLanguageAlias(LCase$(parts(0)) & "-" & UCase$(parts(1)))
     End If
 End Function
 
@@ -515,14 +519,53 @@ Private Function ResolveSupportedLanguageCode(ByVal languageCode As String) As S
     normalizedLanguageCode = NormalizeLanguageCode(languageCode)
 
     Select Case normalizedLanguageCode
-        Case "DE-CH", "EN-US", "FR-FR"
+        Case SUPPORTED_TRANSLATION_LANGUAGE_DE_CH, SUPPORTED_TRANSLATION_LANGUAGE_EN_US, SUPPORTED_TRANSLATION_LANGUAGE_FR_CH
             ResolveSupportedLanguageCode = normalizedLanguageCode
-        Case "DE"
-            ResolveSupportedLanguageCode = "DE-CH"
-        Case "EN"
-            ResolveSupportedLanguageCode = "EN-US"
-        Case "FR"
-            ResolveSupportedLanguageCode = "FR-FR"
+    End Select
+End Function
+
+Public Function GetSupportedTranslationLanguages() As Variant
+    GetSupportedTranslationLanguages = Array( _
+        SUPPORTED_TRANSLATION_LANGUAGE_DE_CH, _
+        SUPPORTED_TRANSLATION_LANGUAGE_EN_US, _
+        SUPPORTED_TRANSLATION_LANGUAGE_FR_CH)
+End Function
+
+Public Function GetKnownLanguageCodes() As Variant
+    GetKnownLanguageCodes = Array( _
+        SUPPORTED_TRANSLATION_LANGUAGE_DE_CH, _
+        SUPPORTED_TRANSLATION_LANGUAGE_FR_CH, _
+        SUPPORTED_TRANSLATION_LANGUAGE_EN_US, _
+        KNOWN_LANGUAGE_IT_CH)
+End Function
+
+Public Function IsSupportedTranslationLanguage(ByVal languageCode As String) As Boolean
+    Select Case NormalizeLanguageCode(languageCode)
+        Case SUPPORTED_TRANSLATION_LANGUAGE_DE_CH, SUPPORTED_TRANSLATION_LANGUAGE_EN_US, SUPPORTED_TRANSLATION_LANGUAGE_FR_CH
+            IsSupportedTranslationLanguage = True
+    End Select
+End Function
+
+Public Function NormalizeProjectLanguageCode(ByVal languageCode As String) As String
+    NormalizeProjectLanguageCode = NormalizeLanguageCode(languageCode)
+End Function
+
+Private Function NormalizeLegacyLanguageAlias(ByVal normalizedLanguageCode As String) As String
+    Select Case normalizedLanguageCode
+        Case "de", "de-CH", "de-DE"
+            If StrComp(normalizedLanguageCode, "de-DE", vbTextCompare) = 0 Then
+                NormalizeLegacyLanguageAlias = "de-DE"
+            Else
+                NormalizeLegacyLanguageAlias = SUPPORTED_TRANSLATION_LANGUAGE_DE_CH
+            End If
+        Case "fr", "fr-FR", "fr-CH"
+            NormalizeLegacyLanguageAlias = SUPPORTED_TRANSLATION_LANGUAGE_FR_CH
+        Case "en", "en-US"
+            NormalizeLegacyLanguageAlias = SUPPORTED_TRANSLATION_LANGUAGE_EN_US
+        Case "it", "it-CH"
+            NormalizeLegacyLanguageAlias = KNOWN_LANGUAGE_IT_CH
+        Case Else
+            NormalizeLegacyLanguageAlias = normalizedLanguageCode
     End Select
 End Function
 
@@ -635,27 +678,6 @@ Private Function GetTargetObjectKind(ByVal TargetObject As Object) As String
     End Select
 End Function
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim tdf As DAO.tableDef
-
-    If db Is Nothing Then
-        Exit Function
-    End If
-
-    For Each tdf In db.TableDefs
-        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tdf
-
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-End Function
 
 Private Function NzString(ByVal Value As Variant, Optional ByVal defaultValue As String = "") As String
     If IsNull(Value) Or IsEmpty(Value) Then
@@ -664,3 +686,6 @@ Private Function NzString(ByVal Value As Variant, Optional ByVal defaultValue As
         NzString = CStr(Value)
     End If
 End Function
+
+
+

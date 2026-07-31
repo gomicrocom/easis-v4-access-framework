@@ -31,7 +31,11 @@ Private Const FIELD_SEARCH_TEXT As String = "article_group_search_text"
 Public Function EnsureArticleGroupTable() As Boolean
     On Error GoTo ErrorHandler
 
-    If Not TableExists(TABLE_ARTICLE_GROUP) Then
+    Dim db As DAO.Database
+
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_ARTICLE_GROUP) Then
         ExecuteSql "CREATE TABLE " & TABLE_ARTICLE_GROUP & " (" & _
                    FIELD_ARTICLE_GROUP_ID & " AUTOINCREMENT CONSTRAINT pk_art_product_group PRIMARY KEY, " & _
                    FIELD_ARTICLE_GROUP_CODE & " TEXT(50), " & _
@@ -48,15 +52,15 @@ Public Function EnsureArticleGroupTable() As Boolean
         Exit Function
     End If
 
-    EnsureFieldExists TABLE_ARTICLE_GROUP, FIELD_ARTICLE_GROUP_CODE, "TEXT(50)"
-    EnsureFieldExists TABLE_ARTICLE_GROUP, FIELD_ARTICLE_GROUP_NAME, "TEXT(150)"
-    EnsureFieldExists TABLE_ARTICLE_GROUP, FIELD_DESCRIPTION_TEXT, "LONGTEXT"
-    EnsureFieldExists TABLE_ARTICLE_GROUP, FIELD_IS_ACTIVE, "YESNO"
-    EnsureFieldExists TABLE_ARTICLE_GROUP, FIELD_SORT_ORDER, "LONG"
-    EnsureFieldExists TABLE_ARTICLE_GROUP, FIELD_CREATED_AT, "DATETIME"
-    EnsureFieldExists TABLE_ARTICLE_GROUP, FIELD_CREATED_BY, "TEXT(100)"
-    EnsureFieldExists TABLE_ARTICLE_GROUP, FIELD_UPDATED_AT, "DATETIME"
-    EnsureFieldExists TABLE_ARTICLE_GROUP, FIELD_UPDATED_BY, "TEXT(100)"
+    EnsureFieldExists db, TABLE_ARTICLE_GROUP, FIELD_ARTICLE_GROUP_CODE, "TEXT(50)"
+    EnsureFieldExists db, TABLE_ARTICLE_GROUP, FIELD_ARTICLE_GROUP_NAME, "TEXT(150)"
+    EnsureFieldExists db, TABLE_ARTICLE_GROUP, FIELD_DESCRIPTION_TEXT, "LONGTEXT"
+    EnsureFieldExists db, TABLE_ARTICLE_GROUP, FIELD_IS_ACTIVE, "YESNO"
+    EnsureFieldExists db, TABLE_ARTICLE_GROUP, FIELD_SORT_ORDER, "LONG"
+    EnsureFieldExists db, TABLE_ARTICLE_GROUP, FIELD_CREATED_AT, "DATETIME"
+    EnsureFieldExists db, TABLE_ARTICLE_GROUP, FIELD_CREATED_BY, "TEXT(100)"
+    EnsureFieldExists db, TABLE_ARTICLE_GROUP, FIELD_UPDATED_AT, "DATETIME"
+    EnsureFieldExists db, TABLE_ARTICLE_GROUP, FIELD_UPDATED_BY, "TEXT(100)"
 
     EnsureIndexExists TABLE_ARTICLE_GROUP, "ux_art_product_group_code", _
         "CREATE UNIQUE INDEX ux_art_product_group_code ON " & TABLE_ARTICLE_GROUP & " (" & FIELD_ARTICLE_GROUP_CODE & ");"
@@ -323,8 +327,8 @@ Private Function EscapeLikeValue(ByVal valueText As String) As String
     EscapeLikeValue = valueText
 End Function
 
-Private Sub EnsureFieldExists(ByVal tableName As String, ByVal fieldName As String, ByVal ddlType As String)
-    If Not FieldExists(tableName, fieldName) Then
+Private Sub EnsureFieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String, ByVal ddlType As String)
+    If Not modDbSchema.FieldExists(db, tableName, fieldName) Then
         ExecuteSql "ALTER TABLE " & tableName & " ADD COLUMN " & fieldName & " " & ddlType & ";"
     End If
 End Sub
@@ -334,47 +338,6 @@ Private Sub EnsureIndexExists(ByVal tableName As String, ByVal indexName As Stri
         ExecuteSql createSql
     End If
 End Sub
-
-Private Function TableExists(ByVal tableName As String) As Boolean
-    On Error GoTo SafeExit
-
-    Dim db As DAO.Database
-    Dim tableDefinition As DAO.tableDef
-
-    Set db = currentDb
-    For Each tableDefinition In db.TableDefs
-        If StrComp(tableDefinition.Name, tableName, vbTextCompare) = 0 Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tableDefinition
-
-SafeExit:
-    Set tableDefinition = Nothing
-    Set db = Nothing
-End Function
-
-Private Function FieldExists(ByVal tableName As String, ByVal fieldName As String) As Boolean
-    On Error GoTo SafeExit
-
-    Dim db As DAO.Database
-    Dim tableDefinition As DAO.tableDef
-    Dim fieldDefinition As DAO.Field
-
-    Set db = currentDb
-    Set tableDefinition = db.TableDefs(tableName)
-    For Each fieldDefinition In tableDefinition.Fields
-        If StrComp(fieldDefinition.Name, fieldName, vbTextCompare) = 0 Then
-            FieldExists = True
-            Exit Function
-        End If
-    Next fieldDefinition
-
-SafeExit:
-    Set fieldDefinition = Nothing
-    Set tableDefinition = Nothing
-    Set db = Nothing
-End Function
 
 Private Function IndexExists(ByVal tableName As String, ByVal indexName As String) As Boolean
     On Error GoTo SafeExit

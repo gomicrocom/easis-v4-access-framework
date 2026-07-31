@@ -1,4 +1,4 @@
-Attribute VB_Name = "modOrderRepository"
+﻿Attribute VB_Name = "modOrderRepository"
 Option Compare Database
 Option Explicit
 
@@ -148,7 +148,7 @@ Public Function EnsureSalesOrderNumberRange(Optional ByVal FiscalYear As Long = 
         Exit Function
     End If
 
-    If Not TableExists(db, TABLE_TEN_NUMBERRANGE) Then
+    If Not modDbSchema.TableExists(db, TABLE_TEN_NUMBERRANGE) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".EnsureSalesOrderNumberRange", _
             "Table '" & TABLE_TEN_NUMBERRANGE & "' is not available."
         Exit Function
@@ -1359,22 +1359,6 @@ Private Sub SetUpdatedAuditFields(ByVal rs As DAO.Recordset)
     SetRecordsetValue rs, FIELD_UPDATED_BY, ResolveAuditUserName()
 End Sub
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim tdf As DAO.tableDef
-
-    For Each tdf In db.TableDefs
-        If StrComp(Trim$(tdf.Name), Trim$(tableName), vbTextCompare) = 0 Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tdf
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-End Function
 
 Private Function FindNumberRangeRow(ByVal rs As DAO.Recordset, ByVal DocumentTypeCode As String, ByVal FiscalYear As Long) As Boolean
     On Error GoTo ErrorHandler
@@ -1404,3 +1388,6 @@ Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal fieldName As Stri
         rs.Fields(fieldName).Value = fieldValue
     End If
 End Sub
+
+
+

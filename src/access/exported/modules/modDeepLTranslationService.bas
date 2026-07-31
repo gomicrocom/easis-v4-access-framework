@@ -15,9 +15,9 @@ Private Const MODULE_NAME As String = "modDeepLTranslationService"
 Private Const DEFAULT_DEEPL_API_BASE_URL As String = "https://api-free.deepl.com"
 Private Const API_TRANSLATE_PATH As String = "/v2/translate"
 
-Private Const LANGUAGE_DE_CH As String = "DE-CH"
-Private Const LANGUAGE_EN_US As String = "EN-US"
-Private Const LANGUAGE_FR_FR As String = "FR-FR"
+Private Const LANGUAGE_DE_CH As String = "de-CH"
+Private Const LANGUAGE_EN_US As String = "en-US"
+Private Const LANGUAGE_FR_CH As String = "fr-CH"
 Private Const LANGUAGE_DE As String = "DE"
 Private Const LANGUAGE_EN As String = "EN"
 Private Const LANGUAGE_FR As String = "FR"
@@ -152,7 +152,7 @@ Public Function SuggestMissingTranslations( _
     End If
 
     If ShouldSuggestTarget(existingFrFr, overwriteFilledTargets) Then
-        suggestions.Add LANGUAGE_FR_FR, TranslateText(sourceText, sourceLang, LANGUAGE_FR_FR, contextText)
+        suggestions.Add LANGUAGE_FR_CH, TranslateText(sourceText, sourceLang, LANGUAGE_FR_CH, contextText)
     End If
 
     Set SuggestMissingTranslations = suggestions
@@ -185,17 +185,17 @@ Private Function ResolveDeepLLanguageCode(ByVal languageCode As String, ByVal is
     languageCode = UCase$(Trim$(modDaoHelper.NzString(languageCode)))
 
     Select Case languageCode
-        Case LANGUAGE_DE_CH, "DE-DE", LANGUAGE_DE
+        Case UCase$(LANGUAGE_DE_CH), "DE-DE", LANGUAGE_DE
             ResolveDeepLLanguageCode = LANGUAGE_DE
-        Case LANGUAGE_EN_US
+        Case UCase$(LANGUAGE_EN_US)
             If isTargetLanguage Then
-                ResolveDeepLLanguageCode = LANGUAGE_EN_US
+                ResolveDeepLLanguageCode = "EN-US"
             Else
                 ResolveDeepLLanguageCode = LANGUAGE_EN
             End If
         Case "EN-GB", LANGUAGE_EN
             ResolveDeepLLanguageCode = LANGUAGE_EN
-        Case LANGUAGE_FR_FR, "FR-CH", LANGUAGE_FR
+        Case UCase$(LANGUAGE_FR_CH), "FR-FR", LANGUAGE_FR
             ResolveDeepLLanguageCode = LANGUAGE_FR
         Case Else
             ResolveDeepLLanguageCode = vbNullString

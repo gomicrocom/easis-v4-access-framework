@@ -1,4 +1,4 @@
-Attribute VB_Name = "modMigrationPaymentTerms"
+﻿Attribute VB_Name = "modMigrationPaymentTerms"
 Option Compare Database
 Option Explicit
 
@@ -83,20 +83,20 @@ Private Sub EnsureDocDocumentFields(ByVal db As DAO.Database)
         Exit Sub
     End If
 
-    If Not TableExists(db, TABLE_DOC_DOCUMENT) Then
+    If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         Debug.Print MODULE_NAME & ".EnsureDocDocumentFields: Table '" & TABLE_DOC_DOCUMENT & "' not found."
         Exit Sub
     End If
 
-    If Not FieldExists(db, TABLE_DOC_DOCUMENT, FIELD_LANGUAGE_CODE) Then
+    If Not modDbSchema.FieldExists(db, TABLE_DOC_DOCUMENT, FIELD_LANGUAGE_CODE) Then
         ExecSql db, "ALTER TABLE " & TABLE_DOC_DOCUMENT & " ADD COLUMN " & FIELD_LANGUAGE_CODE & " TEXT(10)"
     End If
 
-    If Not FieldExists(db, TABLE_DOC_DOCUMENT, FIELD_PAYMENT_TERM_CODE) Then
+    If Not modDbSchema.FieldExists(db, TABLE_DOC_DOCUMENT, FIELD_PAYMENT_TERM_CODE) Then
         ExecSql db, "ALTER TABLE " & TABLE_DOC_DOCUMENT & " ADD COLUMN " & FIELD_PAYMENT_TERM_CODE & " TEXT(50)"
     End If
 
-    If Not FieldExists(db, TABLE_DOC_DOCUMENT, FIELD_PAYMENT_TERMS_TEXT) Then
+    If Not modDbSchema.FieldExists(db, TABLE_DOC_DOCUMENT, FIELD_PAYMENT_TERMS_TEXT) Then
         ExecSql db, "ALTER TABLE " & TABLE_DOC_DOCUMENT & " ADD COLUMN " & FIELD_PAYMENT_TERMS_TEXT & " LONGTEXT"
     End If
 
@@ -116,7 +116,7 @@ Private Sub EnsureTenPaymentTermTable(ByVal db As DAO.Database)
         Exit Sub
     End If
 
-    If TableExists(db, TABLE_TEN_PAYMENT_TERM) Then
+    If modDbSchema.TableExists(db, TABLE_TEN_PAYMENT_TERM) Then
         Exit Sub
     End If
 
@@ -153,7 +153,7 @@ Private Sub EnsureTenPaymentTermIndexes(ByVal db As DAO.Database)
         Exit Sub
     End If
 
-    If Not TableExists(db, TABLE_TEN_PAYMENT_TERM) Then
+    If Not modDbSchema.TableExists(db, TABLE_TEN_PAYMENT_TERM) Then
         Exit Sub
     End If
 
@@ -186,7 +186,7 @@ Private Sub SeedDefaultPaymentTerms(ByVal db As DAO.Database)
         Exit Sub
     End If
 
-    If Not TableExists(db, TABLE_TEN_PAYMENT_TERM) Then
+    If Not modDbSchema.TableExists(db, TABLE_TEN_PAYMENT_TERM) Then
         Exit Sub
     End If
 
@@ -291,7 +291,7 @@ Private Function PaymentTermExists( _
         Exit Function
     End If
 
-    If Not TableExists(db, TABLE_TEN_PAYMENT_TERM) Then
+    If Not modDbSchema.TableExists(db, TABLE_TEN_PAYMENT_TERM) Then
         Exit Function
     End If
 
@@ -332,7 +332,7 @@ Private Function GetBackendPathForLinkedTable(ByVal db As DAO.Database, ByVal li
             "Database reference is not available."
     End If
 
-    If Not TableExists(db, linkedTableName) Then
+    If Not modDbSchema.TableExists(db, linkedTableName) Then
         Err.Raise vbObjectError + 2001, MODULE_NAME & ".GetBackendPathForLinkedTable", _
             "Linked table '" & linkedTableName & "' was not found."
     End If
@@ -385,7 +385,7 @@ Private Sub EnsureLinkedBackendTable( _
             "Backend path is empty for linked table '" & tableName & "'."
     End If
 
-    If TableExists(frontendDb, tableName) Then
+    If modDbSchema.TableExists(frontendDb, tableName) Then
         Set existingTdf = frontendDb.TableDefs(tableName)
         existingConnect = Trim$(Nz(existingTdf.Connect, vbNullString))
 
@@ -410,56 +410,7 @@ ErrorHandler:
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
 
-    Dim tdf As DAO.tableDef
-
-    If db Is Nothing Then
-        Exit Function
-    End If
-
-    For Each tdf In db.TableDefs
-        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tdf
-
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-End Function
-
-Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim tdf As DAO.tableDef
-    Dim fld As DAO.Field
-
-    If db Is Nothing Then
-        Exit Function
-    End If
-
-    If Not TableExists(db, tableName) Then
-        Exit Function
-    End If
-
-    Set tdf = db.TableDefs(tableName)
-
-    For Each fld In tdf.Fields
-        If StrComp(fld.Name, fieldName, vbTextCompare) = 0 Then
-            FieldExists = True
-            Exit Function
-        End If
-    Next fld
-
-    Exit Function
-
-ErrorHandler:
-    FieldExists = False
-End Function
 
 Private Function IndexExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal indexName As String) As Boolean
     On Error GoTo ErrorHandler
@@ -471,7 +422,7 @@ Private Function IndexExists(ByVal db As DAO.Database, ByVal tableName As String
         Exit Function
     End If
 
-    If Not TableExists(db, tableName) Then
+    If Not modDbSchema.TableExists(db, tableName) Then
         Exit Function
     End If
 
@@ -524,3 +475,5 @@ Private Function SqlNumber(ByVal v As Variant) As String
         SqlNumber = Replace(Trim$(Str$(CDbl(v))), ",", ".")
     End If
 End Function
+
+

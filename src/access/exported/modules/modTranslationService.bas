@@ -558,7 +558,7 @@ ErrorHandler:
     TEx = T(TextKey, Fallback)
 End Function
 
-Public Sub DebugPrintReportTranslations(Optional ByVal languageCode As String = "DE-CH")
+Public Sub DebugPrintReportTranslations(Optional ByVal languageCode As String = "de-CH")
     On Error GoTo ErrorHandler
 
     SetCurrentLanguage languageCode

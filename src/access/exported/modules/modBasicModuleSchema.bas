@@ -1,4 +1,4 @@
-Attribute VB_Name = "modBasicModuleSchema"
+﻿Attribute VB_Name = "modBasicModuleSchema"
 Option Compare Database
 Option Explicit
 
@@ -104,8 +104,8 @@ Private Function EnsureTemporaryOrderWorkspaceSchema(ByVal db As DAO.Database) A
     CreateTmpOrders db
     CreateTmpOrderLines db
 
-    If Not TableExists(db, "tmp_order") Then Exit Function
-    If Not TableExists(db, "tmp_order_line") Then Exit Function
+    If Not modDbSchema.TableExists(db, "tmp_order") Then Exit Function
+    If Not modDbSchema.TableExists(db, "tmp_order_line") Then Exit Function
     If Not EnsureTemporaryOrderHeaderSchema(db) Then Exit Function
     If Not EnsureTemporaryOrderLineSchema(db) Then Exit Function
     If Not EnsureRequiredFieldExists(db, "tmp_order", "session_id") Then Exit Function
@@ -137,15 +137,15 @@ Public Sub DiagnoseOrderSchema(Optional ByVal backendPath As String = vbNullStri
 
     resolvedPath = ResolveDatabasePath(db)
     modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "backend_path=" & resolvedPath
-    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "table_exists ord_order=" & CStr(TableExists(db, "ord_order"))
-    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.customer_address_id=" & CStr(FieldExists(db, "ord_order", "customer_address_id"))
-    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.invoice_address_id=" & CStr(FieldExists(db, "ord_order", "invoice_address_id"))
-    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.delivery_address_id=" & CStr(FieldExists(db, "ord_order", "delivery_address_id"))
-    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.vat_code=" & CStr(FieldExists(db, "ord_order", "vat_code"))
-    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.vat_rate=" & CStr(FieldExists(db, "ord_order", "vat_rate"))
-    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "table_exists ord_order_line=" & CStr(TableExists(db, "ord_order_line"))
-    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order_line.article_no=" & CStr(FieldExists(db, "ord_order_line", "article_no"))
-    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order_line.vat_rate=" & CStr(FieldExists(db, "ord_order_line", "vat_rate"))
+    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "table_exists ord_order=" & CStr(modDbSchema.TableExists(db, "ord_order"))
+    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.customer_address_id=" & CStr(modDbSchema.FieldExists(db, "ord_order", "customer_address_id"))
+    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.invoice_address_id=" & CStr(modDbSchema.FieldExists(db, "ord_order", "invoice_address_id"))
+    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.delivery_address_id=" & CStr(modDbSchema.FieldExists(db, "ord_order", "delivery_address_id"))
+    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.vat_code=" & CStr(modDbSchema.FieldExists(db, "ord_order", "vat_code"))
+    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order.vat_rate=" & CStr(modDbSchema.FieldExists(db, "ord_order", "vat_rate"))
+    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "table_exists ord_order_line=" & CStr(modDbSchema.TableExists(db, "ord_order_line"))
+    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order_line.article_no=" & CStr(modDbSchema.FieldExists(db, "ord_order_line", "article_no"))
+    modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "field_exists ord_order_line.vat_rate=" & CStr(modDbSchema.FieldExists(db, "ord_order_line", "vat_rate"))
     modLoggingHandler.LogInfo MODULE_NAME & ".DiagnoseOrderSchema", "index_exists ix_ord_order_customer_address_id=" & CStr(IndexExists(db, "ord_order", "ix_ord_order_customer_address_id"))
 
 CleanExit:
@@ -175,7 +175,7 @@ Private Function OpenSchemaDatabase( _
     modLoggingHandler.LogInfo MODULE_NAME & ".OpenSchemaDatabase", "frontend_db=" & ResolveDatabasePath(frontendDb)
 
     If LenB(targetBackendPath) = 0 Then
-        If TableExists(frontendDb, "ord_order") Then
+        If modDbSchema.TableExists(frontendDb, "ord_order") Then
             If IsLinkedAccessTable(frontendDb, "ord_order") Then
                 targetBackendPath = ResolveLinkedTableBackendPath(frontendDb, "ord_order")
             End If
@@ -394,10 +394,10 @@ Private Function EnsureRefLanguageSchema(ByVal db As DAO.Database) As Boolean
     If Not EnsureDateField(db, TABLE_REF_LANGUAGE, "updated_at", Now(), False) Then GoTo ErrorHandler
     If Not EnsureTextField(db, TABLE_REF_LANGUAGE, "updated_by", 50, "SYSTEM", False) Then GoTo ErrorHandler
 
-    If Not FieldExists(db, TABLE_REF_LANGUAGE, "is_default") Then
+    If Not modDbSchema.FieldExists(db, TABLE_REF_LANGUAGE, "is_default") Then
         db.Execute "ALTER TABLE [" & TABLE_REF_LANGUAGE & "] ADD COLUMN [is_default] YESNO;", dbFailOnError
     End If
-    If Not FieldExists(db, TABLE_REF_LANGUAGE, "is_active") Then
+    If Not modDbSchema.FieldExists(db, TABLE_REF_LANGUAGE, "is_active") Then
         db.Execute "ALTER TABLE [" & TABLE_REF_LANGUAGE & "] ADD COLUMN [is_active] YESNO;", dbFailOnError
     End If
 
@@ -418,11 +418,11 @@ Private Function SeedRefLanguageData(ByVal db As DAO.Database) As Boolean
 
     SeedRefLanguageData = False
 
-    UpsertRefLanguage db, "de-CH", "Deutsch (Schweiz)", "de", "CH", True, True, 10
-    UpsertRefLanguage db, "de-DE", "Deutsch (Deutschland)", "de", "DE", False, True, 20
-    UpsertRefLanguage db, "en-US", "English (United States)", "en", "US", False, True, 30
-    UpsertRefLanguage db, "fr-FR", "Français (France)", "fr", "FR", False, True, 40
-    UpsertRefLanguage db, "it-CH", "Italiano (Svizzera)", "it", "CH", False, True, 50
+    UpsertRefLanguage db, "de-CH", "Deutsch (Schweiz)", "de", "CH", False, True, 10
+    UpsertRefLanguage db, "fr-CH", "Francais (Suisse)", "fr", "CH", False, True, 20
+    UpsertRefLanguage db, "en-US", "English (United States)", "en", "US", True, True, 30
+    UpsertRefLanguage db, "it-CH", "Italiano (Svizzera)", "it", "CH", False, True, 40
+    UpsertRefLanguage db, "de-DE", "Deutsch (Deutschland)", "de", "DE", False, True, 50
 
     SeedRefLanguageData = True
     Exit Function
@@ -494,7 +494,7 @@ Private Function EnsureLinkedAccessTable(ByVal frontendDb As DAO.Database, ByVal
         Exit Function
     End If
 
-    If TableExists(frontendDb, tableName) Then
+    If modDbSchema.TableExists(frontendDb, tableName) Then
         Set existingTableDef = frontendDb.TableDefs(tableName)
         existingConnect = Trim$(Nz(existingTableDef.Connect, vbNullString))
 
@@ -828,10 +828,10 @@ Private Function EnsureOrderPhase1SchemaForDatabase(ByVal db As DAO.Database) As
     CreateTmpOrders db
     CreateTmpOrderLines db
 
-    If Not TableExists(db, "ord_order") Then Exit Function
-    If Not TableExists(db, "ord_order_line") Then Exit Function
-    If Not TableExists(db, "tmp_order") Then Exit Function
-    If Not TableExists(db, "tmp_order_line") Then Exit Function
+    If Not modDbSchema.TableExists(db, "ord_order") Then Exit Function
+    If Not modDbSchema.TableExists(db, "ord_order_line") Then Exit Function
+    If Not modDbSchema.TableExists(db, "tmp_order") Then Exit Function
+    If Not modDbSchema.TableExists(db, "tmp_order_line") Then Exit Function
 
     If Not EnsureOrderHeaderSchema(db) Then GoTo CleanExit
     If Not EnsureOrderLineSchema(db) Then GoTo CleanExit
@@ -868,7 +868,7 @@ Private Function EnsureOrderHeaderSchema(ByVal db As DAO.Database) As Boolean
     If Not EnsureDateField(db, "ord_order", "valid_until", 0, False) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "ord_order", "reference_text", 150, vbNullString, False) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "ord_order", "external_reference", 150, vbNullString, False) Then GoTo ErrorHandler
-    If Not EnsureTextField(db, "ord_order", "language_code", 10, "DE-CH", True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "ord_order", "language_code", 10, "en-US", True) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "ord_order", "currency_code", 10, "CHF", True) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "ord_order", "payment_term_code", 50, vbNullString, False) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "ord_order", "vat_mode", 20, "EXCLUSIVE", True) Then GoTo ErrorHandler
@@ -953,7 +953,7 @@ Private Function EnsureTemporaryOrderHeaderSchema(ByVal db As DAO.Database) As B
     If Not EnsureDateField(db, "tmp_order", "valid_until", 0, False) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "tmp_order", "reference_text", 150, vbNullString, False) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "tmp_order", "external_reference", 150, vbNullString, False) Then GoTo ErrorHandler
-    If Not EnsureTextField(db, "tmp_order", "language_code", 10, "DE-CH", True) Then GoTo ErrorHandler
+    If Not EnsureTextField(db, "tmp_order", "language_code", 10, "en-US", True) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "tmp_order", "currency_code", 10, "CHF", True) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "tmp_order", "payment_term_code", 50, vbNullString, False) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "tmp_order", "vat_mode", 20, "EXCLUSIVE", True) Then GoTo ErrorHandler
@@ -1154,47 +1154,12 @@ ErrorHandler:
     EnsureTemporaryOrderLineIndexes = False
 End Function
 
-Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
 
-    Dim tdf As DAO.tableDef
-
-    For Each tdf In db.TableDefs
-        If StrComp(Trim$(tdf.Name), Trim$(tableName), vbTextCompare) = 0 Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tdf
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-End Function
-
-Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim tdf As DAO.tableDef
-    Dim fld As DAO.Field
-
-    RefreshTableDefinition db, tableName
-    Set tdf = db.TableDefs(tableName)
-    For Each fld In tdf.Fields
-        If StrComp(Trim$(fld.Name), Trim$(fieldName), vbTextCompare) = 0 Then
-            FieldExists = True
-            Exit Function
-        End If
-    Next fld
-    Exit Function
-
-ErrorHandler:
-    FieldExists = False
-End Function
 
 Private Function EnsureTextField(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String, ByVal FieldSize As Long, ByVal defaultValue As String, ByVal updateNullValues As Boolean) As Boolean
     On Error GoTo ErrorHandler
 
-    If Not FieldExists(db, tableName, fieldName) Then
+    If Not modDbSchema.FieldExists(db, tableName, fieldName) Then
         db.Execute "ALTER TABLE [" & tableName & "] ADD COLUMN [" & fieldName & "] TEXT(" & CStr(FieldSize) & ");", dbFailOnError
         modLoggingHandler.LogInfo MODULE_NAME & ".EnsureTextField", "Field ensured: " & tableName & "." & fieldName
     Else
@@ -1218,15 +1183,15 @@ End Function
 Private Function EnsureLongField(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String, ByVal defaultValue As Long, ByVal updateNullValues As Boolean) As Boolean
     On Error GoTo ErrorHandler
 
-    If Not FieldExists(db, tableName, fieldName) Then
+    If Not modDbSchema.FieldExists(db, tableName, fieldName) Then
         modLoggingHandler.LogInfo MODULE_NAME & ".EnsureLongField", _
             "AddField executing: " & tableName & "." & fieldName & "; db=" & ResolveDatabasePath(db)
         db.Execute "ALTER TABLE [" & tableName & "] ADD COLUMN [" & fieldName & "] LONG;", dbFailOnError
         RefreshTableDefinition db, tableName
         LogTableFieldNames db, tableName, MODULE_NAME & ".EnsureLongField"
         modLoggingHandler.LogInfo MODULE_NAME & ".EnsureLongField", _
-            "AddField successful: " & tableName & "." & fieldName & "; exists_after_add=" & CStr(FieldExists(db, tableName, fieldName))
-        If Not FieldExists(db, tableName, fieldName) Then
+            "AddField successful: " & tableName & "." & fieldName & "; exists_after_add=" & CStr(modDbSchema.FieldExists(db, tableName, fieldName))
+        If Not modDbSchema.FieldExists(db, tableName, fieldName) Then
             modLoggingHandler.LogError MODULE_NAME & ".EnsureLongField", _
                 "Required field " & tableName & "." & fieldName & " could not be ensured."
             GoTo ErrorHandler
@@ -1255,7 +1220,7 @@ Private Function EnsureDoubleField(ByVal db As DAO.Database, ByVal tableName As 
 
     Dim numericText As String
 
-    If Not FieldExists(db, tableName, fieldName) Then
+    If Not modDbSchema.FieldExists(db, tableName, fieldName) Then
         db.Execute "ALTER TABLE [" & tableName & "] ADD COLUMN [" & fieldName & "] DOUBLE;", dbFailOnError
         modLoggingHandler.LogInfo MODULE_NAME & ".EnsureDoubleField", "Field ensured: " & tableName & "." & fieldName
     Else
@@ -1280,7 +1245,7 @@ Private Function EnsureCurrencyField(ByVal db As DAO.Database, ByVal tableName A
 
     Dim numericText As String
 
-    If Not FieldExists(db, tableName, fieldName) Then
+    If Not modDbSchema.FieldExists(db, tableName, fieldName) Then
         db.Execute "ALTER TABLE [" & tableName & "] ADD COLUMN [" & fieldName & "] CURRENCY;", dbFailOnError
         modLoggingHandler.LogInfo MODULE_NAME & ".EnsureCurrencyField", "Field ensured: " & tableName & "." & fieldName
     Else
@@ -1306,7 +1271,7 @@ Private Function EnsureDateField(ByVal db As DAO.Database, ByVal tableName As St
     Dim defaultExpression As String
     Dim updateValue As String
 
-    If Not FieldExists(db, tableName, fieldName) Then
+    If Not modDbSchema.FieldExists(db, tableName, fieldName) Then
         db.Execute "ALTER TABLE [" & tableName & "] ADD COLUMN [" & fieldName & "] DATETIME;", dbFailOnError
         modLoggingHandler.LogInfo MODULE_NAME & ".EnsureDateField", "Field ensured: " & tableName & "." & fieldName
     Else
@@ -1335,7 +1300,7 @@ End Function
 Private Function EnsureLongTextField(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
     On Error GoTo ErrorHandler
 
-    If Not FieldExists(db, tableName, fieldName) Then
+    If Not modDbSchema.FieldExists(db, tableName, fieldName) Then
         db.Execute "ALTER TABLE [" & tableName & "] ADD COLUMN [" & fieldName & "] LONGTEXT;", dbFailOnError
         modLoggingHandler.LogInfo MODULE_NAME & ".EnsureLongTextField", "Field ensured: " & tableName & "." & fieldName
     Else
@@ -1358,7 +1323,7 @@ End Sub
 Private Function EnsureRequiredFieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
     On Error GoTo ErrorHandler
 
-    If FieldExists(db, tableName, fieldName) Then
+    If modDbSchema.FieldExists(db, tableName, fieldName) Then
         modLoggingHandler.LogInfo MODULE_NAME & ".EnsureRequiredFieldExists", "Field exists: " & tableName & "." & fieldName
         EnsureRequiredFieldExists = True
         Exit Function
@@ -1379,7 +1344,7 @@ Private Sub DropFieldIfExists(ByVal db As DAO.Database, ByVal tableName As Strin
         Exit Sub
     End If
 
-    If Not FieldExists(db, tableName, fieldName) Then
+    If Not modDbSchema.FieldExists(db, tableName, fieldName) Then
         Exit Sub
     End If
 
@@ -1400,7 +1365,7 @@ Private Sub EnsureIndexWhenFieldExists( _
     ByVal SqlText As String)
     On Error GoTo ErrorHandler
 
-    If Not FieldExists(db, tableName, fieldName) Then
+    If Not modDbSchema.FieldExists(db, tableName, fieldName) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".EnsureIndexWhenFieldExists", _
             "Index skipped because field missing: " & tableName & "." & fieldName & " -> " & indexName
         Exit Sub
@@ -1595,3 +1560,6 @@ End Sub
 Private Function SqlText(ByVal valueText As String) As String
     SqlText = "'" & Replace(Trim$(valueText), "'", "''") & "'"
 End Function
+
+
+

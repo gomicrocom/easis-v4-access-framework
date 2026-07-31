@@ -33,6 +33,7 @@ End Function
 Public Function GetTenantDocumentRootPath() As String
     On Error GoTo ErrorHandler
 
+    Dim db As DAO.Database
     Dim rootPath As String
 
     If Not modDb.ValidateBackendConfiguration() Then
@@ -41,7 +42,9 @@ Public Function GetTenantDocumentRootPath() As String
         Exit Function
     End If
 
-    If Not TableExists(TABLE_TEN_PARAMETER) Then
+    Set db = modDb.GetCurrentDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_TEN_PARAMETER) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".GetTenantDocumentRootPath", _
             "Table '" & TABLE_TEN_PARAMETER & "' is not available."
         Exit Function
@@ -250,35 +253,3 @@ Private Function IsReservedWindowsDeviceName(ByVal Value As String) As Boolean
     End If
 End Function
 
-Private Function TableExists(ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim db As DAO.Database
-    Dim tdf As DAO.tableDef
-
-    If LenB(Trim$(tableName)) = 0 Then
-        Exit Function
-    End If
-
-    Set db = modDb.GetCurrentDatabase()
-    If db Is Nothing Then
-        Exit Function
-    End If
-
-    For Each tdf In db.TableDefs
-        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
-            TableExists = True
-            Exit Function
-        End If
-    Next tdf
-
-CleanExit:
-    Set tdf = Nothing
-    Set db = Nothing
-    Exit Function
-
-ErrorHandler:
-    TableExists = False
-    modErrorHandler.HandleError MODULE_NAME, "TableExists", Err
-    Resume CleanExit
-End Function

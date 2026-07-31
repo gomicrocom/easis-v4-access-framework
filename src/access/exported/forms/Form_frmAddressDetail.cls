@@ -32,11 +32,11 @@ Private Const COUNTRY_ROW_SOURCE As String = _
     "FROM ref_country " & _
     "ORDER BY country_name;"
 Private Const LANGUAGE_ROW_SOURCE As String = _
-    "DE-CH;Deutsch Schweiz;" & _
-    "DE-DE;Deutsch Deutschland;" & _
-    "FR-FR;Franzoesisch Frankreich;" & _
-    "IT-CH;Italienisch Schweiz;" & _
-    "EN-US;Englisch USA"
+    "de-CH;Deutsch Schweiz;" & _
+    "de-DE;Deutsch Deutschland;" & _
+    "fr-CH;Franzoesisch Schweiz;" & _
+    "it-CH;Italienisch Schweiz;" & _
+    "en-US;Englisch USA"
 
 Private Sub cboAddressingMode_AfterUpdate()
     On Error GoTo ErrorHandler

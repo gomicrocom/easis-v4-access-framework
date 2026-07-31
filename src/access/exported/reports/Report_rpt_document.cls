@@ -114,7 +114,7 @@ Private Sub ApplyTranslations()
     Dim languageCode As String
     Dim documentType As String
 
-    languageCode = Nz(GetControlValue("txtLanguageCode", "DE-CH"), "DE-CH")
+    languageCode = Nz(GetControlValue("txtLanguageCode", "en-US"), "en-US")
     documentType = UCase$(Nz(GetControlValue("txtDocumentType", ""), ""))
 
     modTranslationService.SetCurrentLanguage languageCode

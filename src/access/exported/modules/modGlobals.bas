@@ -16,7 +16,7 @@ Public Const CONFIG_SECTION_APP As String = "Application"
 Public Const CONFIG_SECTION_LICENSE As String = "License"
 Public Const CONFIG_SECTION_LOGGING As String = "Logging"
 
-Public Const DEFAULT_LANGUAGE As String = "de-CH"
+Public Const DEFAULT_LANGUAGE As String = "en-US"
 Public Const DEFAULT_LOG_LEVEL As String = "INFO"
 
 Public Const ENV_DEV As String = "DEV"

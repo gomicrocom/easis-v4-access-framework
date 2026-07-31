@@ -1,0 +1,108 @@
+﻿"family","module","file","start_line","end_line","visibility","proc_type","signature","return_type","parameters","line_count","procedure_body","error_handling","used_module_variables","used_constants","currentdb_dependency","dao_recordset_dependency","form_or_control_dependency","side_effects","actual_call_count","actual_call_sites"
+"ResolveFieldValue","modAddressRepository","C:\Users\gomic\OneDrive\Documents\GitHub\easis-v4-access-framework\src\access\exported\modules\modAddressRepository.bas","215","221","Private","Function","Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal defaultValue As String) As String","String","ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal defaultValue As String","7","Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal defaultValue As String) As String
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        ResolveFieldValue = modDaoHelper.NzString(rs.Fields(fieldName).Value, defaultValue)
+    Else
+        ResolveFieldValue = defaultValue
+    End If
+End Function","No","Function","","No","Yes","No","No obvious side effects","4","modAddressRepository:158 [GetAddressDisplayName]; modAddressRepository:164 [GetAddressDisplayName]; modAddressRepository:165 [GetAddressDisplayName]; modAddressRepository:254 [GetAddressCountryCode]"
+"ResolveCreatedBy","modAddressRepository","C:\Users\gomic\OneDrive\Documents\GitHub\easis-v4-access-framework\src\access\exported\modules\modAddressRepository.bas","223","229","Private","Function","Private Function ResolveCreatedBy() As String","String","","7","Private Function ResolveCreatedBy() As String
+    If IsSessionInitialized() Then
+        ResolveCreatedBy = currentUserId
+    Else
+        ResolveCreatedBy = ""SYSTEM""
+    End If
+End Function","No","Function","","No","No","No","No obvious side effects","1","modAddressRepository:76 [CreateAddress]"
+"HasControl","modAppDashboardService","C:\Users\gomic\OneDrive\Documents\GitHub\easis-v4-access-framework\src\access\exported\modules\modAppDashboardService.bas","170","187","Private","Function","Private Function HasControl(ByVal formInstance As Access.Form, ByVal ControlName As String) As Boolean","Boolean","ByVal formInstance As Access.Form, ByVal ControlName As String","18","Private Function HasControl(ByVal formInstance As Access.Form, ByVal ControlName As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim ctl As Control
+
+    If formInstance Is Nothing Then
+        Exit Function
+    End If
+
+    For Each ctl In formInstance.Controls
+        If StrComp(ctl.Name, ControlName, vbTextCompare) = 0 Then
+            HasControl = True
+            Exit Function
+        End If
+    Next ctl
+
+SafeExit:
+End Function","Yes","Function","","No","No","Yes","No obvious side effects","2","modAppDashboardService:134 [SetDisplayValueIfPresent]; modAppDashboardService:161 [SetCaptionIfPresent]"
+"HasControl","modAppShell","C:\Users\gomic\OneDrive\Documents\GitHub\easis-v4-access-framework\src\access\exported\modules\modAppShell.bas","1222","1239","Private","Function","Private Function HasControl(ByVal formInstance As Access.Form, ByVal ControlName As String) As Boolean","Boolean","ByVal formInstance As Access.Form, ByVal ControlName As String","18","Private Function HasControl(ByVal formInstance As Access.Form, ByVal ControlName As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim ctl As Control
+
+    If formInstance Is Nothing Then
+        Exit Function
+    End If
+
+    For Each ctl In formInstance.Controls
+        If StrComp(ctl.Name, ControlName, vbTextCompare) = 0 Then
+            HasControl = True
+            Exit Function
+        End If
+    Next ctl
+
+SafeExit:
+End Function","Yes","Function","","No","No","Yes","No obvious side effects","16","modAppShell:385 [LoadNavigationHost]; modAppShell:479 [SetDisplayValueIfPresent]; modAppShell:506 [SetCaptionIfPresent]; modAppShell:525 [SetControlEnabledIfPresent]; modAppShell:544 [SetControlVisibleIfPresent]; modAppShell:580 [ClearShellSearchText]; modAppShell:618 [ResetCommandBarSlot]; modAppShell:761 [ApplyCommandBarSlot]; modAppShell:802 [ApplyQuickSearchConfig]; modAppShell:811 [ApplyQuickSearchConfig]; modAppShell:959 [ResolveSlotCommandKey]; modAppShell:966 [ResolveQuickSearchCommandKey]; modAppShell:970 [ResolveQuickSearchCommandKey]; modAppShell:1072 [ClearQuickSearchText]; modAppShell:1076 [ClearQuickSearchText]; modAppShell:1092 [ResolveCurrentWorkspaceForm]"
+"HasControl","modAppWorkspaceService","C:\Users\gomic\OneDrive\Documents\GitHub\easis-v4-access-framework\src\access\exported\modules\modAppWorkspaceService.bas","534","551","Private","Function","Private Function HasControl(ByVal formInstance As Access.Form, ByVal ControlName As String) As Boolean","Boolean","ByVal formInstance As Access.Form, ByVal ControlName As String","18","Private Function HasControl(ByVal formInstance As Access.Form, ByVal ControlName As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim ctl As Control
+
+    If formInstance Is Nothing Then
+        Exit Function
+    End If
+
+    For Each ctl In formInstance.Controls
+        If StrComp(ctl.Name, ControlName, vbTextCompare) = 0 Then
+            HasControl = True
+            Exit Function
+        End If
+    Next ctl
+
+SafeExit:
+End Function","Yes","Function","","No","No","Yes","No obvious side effects","3","modAppWorkspaceService:527 [GetWorkspaceHostControl]; modAppWorkspaceService:594 [ResolveWorkspaceHostForm]; modAppWorkspaceService:602 [ResolveWorkspaceHostForm]"
+"ResolveFieldValue","modContactRepository","C:\Users\gomic\OneDrive\Documents\GitHub\easis-v4-access-framework\src\access\exported\modules\modContactRepository.bas","191","197","Private","Function","Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal defaultValue As String) As String","String","ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal defaultValue As String","7","Private Function ResolveFieldValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal defaultValue As String) As String
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        ResolveFieldValue = modDaoHelper.NzString(rs.Fields(fieldName).Value, defaultValue)
+    Else
+        ResolveFieldValue = defaultValue
+    End If
+End Function","No","Function","","No","Yes","No","No obvious side effects","2","modContactRepository:105 [GetPrimaryContactValue]; modContactRepository:108 [GetPrimaryContactValue]"
+"ResolveCreatedBy","modContactRepository","C:\Users\gomic\OneDrive\Documents\GitHub\easis-v4-access-framework\src\access\exported\modules\modContactRepository.bas","199","205","Private","Function","Private Function ResolveCreatedBy() As String","String","","7","Private Function ResolveCreatedBy() As String
+    If IsSessionInitialized() Then
+        ResolveCreatedBy = currentUserId
+    Else
+        ResolveCreatedBy = ""SYSTEM""
+    End If
+End Function","No","Function","","No","No","No","No obvious side effects","1","modContactRepository:54 [CreateContact]"
+"ResolveCreatedBy","modDocumentRepository","C:\Users\gomic\OneDrive\Documents\GitHub\easis-v4-access-framework\src\access\exported\modules\modDocumentRepository.bas","667","673","Private","Function","Private Function ResolveCreatedBy() As String","String","","7","Private Function ResolveCreatedBy() As String
+    If IsSessionInitialized() Then
+        ResolveCreatedBy = currentUserId
+    Else
+        ResolveCreatedBy = ""SYSTEM""
+    End If
+End Function","No","Function","","No","No","No","No obvious side effects","1","modDocumentRepository:115 [CreateDocumentHeader]"
+"HasControl","modFwTranslationEditService","C:\Users\gomic\OneDrive\Documents\GitHub\easis-v4-access-framework\src\access\exported\modules\modFwTranslationEditService.bas","438","455","Private","Function","Private Function HasControl(ByVal targetForm As Access.Form, ByVal ControlName As String) As Boolean","Boolean","ByVal targetForm As Access.Form, ByVal ControlName As String","18","Private Function HasControl(ByVal targetForm As Access.Form, ByVal ControlName As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim currentControl As Control
+
+    If targetForm Is Nothing Then
+        Exit Function
+    End If
+
+    For Each currentControl In targetForm.Controls
+        If StrComp(currentControl.Name, ControlName, vbTextCompare) = 0 Then
+            HasControl = True
+            Exit Function
+        End If
+    Next currentControl
+
+SafeExit:
+End Function","Yes","Function","","No","No","Yes","No obvious side effects","2","modFwTranslationEditService:421 [GetControlText]; modFwTranslationEditService:431 [SetControlValueIfPresent]"
