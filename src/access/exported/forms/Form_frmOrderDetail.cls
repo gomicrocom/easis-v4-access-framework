@@ -82,7 +82,9 @@ End Sub
 Private Sub Form_Current()
     On Error GoTo ErrorHandler
 
+    RefreshPaymentTermDisplay
     EnsureDefaultPaymentTerm
+    RefreshVatModeDisplay
     UpdateHeaderCaptionUi
     UpdateLocalCommandButtons
     Exit Sub
@@ -131,8 +133,20 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "cboDeliveryAddressId_AfterUpdate", Err
 End Sub
 
+Private Sub cboLanguageCode_AfterUpdate()
+    On Error GoTo ErrorHandler
+
+    RefreshPaymentTermDisplay
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "cboLanguageCode_AfterUpdate", Err
+End Sub
+
 Private Sub cboVatMode_AfterUpdate()
     On Error GoTo ErrorHandler
+
+    RefreshVatModeDisplay
 
     If m_isTemporaryOrder And m_temporaryOrderId > 0 Then
         modOrderCalculationService.RecalculateTemporaryOrder m_temporaryOrderId
@@ -145,6 +159,16 @@ Private Sub cboVatMode_AfterUpdate()
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "cboVatMode_AfterUpdate", Err
+End Sub
+
+Private Sub txtVatRate_AfterUpdate()
+    On Error GoTo ErrorHandler
+
+    RefreshVatModeDisplay
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "txtVatRate_AfterUpdate", Err
 End Sub
 
 Public Function CanLeaveWorkspace() As Boolean
@@ -408,6 +432,7 @@ Public Sub RefreshCalculatedTotals(Optional ByVal requeryLines As Boolean = Fals
         RequeryOrderLinesSubform
     End If
 
+    RefreshVatModeDisplay
     UpdateHeaderCaptionUi
     Exit Sub
 
@@ -533,9 +558,10 @@ Private Sub ConfigureVatModeCombo()
     With Me.Controls("cboVatMode")
         .ControlSource = FIELD_VAT_MODE
         .RowSourceType = "Value List"
-        .RowSource = "EXCLUSIVE;INCLUSIVE;NONE"
+        .RowSource = BuildVatModeRowSource()
         .BoundColumn = 1
-        .ColumnCount = 1
+        .ColumnCount = 2
+        .ColumnWidths = "0cm;5cm"
         .LimitToList = True
     End With
 
@@ -562,6 +588,24 @@ Private Sub ConfigurePaymentTermCombo()
 SafeExit:
 End Sub
 
+Private Sub RefreshPaymentTermDisplay()
+    On Error GoTo SafeExit
+
+    Dim currentPaymentTermCode As String
+
+    If Not HasControl("cboTenPaymentTerm") Then
+        Exit Sub
+    End If
+
+    currentPaymentTermCode = Trim$(GetControlTextValue("cboTenPaymentTerm", FIELD_PAYMENT_TERM_CODE))
+    ConfigurePaymentTermCombo
+    If LenB(currentPaymentTermCode) > 0 Then
+        Me.Controls("cboTenPaymentTerm").Value = currentPaymentTermCode
+    End If
+
+SafeExit:
+End Sub
+
 Private Sub ConfigureCurrencyCombo()
     On Error GoTo SafeExit
 
@@ -574,8 +618,8 @@ Private Sub ConfigureCurrencyCombo()
         .RowSourceType = "Table/Query"
         .RowSource = BuildCurrencyRowSourceSql()
         .BoundColumn = 1
-        .ColumnCount = 2
-        .ColumnWidths = "0cm;5cm"
+        .ColumnCount = 1
+        .ColumnWidths = "2.5cm"
         .LimitToList = True
     End With
 
@@ -619,6 +663,7 @@ Private Sub ApplyDeliveryAddressVatDefaults()
     SetControlValueIfPresent "txtVatCode", GetDictionaryString(vatContext, FIELD_VAT_CODE)
     SetControlValueIfPresent FIELD_VAT_RATE, GetDictionaryDouble(vatContext, FIELD_VAT_RATE, 0)
     SetControlValueIfPresent "txtVatRate", GetDictionaryDouble(vatContext, FIELD_VAT_RATE, 0)
+    RefreshVatModeDisplay
 
     OrderId = GetCurrentOrderId()
     If m_isTemporaryOrder And m_temporaryOrderId > 0 Then
@@ -1134,10 +1179,13 @@ End Function
 
 Private Function BuildPaymentTermRowSourceSql() As String
     BuildPaymentTermRowSourceSql = _
-        "SELECT payment_term_code, title " & _
+        "SELECT payment_term_code, " & _
+        "ResolveText('PAYMENT_TERM.' & Nz([payment_term_code],'') & '.TITLE', Nz([payment_term_code],''), " & _
+        SqlText(ResolveCurrentDocumentLanguageCode()) & ") AS payment_term_title " & _
         "FROM ten_payment_term " & _
-        "WHERE Nz(is_active, True)=True " & _
-        "ORDER BY Nz(sort_order, 0), Nz(title, '');"
+        "WHERE Len(Trim(Nz([payment_term_code], ''))) > 0 " & _
+        "AND Nz([is_active], True)=True " & _
+        "ORDER BY Nz([sort_order], 0), Nz([payment_term_code], '');"
 End Function
 
 Private Sub EnsureDefaultPaymentTerm()
@@ -1174,7 +1222,7 @@ Private Function ResolveDefaultPaymentTermCode() As String
         "FROM ten_payment_term " & _
         "WHERE Nz(is_active, True)=True " & _
         "AND Nz(is_default, False)=True " & _
-        "ORDER BY Nz(sort_order, 0), Nz(title, '');", _
+        "ORDER BY Nz(sort_order, 0), Nz(payment_term_code, '');", _
         dbOpenSnapshot)
 
     If Not (rs.BOF And rs.EOF) Then
@@ -1188,19 +1236,35 @@ SafeExit:
     Set db = Nothing
 End Function
 
-Private Function BuildCurrencyRowSourceSql() As String
-    Dim displayFieldName As String
+Private Function ResolveCurrentDocumentLanguageCode() As String
+    Dim languageCode As String
 
-    displayFieldName = ResolveExistingFieldName("ref_currency", Array("currency_name", "display_name", "currency_symbol"))
-    If LenB(displayFieldName) = 0 Then
-        displayFieldName = FIELD_CURRENCY_CODE
+    languageCode = Trim$(GetControlTextValue(FIELD_LANGUAGE_CODE, "cboLanguageCode"))
+    If LenB(languageCode) = 0 Then
+        languageCode = Trim$(modTenantRepository.GetTenantParameter("DEFAULT_LANGUAGE", "en-US"))
     End If
 
+    languageCode = Trim$(modFwTranslationRuntime.NormalizeProjectLanguageCode(languageCode))
+    If LenB(languageCode) = 0 Then
+        languageCode = "en-US"
+    End If
+
+    ResolveCurrentDocumentLanguageCode = languageCode
+End Function
+
+Private Function BuildCurrencyRowSourceSql() As String
     BuildCurrencyRowSourceSql = _
-        "SELECT currency_code, Nz([" & displayFieldName & "], [currency_code]) AS currency_display " & _
+        "SELECT currency_code " & _
         "FROM ref_currency " & _
         "WHERE Nz(is_active, True)=True " & _
         "ORDER BY currency_code;"
+End Function
+
+Private Function BuildVatModeRowSource() As String
+    BuildVatModeRowSource = _
+        "EXCLUSIVE;" & ResolveVatModeDisplayText("EXCLUSIVE") & ";" & _
+        "INCLUSIVE;" & ResolveVatModeDisplayText("INCLUSIVE") & ";" & _
+        "NONE;" & ResolveVatModeDisplayText("NONE")
 End Function
 
 Private Function BuildLanguageRowSourceSql() As String
@@ -1209,6 +1273,35 @@ Private Function BuildLanguageRowSourceSql() As String
         "FROM ref_language " & _
         "WHERE Nz(is_active, True)=True " & _
         "ORDER BY Nz(sort_order, 0), Nz(language_name, '');"
+End Function
+
+Private Sub RefreshVatModeDisplay()
+    On Error GoTo SafeExit
+
+    If Not HasControl("cboVatMode") Then
+        Exit Sub
+    End If
+
+    Me.Controls("cboVatMode").RowSource = BuildVatModeRowSource()
+
+SafeExit:
+End Sub
+
+Private Function ResolveVatModeDisplayText(ByVal vatMode As String) As String
+    Select Case UCase$(Trim$(vatMode))
+        Case "INCLUSIVE"
+            ResolveVatModeDisplayText = modFwTranslationRuntime.ResolveText( _
+                "FORM.FRMORDERDETAIL.VAT_MODE_INCLUSIVE", _
+                "Inklusive MwSt.")
+        Case "NONE"
+            ResolveVatModeDisplayText = modFwTranslationRuntime.ResolveText( _
+                "FORM.FRMORDERDETAIL.VAT_MODE_NONE", _
+                "Keine MwSt.")
+        Case Else
+            ResolveVatModeDisplayText = modFwTranslationRuntime.ResolveText( _
+                "FORM.FRMORDERDETAIL.VAT_MODE_EXCLUSIVE", _
+                "Exklusive MwSt.")
+    End Select
 End Function
 
 Private Function ResolveExistingFieldName(ByVal tableName As String, ByVal candidateFieldNames As Variant) As String
@@ -1466,4 +1559,8 @@ Private Function NzDouble(ByVal Value As Variant, Optional ByVal defaultValue As
     Else
         NzDouble = defaultValue
     End If
+End Function
+
+Private Function SqlText(ByVal valueText As String) As String
+    SqlText = "'" & Replace(Trim$(valueText), "'", "''") & "'"
 End Function

@@ -315,9 +315,7 @@ Private Sub CreateTenPaymentTerms(ByVal db As DAO.Database)
     sqlStatement = sqlStatement & "CREATE TABLE ten_payment_term ("
     sqlStatement = sqlStatement & "payment_term_id AUTOINCREMENT CONSTRAINT pk_ten_payment_term PRIMARY KEY, "
     sqlStatement = sqlStatement & "payment_term_code TEXT(50) NOT NULL, "
-    sqlStatement = sqlStatement & "language_code TEXT(10) NOT NULL, "
-    sqlStatement = sqlStatement & "title TEXT(100), "
-    sqlStatement = sqlStatement & "terms_text LONGTEXT, "
+    sqlStatement = sqlStatement & "payment_term_type_code TEXT(50), "
     sqlStatement = sqlStatement & "days_net LONG, "
     sqlStatement = sqlStatement & "discount_days LONG, "
     sqlStatement = sqlStatement & "discount_percent DOUBLE, "
@@ -331,8 +329,8 @@ Private Sub CreateTenPaymentTerms(ByVal db As DAO.Database)
     sqlStatement = sqlStatement & ");"
 
     ExecuteDdl db, sqlStatement
-    ExecuteCreateIndexIfMissing db, "ten_payment_term", "ux_ten_payment_term_code_language", _
-        "CREATE UNIQUE INDEX ux_ten_payment_term_code_language ON ten_payment_term (payment_term_code, language_code);"
+    ExecuteCreateIndexIfMissing db, "ten_payment_term", "ux_ten_payment_term_code", _
+        "CREATE UNIQUE INDEX ux_ten_payment_term_code ON ten_payment_term (payment_term_code);"
     ExecuteCreateIndexIfMissing db, "ten_payment_term", "ix_ten_payment_term_is_default", _
         "CREATE INDEX ix_ten_payment_term_is_default ON ten_payment_term (is_default);"
     ExecuteCreateIndexIfMissing db, "ten_payment_term", "ix_ten_payment_term_is_active", _
@@ -421,8 +419,8 @@ Private Function SeedRefLanguageData(ByVal db As DAO.Database) As Boolean
     UpsertRefLanguage db, "de-CH", "Deutsch (Schweiz)", "de", "CH", False, True, 10
     UpsertRefLanguage db, "fr-CH", "Francais (Suisse)", "fr", "CH", False, True, 20
     UpsertRefLanguage db, "en-US", "English (United States)", "en", "US", True, True, 30
-    UpsertRefLanguage db, "it-CH", "Italiano (Svizzera)", "it", "CH", False, True, 40
-    UpsertRefLanguage db, "de-DE", "Deutsch (Deutschland)", "de", "DE", False, True, 50
+    UpsertRefLanguage db, "it-CH", "Italiano (Svizzera)", "it", "CH", False, False, 40
+    UpsertRefLanguage db, "de-DE", "Deutsch (Deutschland)", "de", "DE", False, False, 50
 
     SeedRefLanguageData = True
     Exit Function
@@ -453,6 +451,7 @@ Private Sub UpsertRefLanguage( _
         rs.Fields("language_code").Value = languageCode
         rs.Fields("created_at").Value = Now()
         rs.Fields("created_by").Value = "SYSTEM"
+        rs.Fields("is_active").Value = isActive
     Else
         rs.Edit
     End If
@@ -461,7 +460,6 @@ Private Sub UpsertRefLanguage( _
     rs.Fields("iso_language_code").Value = isoLanguageCode
     rs.Fields("country_code").Value = countryCode
     rs.Fields("is_default").Value = isDefault
-    rs.Fields("is_active").Value = isActive
     rs.Fields("sort_order").Value = sortOrder
     rs.Fields("updated_at").Value = Now()
     rs.Fields("updated_by").Value = "SYSTEM"
@@ -1337,7 +1335,7 @@ ErrorHandler:
     EnsureRequiredFieldExists = False
 End Function
 
-Private Sub DropFieldIfExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String)
+Public Sub DropFieldIfExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String)
     On Error GoTo ErrorHandler
 
     If db Is Nothing Then

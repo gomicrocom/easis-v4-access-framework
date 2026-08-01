@@ -28,6 +28,8 @@ Public Function TableExists( _
         Exit Function
     End If
 
+    db.TableDefs.Refresh
+
     For Each tableDefinition In db.TableDefs
         If StrComp(Trim$(tableDefinition.Name), normalizedTableName, vbTextCompare) = 0 Then
             TableExists = True
@@ -70,6 +72,8 @@ Public Function FieldExists( _
     If LenB(normalizedFieldName) = 0 Then
         Exit Function
     End If
+
+    db.TableDefs.Refresh
 
     For Each tableDefinition In db.TableDefs
         If StrComp(Trim$(tableDefinition.Name), normalizedTableName, vbTextCompare) = 0 Then

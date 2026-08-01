@@ -19,9 +19,16 @@ Private Const FORM_ORDER_LINES_SUBFORM As String = "sfrmOrderLines"
 Public Function EnsureOrderSchema() As Boolean
     On Error GoTo ErrorHandler
 
+    Dim workingDb As DAO.Database
+
     EnsureOrderSchema = False
+    Set workingDb = currentDb
 
     If Not modBasicModuleSchema.EnsureOrderPhase1Schema() Then
+        Exit Function
+    End If
+
+    If Not modMigrationPaymentTerms.ApplyPaymentTermsMigration() Then
         Exit Function
     End If
 
@@ -33,9 +40,17 @@ Public Function EnsureOrderSchema() As Boolean
         Exit Function
     End If
 
+    EnsureOrderDetailTranslations workingDb
+    EnsureOrderLinesTranslations workingDb
+
+    If Not TranslationSeedExists(workingDb, "de-CH", "FORM.FRMORDERDETAIL.VAT_MODE") Then
+        Err.Raise vbObjectError + 6120, MODULE_NAME & ".EnsureOrderSchema", _
+            "Order detail VAT-mode translations could not be ensured."
+    End If
+
     EnsureOrderSchema = True
     modLoggingHandler.LogInfo MODULE_NAME & ".EnsureOrderSchema", _
-        "Sales-order schema, SO number range, and ref_language ensured successfully."
+        "Sales-order schema, SO number range, ref_language, and order translations ensured successfully."
     Exit Function
 
 ErrorHandler:
@@ -485,6 +500,15 @@ Public Sub EnsureOrderDetailTranslations(Optional ByVal db As DAO.Database = Not
     EnsureTranslationSeed workingDb, "de-CH", "FORM.FRMORDERDETAIL.VAT_MODE", "MWST-Modus", "FORM", 360
     EnsureTranslationSeed workingDb, "en-US", "FORM.FRMORDERDETAIL.VAT_MODE", "VAT mode", "FORM", 360
     EnsureTranslationSeed workingDb, "fr-CH", "FORM.FRMORDERDETAIL.VAT_MODE", "Mode TVA", "FORM", 360
+    EnsureTranslationSeed workingDb, "de-CH", "FORM.FRMORDERDETAIL.VAT_MODE_EXCLUSIVE", "Exklusive MwSt.", "FORM", 3601
+    EnsureTranslationSeed workingDb, "en-US", "FORM.FRMORDERDETAIL.VAT_MODE_EXCLUSIVE", "Exclusive VAT", "FORM", 3601
+    EnsureTranslationSeed workingDb, "fr-CH", "FORM.FRMORDERDETAIL.VAT_MODE_EXCLUSIVE", "TVA exclue", "FORM", 3601
+    EnsureTranslationSeed workingDb, "de-CH", "FORM.FRMORDERDETAIL.VAT_MODE_INCLUSIVE", "Inklusive MwSt.", "FORM", 3602
+    EnsureTranslationSeed workingDb, "en-US", "FORM.FRMORDERDETAIL.VAT_MODE_INCLUSIVE", "Inclusive VAT", "FORM", 3602
+    EnsureTranslationSeed workingDb, "fr-CH", "FORM.FRMORDERDETAIL.VAT_MODE_INCLUSIVE", "TVA incluse", "FORM", 3602
+    EnsureTranslationSeed workingDb, "de-CH", "FORM.FRMORDERDETAIL.VAT_MODE_NONE", "Keine MwSt.", "FORM", 3603
+    EnsureTranslationSeed workingDb, "en-US", "FORM.FRMORDERDETAIL.VAT_MODE_NONE", "No VAT", "FORM", 3603
+    EnsureTranslationSeed workingDb, "fr-CH", "FORM.FRMORDERDETAIL.VAT_MODE_NONE", "Sans TVA", "FORM", 3603
     EnsureTranslationSeed workingDb, "de-CH", "FORM.FRMORDERDETAIL.ORDER_STATUS_CODE", "Status", "FORM", 361
     EnsureTranslationSeed workingDb, "en-US", "FORM.FRMORDERDETAIL.ORDER_STATUS_CODE", "Status", "FORM", 361
     EnsureTranslationSeed workingDb, "fr-CH", "FORM.FRMORDERDETAIL.ORDER_STATUS_CODE", "Statut", "FORM", 361
@@ -1293,6 +1317,7 @@ Private Sub InsertShellTranslations(ByVal db As DAO.Database)
     EnsureTranslationSeed db, "en-US", "NAV.ADDRESS_LIST", "Address list", "NAVIGATION", 20
     EnsureTranslationSeed db, "de-CH", "NAV.NEW_ADDRESS", "Neue Adresse", "NAVIGATION", 30
     EnsureTranslationSeed db, "en-US", "NAV.NEW_ADDRESS", "New address", "NAVIGATION", 30
+    EnsureTranslationSeed db, "fr-CH", "NAV.NEW_ADDRESS", "Nouvelle adresse", "NAVIGATION", 30
     EnsureTranslationSeed db, "de-CH", "NAV.GROUP.DOCUMENTS", "Dokumente", "NAVIGATION", 40
     EnsureTranslationSeed db, "en-US", "NAV.GROUP.DOCUMENTS", "Documents", "NAVIGATION", 40
     EnsureTranslationSeed db, "de-CH", "NAV.DOCUMENT_PREVIEW", "Dokumentvorschau", "NAVIGATION", 50
@@ -1369,6 +1394,12 @@ Private Sub InsertShellTranslations(ByVal db As DAO.Database)
     EnsureTranslationSeed db, "en-US", "FORM.FRMAPPDASHBOARD.TENANT", "Tenant", "FORM", 80
     EnsureTranslationSeed db, "de-CH", "FORM.FRMAPPDASHBOARD.USER", "Benutzer", "FORM", 90
     EnsureTranslationSeed db, "en-US", "FORM.FRMAPPDASHBOARD.USER", "User", "FORM", 90
+    EnsureTranslationSeed db, "de-CH", "FORM.FRMADDRESSDETAIL.TITLE_NEW", "Neue Adresse", "FORM", 91
+    EnsureTranslationSeed db, "en-US", "FORM.FRMADDRESSDETAIL.TITLE_NEW", "New address", "FORM", 91
+    EnsureTranslationSeed db, "fr-CH", "FORM.FRMADDRESSDETAIL.TITLE_NEW", "Nouvelle adresse", "FORM", 91
+    EnsureTranslationSeed db, "de-CH", "FORM.FRMADDRESSDETAIL.TITLE_EDIT", "Adresse bearbeiten", "FORM", 92
+    EnsureTranslationSeed db, "en-US", "FORM.FRMADDRESSDETAIL.TITLE_EDIT", "Edit address", "FORM", 92
+    EnsureTranslationSeed db, "fr-CH", "FORM.FRMADDRESSDETAIL.TITLE_EDIT", "Modifier l'adresse", "FORM", 92
     EnsureTranslationSeed db, "de-CH", "FORM.FRMAPPDASHBOARD.BACKEND", "Backend", "FORM", 100
     EnsureTranslationSeed db, "en-US", "FORM.FRMAPPDASHBOARD.BACKEND", "Backend", "FORM", 100
     EnsureTranslationSeed db, "de-CH", "FORM.FRMAPPDASHBOARD.FRAMEWORK", "Framework", "FORM", 110
@@ -1647,7 +1678,7 @@ Private Sub InsertShellTranslations(ByVal db As DAO.Database)
 
 End Sub
 
-Private Sub EnsureTranslationSeed( _
+Public Sub EnsureTranslationSeed( _
     ByVal db As DAO.Database, _
     ByVal languageCode As String, _
     ByVal translationKey As String, _
@@ -1688,7 +1719,7 @@ Private Sub UpdateTranslationSeed( _
     db.Execute sqlStatement, dbFailOnError
 End Sub
 
-Private Function TranslationSeedExists( _
+Public Function TranslationSeedExists( _
     ByVal db As DAO.Database, _
     ByVal languageCode As String, _
     ByVal translationKey As String) As Boolean
@@ -1734,7 +1765,6 @@ Public Sub NormalizeLanguageCodeData()
 
     NormalizeFwTranslationLanguageCodes db
     NormalizeLanguageCodesForTable db, "adr_address", "language_code", Array("address_id")
-    NormalizeLanguageCodesForTable db, "ten_payment_term", "language_code", Array("payment_term_id")
     NormalizeLanguageCodesForTable db, "ref_language", "language_code", Array()
 
     If Not modBasicModuleSchema.EnsureSystemLanguageReferenceSchema() Then

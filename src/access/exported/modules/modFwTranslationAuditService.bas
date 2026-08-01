@@ -151,6 +151,7 @@ Public Sub BuildTranslationAuditData()
     expectedCount = expectedCount + CollectReferenceExpectedKeys(db, expectedKeys, "ref_unit", "", "unit_code")
     expectedCount = expectedCount + CollectReferenceExpectedKeys(db, expectedKeys, "ref_vat_code", "", "vat_code")
     expectedCount = expectedCount + CollectReferenceExpectedKeys(db, expectedKeys, "ref_article_type_code", "article_type_name", "article_type_code")
+    expectedCount = expectedCount + CollectPaymentTermExpectedKeys(db, expectedKeys)
     expectedCount = expectedCount + CollectReferenceExpectedKeys(db, expectedKeys, "ref_address_type", "", "address_type_code")
     expectedCount = expectedCount + CollectReferenceExpectedKeys(db, expectedKeys, "ref_salutation", "", "salutation_code")
     expectedCount = expectedCount + CollectReferenceExpectedKeys(db, expectedKeys, "ref_addressing_mode", "", "addressing_mode_code")
@@ -803,6 +804,57 @@ Private Function RequiredLanguages() As Variant
     RequiredLanguages = modFwTranslationRuntime.GetSupportedTranslationLanguages()
 End Function
 
+Private Function CollectPaymentTermExpectedKeys(ByVal db As DAO.Database, ByRef expectedKeys As Collection) As Long
+    On Error GoTo ErrorHandler
+
+    Dim rs As DAO.Recordset
+    Dim sqlStatement As String
+    Dim paymentTermCode As String
+    Dim titleKey As String
+    Dim termsKey As String
+
+    If Not modDbSchema.TableExists(db, "ten_payment_term") Then
+        Exit Function
+    End If
+
+    sqlStatement = "SELECT [payment_term_code] " & _
+                   "FROM [ten_payment_term] " & _
+                   "WHERE Len(Trim(Nz([payment_term_code], ''))) > 0 " & _
+                   "AND Nz([is_active], True) = True " & _
+                   "ORDER BY Nz([sort_order], 0), [payment_term_code];"
+
+    Set rs = db.OpenRecordset(sqlStatement, dbOpenSnapshot)
+    Do While Not rs.EOF
+        paymentTermCode = UCase$(Trim$(modDaoHelper.NzString(rs.Fields("payment_term_code").Value, vbNullString)))
+        If LenB(paymentTermCode) > 0 Then
+            titleKey = "PAYMENT_TERM." & paymentTermCode & ".TITLE"
+            If AddExpectedKey(expectedKeys, titleKey) Then
+                AppendExpectedAuditRows db, SCOPE_REF, titleKey, SOURCE_REFERENCE, "ten_payment_term", "TITLE", _
+                    paymentTermCode
+                CollectPaymentTermExpectedKeys = CollectPaymentTermExpectedKeys + 1
+            End If
+
+            termsKey = "PAYMENT_TERM." & paymentTermCode & ".TERMS"
+            If AddExpectedKey(expectedKeys, termsKey) Then
+                AppendExpectedAuditRows db, SCOPE_REF, termsKey, SOURCE_REFERENCE, "ten_payment_term", "TERMS", _
+                    paymentTermCode
+                CollectPaymentTermExpectedKeys = CollectPaymentTermExpectedKeys + 1
+            End If
+        End If
+        rs.MoveNext
+    Loop
+
+    rs.Close
+    Set rs = Nothing
+    Exit Function
+
+ErrorHandler:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    modErrorHandler.HandleError MODULE_NAME, "CollectPaymentTermExpectedKeys", Err
+End Function
+
 Private Function ResolveScopeCodeFromKey(ByVal translationKey As String) As String
     Dim normalizedKey As String
 
@@ -835,6 +887,7 @@ Private Function ResolveScopeCodeFromKey(ByVal translationKey As String) As Stri
            Left$(normalizedKey, 13) = "ADDRESS_TYPE." Or _
            Left$(normalizedKey, 11) = "SALUTATION." Or _
            Left$(normalizedKey, 13) = "CONTACT_TYPE." Or _
+           Left$(normalizedKey, 13) = "PAYMENT_TERM." Or _
            Left$(normalizedKey, 5) = "UNIT." Or _
            Left$(normalizedKey, 4) = "VAT." Then
         ResolveScopeCodeFromKey = SCOPE_REF

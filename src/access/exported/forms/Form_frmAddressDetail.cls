@@ -31,12 +31,6 @@ Private Const COUNTRY_ROW_SOURCE As String = _
     "SELECT country_code, country_name " & _
     "FROM ref_country " & _
     "ORDER BY country_name;"
-Private Const LANGUAGE_ROW_SOURCE As String = _
-    "de-CH;Deutsch Schweiz;" & _
-    "de-DE;Deutsch Deutschland;" & _
-    "fr-CH;Franzoesisch Schweiz;" & _
-    "it-CH;Italienisch Schweiz;" & _
-    "en-US;Englisch USA"
 
 Private Sub cboAddressingMode_AfterUpdate()
     On Error GoTo ErrorHandler
@@ -365,8 +359,8 @@ Private Sub ConfigureLanguageCombo()
 
     With Me!cboLanguageCode
         .ControlSource = "language_code"
-        .RowSourceType = "Value List"
-        .rowSource = LANGUAGE_ROW_SOURCE
+        .RowSourceType = "Table/Query"
+        .rowSource = BuildSupportedLanguageRowSourceSql()
         .BoundColumn = 1
         .columnCount = 2
         .columnWidths = "0cm;5cm"
@@ -378,6 +372,28 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "ConfigureLanguageCombo", Err
     Err.Raise Err.Number, Err.Source, Err.description
 End Sub
+
+Private Function BuildSupportedLanguageRowSourceSql() As String
+    Dim supportedLanguages As Variant
+    Dim languageCode As Variant
+    Dim inClause As String
+
+    supportedLanguages = modFwTranslationRuntime.GetSupportedTranslationLanguages()
+
+    For Each languageCode In supportedLanguages
+        If LenB(inClause) > 0 Then
+            inClause = inClause & ", "
+        End If
+        inClause = inClause & "'" & Replace(CStr(languageCode), "'", "''") & "'"
+    Next languageCode
+
+    BuildSupportedLanguageRowSourceSql = _
+        "SELECT language_code, language_name " & _
+        "FROM ref_language " & _
+        "WHERE Nz(is_active, True)=True " & _
+        "AND language_code IN (" & inClause & ") " & _
+        "ORDER BY Nz(sort_order, 0), Nz(language_name, '');"
+End Function
 
 Private Sub ApplyPostalLookupByZip()
     On Error GoTo ErrorHandler
@@ -1029,17 +1045,15 @@ Private Sub UpdateHeaderCaptionUi()
     On Error GoTo SafeExit
 
     Dim headerCaption As String
-    Dim displayName As String
 
-    headerCaption = "Neue Adresse"
-
-    If GetCurrentAddressId() > 0 Then
-        displayName = ResolveDisplayName()
-        If LenB(displayName) > 0 Then
-            headerCaption = "Adresse: " & displayName
-        Else
-            headerCaption = "Adresse: " & CStr(GetCurrentAddressId())
-        End If
+    If Me.NewRecord Then
+        headerCaption = modFwTranslationRuntime.ResolveText( _
+            "FORM.FRMADDRESSDETAIL.TITLE_NEW", _
+            "Neue Adresse")
+    Else
+        headerCaption = modFwTranslationRuntime.ResolveText( _
+            "FORM.FRMADDRESSDETAIL.TITLE_EDIT", _
+            "Adresse bearbeiten")
     End If
 
     If HasControl("lblFormTitle") Then
