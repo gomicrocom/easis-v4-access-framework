@@ -447,7 +447,7 @@ End Function
 Private Function ResolveBackendStatusText() As String
     Dim backendPath As String
 
-    backendPath = Trim$(modDb.GetBackendPath())
+    backendPath = Trim$(modDb.GetCurrentTenantBackendPath())
 
     If modDb.ValidateBackendConfiguration() Then
         ResolveBackendStatusText = ResolveShellText("STATUS.READY", "Ready")

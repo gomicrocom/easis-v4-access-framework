@@ -340,27 +340,27 @@ End Function
 Private Sub EnsureNavigationTable()
     Dim db As DAO.Database
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetSystemDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_NAVIGATION) Then
-        ExecuteSql "CREATE TABLE " & TABLE_NAVIGATION & " (" & _
-                   "navigation_id AUTOINCREMENT CONSTRAINT pk_fw_navigation PRIMARY KEY, " & _
-                   "parent_navigation_id LONG, " & _
-                   "navigation_group TEXT(100), " & _
-                   "caption_key TEXT(150), " & _
-                   "fallback_caption TEXT(150), " & _
-                   "object_name TEXT(150), " & _
-                   "object_type TEXT(30), " & _
-                   "open_mode TEXT(30), " & _
-                   "icon_key TEXT(100), " & _
-                   "sort_order LONG, " & _
-                   "is_active YESNO, " & _
-                   "is_expanded YESNO, " & _
-                   "is_visible YESNO, " & _
-                   "created_at DATETIME, " & _
-                   "created_by TEXT(100), " & _
-                   "updated_at DATETIME, " & _
-                   "updated_by TEXT(100));"
+        ExecuteSql db, "CREATE TABLE " & TABLE_NAVIGATION & " (" & _
+                       "navigation_id AUTOINCREMENT CONSTRAINT pk_fw_navigation PRIMARY KEY, " & _
+                       "parent_navigation_id LONG, " & _
+                       "navigation_group TEXT(100), " & _
+                       "caption_key TEXT(150), " & _
+                       "fallback_caption TEXT(150), " & _
+                       "object_name TEXT(150), " & _
+                       "object_type TEXT(30), " & _
+                       "open_mode TEXT(30), " & _
+                       "icon_key TEXT(100), " & _
+                       "sort_order LONG, " & _
+                       "is_active YESNO, " & _
+                       "is_expanded YESNO, " & _
+                       "is_visible YESNO, " & _
+                       "created_at DATETIME, " & _
+                       "created_by TEXT(100), " & _
+                       "updated_at DATETIME, " & _
+                       "updated_by TEXT(100));"
     End If
 
     EnsureFieldExists db, TABLE_NAVIGATION, "parent_navigation_id", "LONG"
@@ -380,44 +380,44 @@ Private Sub EnsureNavigationTable()
     EnsureFieldExists db, TABLE_NAVIGATION, "updated_at", "DATETIME"
     EnsureFieldExists db, TABLE_NAVIGATION, "updated_by", "TEXT(100)"
 
-    ExecuteSql "UPDATE " & TABLE_NAVIGATION & " " & _
-               "SET open_mode = " & SqlText(OPEN_MODE_NORMAL) & " " & _
-               "WHERE open_mode Is Null OR Trim(open_mode) = '';"
+    ExecuteSql db, "UPDATE " & TABLE_NAVIGATION & " " & _
+                   "SET open_mode = " & SqlText(OPEN_MODE_NORMAL) & " " & _
+                   "WHERE open_mode Is Null OR Trim(open_mode) = '';"
 
-    EnsureIndexExists TABLE_NAVIGATION, "ix_fw_navigation_parent_navigation_id", _
+    EnsureIndexExists db, TABLE_NAVIGATION, "ix_fw_navigation_parent_navigation_id", _
         "CREATE INDEX ix_fw_navigation_parent_navigation_id ON fw_navigation (parent_navigation_id);"
 
-    EnsureIndexExists TABLE_NAVIGATION, "ix_fw_navigation_navigation_group", _
+    EnsureIndexExists db, TABLE_NAVIGATION, "ix_fw_navigation_navigation_group", _
         "CREATE INDEX ix_fw_navigation_navigation_group ON fw_navigation (navigation_group);"
 
-    EnsureIndexExists TABLE_NAVIGATION, "ix_fw_navigation_sort_order", _
+    EnsureIndexExists db, TABLE_NAVIGATION, "ix_fw_navigation_sort_order", _
         "CREATE INDEX ix_fw_navigation_sort_order ON fw_navigation (sort_order);"
 
-    EnsureIndexExists TABLE_NAVIGATION, "ix_fw_navigation_is_visible", _
+    EnsureIndexExists db, TABLE_NAVIGATION, "ix_fw_navigation_is_visible", _
         "CREATE INDEX ix_fw_navigation_is_visible ON fw_navigation (is_visible);"
 
-    EnsureIndexExists TABLE_NAVIGATION, "ix_fw_navigation_object_type", _
+    EnsureIndexExists db, TABLE_NAVIGATION, "ix_fw_navigation_object_type", _
         "CREATE INDEX ix_fw_navigation_object_type ON fw_navigation (object_type);"
 
-    EnsureIndexExists TABLE_NAVIGATION, "ix_fw_navigation_open_mode", _
+    EnsureIndexExists db, TABLE_NAVIGATION, "ix_fw_navigation_open_mode", _
         "CREATE INDEX ix_fw_navigation_open_mode ON fw_navigation (open_mode);"
 End Sub
 
 Private Sub EnsureNavigationRoleTable()
     Dim db As DAO.Database
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetSystemDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_NAVIGATION_ROLE) Then
-        ExecuteSql "CREATE TABLE " & TABLE_NAVIGATION_ROLE & " (" & _
-                   "navigation_role_id AUTOINCREMENT CONSTRAINT pk_fw_navigation_role PRIMARY KEY, " & _
-                   "navigation_id LONG, " & _
-                   "role_code TEXT(50), " & _
-                   "is_active YESNO, " & _
-                   "created_at DATETIME, " & _
-                   "created_by TEXT(100), " & _
-                   "updated_at DATETIME, " & _
-                   "updated_by TEXT(100));"
+        ExecuteSql db, "CREATE TABLE " & TABLE_NAVIGATION_ROLE & " (" & _
+                       "navigation_role_id AUTOINCREMENT CONSTRAINT pk_fw_navigation_role PRIMARY KEY, " & _
+                       "navigation_id LONG, " & _
+                       "role_code TEXT(50), " & _
+                       "is_active YESNO, " & _
+                       "created_at DATETIME, " & _
+                       "created_by TEXT(100), " & _
+                       "updated_at DATETIME, " & _
+                       "updated_by TEXT(100));"
     End If
 
     EnsureFieldExists db, TABLE_NAVIGATION_ROLE, "navigation_id", "LONG"
@@ -428,13 +428,13 @@ Private Sub EnsureNavigationRoleTable()
     EnsureFieldExists db, TABLE_NAVIGATION_ROLE, "updated_at", "DATETIME"
     EnsureFieldExists db, TABLE_NAVIGATION_ROLE, "updated_by", "TEXT(100)"
 
-    EnsureIndexExists TABLE_NAVIGATION_ROLE, "ix_fw_navigation_role_navigation_id", _
+    EnsureIndexExists db, TABLE_NAVIGATION_ROLE, "ix_fw_navigation_role_navigation_id", _
         "CREATE INDEX ix_fw_navigation_role_navigation_id ON fw_navigation_role (navigation_id);"
 
-    EnsureIndexExists TABLE_NAVIGATION_ROLE, "ix_fw_navigation_role_role_code", _
+    EnsureIndexExists db, TABLE_NAVIGATION_ROLE, "ix_fw_navigation_role_role_code", _
         "CREATE INDEX ix_fw_navigation_role_role_code ON fw_navigation_role (role_code);"
 
-    EnsureIndexExists TABLE_NAVIGATION_ROLE, "ux_fw_navigation_role_nav_role", _
+    EnsureIndexExists db, TABLE_NAVIGATION_ROLE, "ux_fw_navigation_role_nav_role", _
         "CREATE UNIQUE INDEX ux_fw_navigation_role_nav_role ON fw_navigation_role (navigation_id, role_code);"
 End Sub
 
@@ -458,6 +458,7 @@ Private Function EnsureNavigationEntry( _
     Dim existingId As Long
     Dim normalizedObjectType As String
     Dim normalizedOpenMode As String
+    Dim db As DAO.Database
 
     captionKey = Trim$(modDaoHelper.NzString(captionKey))
     fallbackCaption = Trim$(modDaoHelper.NzString(fallbackCaption))
@@ -469,6 +470,7 @@ Private Function EnsureNavigationEntry( _
     existingId = LookupNavigationId(captionKey, normalizedObjectType, objectName, fallbackCaption)
 
     If existingId <= 0 Then
+        Set db = modDb.GetSystemDatabase()
         sqlStatement = "INSERT INTO " & TABLE_NAVIGATION & " (" & _
                        "parent_navigation_id, navigation_group, caption_key, fallback_caption, " & _
                        "object_name, object_type, open_mode, icon_key, sort_order, is_active, is_expanded, is_visible, " & _
@@ -485,7 +487,7 @@ Private Function EnsureNavigationEntry( _
                        SqlBoolean(isExpanded) & ", " & _
                        SqlBoolean(isVisible) & ", " & _
                        "Now(), 'SYSTEM', Now(), 'SYSTEM');"
-        ExecuteSql sqlStatement
+        ExecuteSql db, sqlStatement
         createdCount = createdCount + 1
     End If
 
@@ -663,24 +665,26 @@ End Function
 
 Private Sub EnsureFieldExists(ByVal db As DAO.Database, ByVal table_name As String, ByVal field_name As String, ByVal ddlType As String)
     If Not modDbSchema.FieldExists(db, table_name, field_name) Then
-        ExecuteSql "ALTER TABLE " & table_name & " ADD COLUMN " & field_name & " " & ddlType & ";"
+        ExecuteSql db, "ALTER TABLE " & table_name & " ADD COLUMN " & field_name & " " & ddlType & ";"
     End If
 End Sub
 
-Private Sub EnsureIndexExists(ByVal table_name As String, ByVal indexName As String, ByVal createSql As String)
-    If Not IndexExists(table_name, indexName) Then
-        ExecuteSql createSql
+Private Sub EnsureIndexExists(ByVal db As DAO.Database, ByVal table_name As String, ByVal indexName As String, ByVal createSql As String)
+    If Not IndexExists(db, table_name, indexName) Then
+        ExecuteSql db, createSql
     End If
 End Sub
 
-Private Function IndexExists(ByVal table_name As String, ByVal indexName As String) As Boolean
+Private Function IndexExists(ByVal db As DAO.Database, ByVal table_name As String, ByVal indexName As String) As Boolean
     On Error GoTo SafeExit
 
-    Dim db As DAO.Database
     Dim tdf As DAO.tableDef
     Dim idx As DAO.index
 
-    Set db = currentDb
+    If db Is Nothing Then
+        Exit Function
+    End If
+
     Set tdf = db.TableDefs(table_name)
 
     For Each idx In tdf.Indexes
@@ -693,9 +697,12 @@ Private Function IndexExists(ByVal table_name As String, ByVal indexName As Stri
 SafeExit:
     Set idx = Nothing
     Set tdf = Nothing
-    Set db = Nothing
 End Function
 
-Private Sub ExecuteSql(ByVal sqlStatement As String)
-    currentDb.Execute sqlStatement, dbFailOnError
+Private Sub ExecuteSql(ByVal db As DAO.Database, ByVal sqlStatement As String)
+    If db Is Nothing Then
+        Exit Sub
+    End If
+
+    db.Execute sqlStatement, dbFailOnError
 End Sub

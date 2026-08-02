@@ -167,7 +167,7 @@ Private Function CalculateLineAmountsForContext( _
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     If db Is Nothing Then
         Exit Function
     End If
@@ -322,7 +322,7 @@ Private Function CalculateTotalsForContext( _
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     If db Is Nothing Then
         Exit Function
     End If
@@ -402,7 +402,7 @@ Private Function RecalculateForContext( _
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     If db Is Nothing Then
         Exit Function
     End If
@@ -476,7 +476,7 @@ Private Function ResolveOrderVatModeForContext( _
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     If db Is Nothing Then
         Exit Function
     End If

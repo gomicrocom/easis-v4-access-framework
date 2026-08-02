@@ -143,7 +143,7 @@ Public Function EnsureSalesOrderNumberRange(Optional ByVal FiscalYear As Long = 
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     If db Is Nothing Then
         Exit Function
     End If
@@ -313,7 +313,7 @@ Public Function CreateSalesOrderHeader( _
         effectiveVatRate = ResolveVatRateByCode(effectiveVatCode, modVatHandler.GetVatRate())
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset(TABLE_ORD_ORDER, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
@@ -384,7 +384,7 @@ Public Function DeleteOrderLines(ByVal OrderId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     db.Execute "DELETE FROM [" & TABLE_ORD_ORDER_LINE & "] WHERE [" & FIELD_ORDER_ID & "]=" & CStr(OrderId) & ";", dbFailOnError
 
     DeleteOrderLines = True
@@ -450,7 +450,7 @@ Public Function CreateOrderLine( _
         effectiveVatRate = vatRate
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset(TABLE_ORD_ORDER_LINE, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
@@ -553,7 +553,7 @@ Public Function CreateTemporarySalesOrderForAddress(ByVal addressId As Long) As 
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset(TABLE_TMP_ORDER, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
@@ -605,7 +605,7 @@ Public Function TemporaryOrderExists(ByVal tmpOrderId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset( _
         "SELECT [" & FIELD_TMP_ORDER_ID & "] FROM [" & TABLE_TMP_ORDER & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", _
         dbOpenSnapshot)
@@ -636,7 +636,7 @@ Public Function DeleteTemporaryOrder(ByVal tmpOrderId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     db.Execute "DELETE FROM [" & TABLE_TMP_ORDER_LINE & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", dbFailOnError
     db.Execute "DELETE FROM [" & TABLE_TMP_ORDER & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", dbFailOnError
     DeleteTemporaryOrder = True
@@ -670,7 +670,7 @@ Public Function PersistTemporaryOrder(ByVal tmpOrderId As Long) As Long
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rsTmpOrder = db.OpenRecordset( _
         "SELECT * FROM [" & TABLE_TMP_ORDER & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", _
         dbOpenDynaset)
@@ -860,7 +860,7 @@ Public Function GetOrderHeaderVatContext(ByVal OrderId As Long) As Object
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset( _
         "SELECT [" & FIELD_CUSTOMER_ADDRESS_ID & "], [" & FIELD_DELIVERY_ADDRESS_ID & "], " & _
         "[" & FIELD_VAT_MODE & "], [" & FIELD_VAT_CODE & "], [" & FIELD_VAT_RATE & "] " & _
@@ -911,7 +911,7 @@ Public Function ApplyDefaultVatContextToOrder(ByVal OrderId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset( _
         "SELECT * FROM [" & TABLE_ORD_ORDER & "] WHERE [" & FIELD_ORDER_ID & "]=" & CStr(OrderId) & ";", _
         dbOpenDynaset)
@@ -983,7 +983,7 @@ Public Function ResolveVatRateByCode(ByVal VatCode As String, Optional ByVal def
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset( _
         "SELECT [vat_rate] FROM [ref_vat_code] WHERE [vat_code]=" & SqlText(VatCode) & ";", _
         dbOpenSnapshot)
@@ -1019,7 +1019,7 @@ Public Function OrderExists(ByVal OrderId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT [" & FIELD_ORDER_ID & "] FROM [" & TABLE_ORD_ORDER & "] WHERE [" & FIELD_ORDER_ID & "]=" & CStr(OrderId) & ";", dbOpenSnapshot)
     OrderExists = Not (rs.BOF And rs.EOF)
 
@@ -1083,7 +1083,7 @@ Private Function ResolveAddressLanguageCode(ByVal addressId As Long, ByVal defau
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset( _
         "SELECT [" & FIELD_LANGUAGE_CODE & "] FROM [adr_address] WHERE [address_id]=" & CStr(addressId) & ";", _
         dbOpenSnapshot)
@@ -1174,7 +1174,7 @@ Private Function VatCodeExists(ByVal VatCode As String) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset( _
         "SELECT [vat_code] FROM [ref_vat_code] WHERE [vat_code]=" & SqlText(VatCode) & ";", _
         dbOpenSnapshot)
@@ -1221,7 +1221,7 @@ Private Function FindVatCodeByCountryAndRate( _
 
     sqlStatement = sqlStatement & "ORDER BY Nz([sort_order],0), [vat_code];"
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset(sqlStatement, dbOpenSnapshot)
 
     If Not (rs.BOF And rs.EOF) Then

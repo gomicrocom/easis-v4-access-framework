@@ -50,33 +50,98 @@ Private m_workspaceOpenArgsApplied As Boolean
 Private m_isTemporaryOrder As Boolean
 Private m_temporaryOrderId As Long
 Private m_temporaryOrderDisposed As Boolean
+Private m_lastAppliedWorkspaceOpenArgs As String
+
+Private Sub Form_Open(Cancel As Integer)
+    On Error GoTo ErrorHandler
+
+    PrimePaymentTermComboEarly
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "Form_Open", Err
+End Sub
 
 Private Sub Form_Load()
     On Error GoTo ErrorHandler
 
+    Dim deferWorkspaceContext As Boolean
+    Dim effectiveOpenArgs As String
+    Dim hasEffectiveOpenArgs As Boolean
+
     modLoggingHandler.LogInfo MODULE_NAME & ".Form_Load", _
         "OpenArgs raw='" & Replace(modDaoHelper.NzString(Me.OpenArgs), "'", "''") & "'."
 
-    InitializeRecordSource
-    ConfigureOrderLinesSubform
-    ConfigureHeaderControls
-    modFwTranslationRuntime.ApplyTranslations Me
-    UpdateLocalCommandButtons
-    UpdateHeaderCaptionUi
+    effectiveOpenArgs = modDaoHelper.NzString(Me.OpenArgs)
+    If LenB(Trim$(effectiveOpenArgs)) = 0 Then
+        effectiveOpenArgs = modAppWorkspaceService.ConsumePendingWorkspaceOpenArgs(Me.Name)
+        If LenB(Trim$(effectiveOpenArgs)) > 0 Then
+            modLoggingHandler.LogInfo MODULE_NAME & ".Form_Load", _
+                "Consumed pending workspace OpenArgs='" & Replace(effectiveOpenArgs, "'", "''") & "' during Form_Load."
+        End If
+    End If
+    hasEffectiveOpenArgs = (LenB(Trim$(effectiveOpenArgs)) > 0)
 
-    If LenB(Trim$(modDaoHelper.NzString(Me.OpenArgs))) > 0 Then
+    InitializeRecordSource
+    If hasEffectiveOpenArgs Then
         modLoggingHandler.LogInfo MODULE_NAME & ".Form_Load", _
-            "Applying standalone OpenArgs during Form_Load."
-        ApplyWorkspaceOpenArgs CStr(Me.OpenArgs)
+            "Applying effective OpenArgs during Form_Load."
+        ApplyWorkspaceOpenArgs effectiveOpenArgs
     Else
+        deferWorkspaceContext = ShouldDeferWorkspaceContextBinding(effectiveOpenArgs)
+        If deferWorkspaceContext Then
+            PrepareDeferredWorkspaceContext
+        End If
+        ConfigureOrderLinesSubform
+        ConfigureHeaderControls
+        UpdateHeaderCaptionUi
+
         modLoggingHandler.LogInfo MODULE_NAME & ".Form_Load", _
             "No OpenArgs available during Form_Load. Waiting for workspace ApplyWorkspaceOpenArgs if hosted."
     End If
+
+    modFwTranslationRuntime.ApplyTranslations Me
+    UpdateLocalCommandButtons
+    UpdateHeaderCaptionUi
 
     Exit Sub
 
 ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "Form_Load", Err
+End Sub
+
+Private Function ShouldDeferWorkspaceContextBinding(ByVal effectiveOpenArgs As String) As Boolean
+    On Error GoTo SafeExit
+
+    If ResolveHostingShellForm() Is Nothing Then
+        Exit Function
+    End If
+
+    If LenB(Trim$(effectiveOpenArgs)) > 0 Then
+        Exit Function
+    End If
+
+    ShouldDeferWorkspaceContextBinding = True
+
+SafeExit:
+End Function
+
+Private Sub PrepareDeferredWorkspaceContext()
+    On Error GoTo ErrorHandler
+
+    m_workspaceOpenArgsApplied = False
+    m_isTemporaryOrder = False
+    m_temporaryOrderId = 0
+    m_temporaryOrderDisposed = False
+    Me.Filter = "[" & FIELD_ORDER_ID & "]=0"
+    Me.FilterOn = True
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".PrepareDeferredWorkspaceContext", _
+        "Hosted workspace form was initialized without direct OpenArgs. Applied neutral deferred binding until workspace OpenArgs arrive."
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "PrepareDeferredWorkspaceContext", Err
 End Sub
 
 Private Sub Form_Current()
@@ -345,14 +410,26 @@ Public Sub ApplyWorkspaceOpenArgs(ByVal openArgs As String)
     On Error GoTo ErrorHandler
 
     Dim OrderId As Long
+    Dim normalizedOpenArgs As String
 
-    If IsNewOrderOpenArgs(openArgs) Then
-        ActivateTemporaryOrderContext ParseTemporaryOrderId(openArgs)
+    normalizedOpenArgs = Trim$(modDaoHelper.NzString(openArgs))
+
+    If m_workspaceOpenArgsApplied Then
+        If StrComp(normalizedOpenArgs, Trim$(m_lastAppliedWorkspaceOpenArgs), vbTextCompare) = 0 Then
+            modLoggingHandler.LogInfo MODULE_NAME & ".ApplyWorkspaceOpenArgs", _
+                "Skipped duplicate workspace OpenArgs='" & Replace(normalizedOpenArgs, "'", "''") & "'."
+            Exit Sub
+        End If
+    End If
+
+    If IsNewOrderOpenArgs(normalizedOpenArgs) Then
+        ActivateTemporaryOrderContext ParseTemporaryOrderId(normalizedOpenArgs)
         m_workspaceOpenArgsApplied = True
+        m_lastAppliedWorkspaceOpenArgs = normalizedOpenArgs
         Exit Sub
     End If
 
-    OrderId = NzLong(openArgs, 0)
+    OrderId = NzLong(normalizedOpenArgs, 0)
     m_workspaceOpenArgsApplied = False
     m_isTemporaryOrder = False
     m_temporaryOrderId = 0
@@ -362,7 +439,7 @@ Public Sub ApplyWorkspaceOpenArgs(ByVal openArgs As String)
     Me.RecordSource = TABLE_ORD_ORDER
 
     modLoggingHandler.LogInfo MODULE_NAME & ".ApplyWorkspaceOpenArgs", _
-        "Parsed order_id=" & CStr(OrderId) & "; raw_open_args='" & Replace(openArgs, "'", "''") & "'."
+        "Parsed order_id=" & CStr(OrderId) & "; raw_open_args='" & Replace(normalizedOpenArgs, "'", "''") & "'."
 
     If OrderId <= 0 Then
         HandleInvalidOrderContext "MSG.ORDER_DETAIL_INVALID_ID", "Die uebergebene Bestell-ID ist ungueltig."
@@ -381,6 +458,7 @@ Public Sub ApplyWorkspaceOpenArgs(ByVal openArgs As String)
     UpdateOrderLinesAvailability
     UpdateHeaderCaptionUi
     m_workspaceOpenArgsApplied = True
+    m_lastAppliedWorkspaceOpenArgs = normalizedOpenArgs
 
     modLoggingHandler.LogInfo MODULE_NAME & ".ApplyWorkspaceOpenArgs", _
         "Order context applied successfully for order_id=" & CStr(OrderId) & "."
@@ -579,6 +657,29 @@ Private Sub ConfigurePaymentTermCombo()
         .ControlSource = FIELD_PAYMENT_TERM_CODE
         .RowSourceType = "Table/Query"
         .RowSource = BuildPaymentTermRowSourceSql()
+        .BoundColumn = 1
+        .ColumnCount = 2
+        .ColumnWidths = "0cm;6cm"
+        .LimitToList = True
+    End With
+
+SafeExit:
+End Sub
+
+Private Sub PrimePaymentTermComboEarly()
+    On Error GoTo SafeExit
+
+    If Not HasControl("cboTenPaymentTerm") Then
+        Exit Sub
+    End If
+
+    With Me.Controls("cboTenPaymentTerm")
+        .RowSourceType = "Table/Query"
+        .RowSource = "SELECT payment_term_code, payment_term_code " & _
+                     "FROM ten_payment_term " & _
+                     "WHERE Len(Trim(Nz([payment_term_code], ''))) > 0 " & _
+                     "AND Nz([is_active], True)=True " & _
+                     "ORDER BY Nz([sort_order], 0), Nz([payment_term_code], '');"
         .BoundColumn = 1
         .ColumnCount = 2
         .ColumnWidths = "0cm;6cm"
@@ -1216,7 +1317,10 @@ Private Function ResolveDefaultPaymentTermCode() As String
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
 
-    Set db = CurrentDb
+    Set db = modDb.GetCurrentTenantDatabase()
+    If db Is Nothing Then
+        GoTo SafeExit
+    End If
     Set rs = db.OpenRecordset( _
         "SELECT TOP 1 payment_term_code " & _
         "FROM ten_payment_term " & _

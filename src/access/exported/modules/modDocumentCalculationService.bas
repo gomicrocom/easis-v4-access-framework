@@ -66,7 +66,7 @@ Public Function EnsureDocumentCalculationSchema() As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     If db Is Nothing Then
         Exit Function
     End If
@@ -183,7 +183,7 @@ Public Function CalculatePositionAmounts(ByVal DocumentPositionId As Long) As Bo
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     If db Is Nothing Then
         Exit Function
     End If
@@ -281,7 +281,7 @@ Public Function CalculateDocumentTotals(ByVal DocumentId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     If db Is Nothing Then
         Exit Function
     End If
@@ -376,7 +376,7 @@ Public Function RecalculateDocument(ByVal DocumentId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     If db Is Nothing Then
         Exit Function
     End If
@@ -444,7 +444,7 @@ Private Function ResolveDocumentVatMode(ByVal DocumentId As Long, ByVal defaultV
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     If db Is Nothing Then
         Exit Function
     End If
@@ -504,7 +504,7 @@ Private Function DocumentExists(ByVal DocumentId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     If db Is Nothing Then
         Exit Function
     End If

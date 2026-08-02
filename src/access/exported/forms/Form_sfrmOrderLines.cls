@@ -396,16 +396,20 @@ ErrorHandler:
 End Sub
 
 Private Sub ConfigureVatCodeCombo()
-    On Error GoTo SafeExit
+    On Error GoTo ErrorHandler
+
+    Dim rowSourceText As String
 
     If Not HasControl("cboVatCode") Then
         Exit Sub
     End If
 
+    rowSourceText = BuildVatCodeValueList()
+
     With Me.Controls("cboVatCode")
         .ControlSource = FIELD_VAT_CODE
-        .RowSourceType = "Table/Query"
-        .RowSource = modOrderRepository.GetVatCodeRowSourceSql()
+        .RowSourceType = "Value List"
+        .RowSource = rowSourceText
         .BoundColumn = 1
         .ColumnCount = 3
         .ColumnWidths = "0cm;5cm;0cm"
@@ -413,6 +417,84 @@ Private Sub ConfigureVatCodeCombo()
     End With
 
 SafeExit:
+    Exit Sub
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ConfigureVatCodeCombo", Err
+    Resume SafeExit
+End Sub
+
+Private Function BuildVatCodeValueList() As String
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim sqlStatement As String
+    Dim itemText As String
+    Dim displayText As String
+    Dim translationKey As String
+    Dim vatCode As String
+    Dim vatRate As Double
+
+    sqlStatement = "SELECT vat_code, translation_key, vat_rate " & _
+                   "FROM ref_vat_code " & _
+                   "WHERE Nz(is_active, True)=True " & _
+                   "ORDER BY Nz(sort_order, 0), Nz(vat_code, '');"
+
+    Set db = modDb.GetCurrentTenantDatabase()
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    Set rs = db.OpenRecordset(sqlStatement, dbOpenSnapshot)
+    Do While Not rs.EOF
+        vatCode = modDaoHelper.NzString(rs.Fields("vat_code").Value)
+        translationKey = modDaoHelper.NzString(rs.Fields("translation_key").Value)
+        vatRate = NzDouble(rs.Fields("vat_rate").Value, 0)
+
+        displayText = ResolveVatCodeDisplayText(translationKey, vatCode, vatRate)
+        itemText = vatCode & ";" & displayText & ";" & Replace(Format$(vatRate, "0.0"), ",", ".")
+
+        If LenB(BuildVatCodeValueList) > 0 Then
+            BuildVatCodeValueList = BuildVatCodeValueList & ";"
+        End If
+        BuildVatCodeValueList = BuildVatCodeValueList & itemText
+
+        rs.MoveNext
+    Loop
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "BuildVatCodeValueList", Err
+    BuildVatCodeValueList = vbNullString
+    Resume CleanExit
+End Function
+
+Private Function ResolveVatCodeDisplayText( _
+    ByVal translationKey As String, _
+    ByVal vatCode As String, _
+    ByVal vatRate As Double) As String
+
+    Dim translatedText As String
+    Dim fallbackText As String
+
+    fallbackText = vatCode
+    If LenB(Trim$(translationKey)) > 0 Then
+        fallbackText = modFwTranslationRuntime.ResolveText(translationKey, vatCode)
+    End If
+
+    translatedText = Trim$(fallbackText)
+    If LenB(translatedText) = 0 Then
+        translatedText = vatCode
+    End If
+
+    ResolveVatCodeDisplayText = translatedText & " (" & Replace(Format$(vatRate, "0.0"), ",", ".") & "%)"
 End Sub
 
 Private Sub UpdateVatRateFromVatCodeCombo()

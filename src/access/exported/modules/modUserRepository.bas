@@ -31,7 +31,7 @@ Public Function UserExists(ByVal UserId As String) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_USR_USER & "];", dbOpenSnapshot)
 
     UserExists = FindActiveUser(rs, UserId)
@@ -65,7 +65,7 @@ Public Function GetUserDisplayName(ByVal UserId As String, Optional ByVal defaul
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_USR_USER & "];", dbOpenSnapshot)
 
     GetUserDisplayName = ResolveUserFieldValue(rs, UserId, FIELD_USER_NAME, defaultValue)
@@ -99,7 +99,7 @@ Public Function GetUserRoleCode(ByVal UserId As String, Optional ByVal defaultVa
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_USR_USER & "];", dbOpenSnapshot)
 
     GetUserRoleCode = ResolveUserFieldValue(rs, UserId, FIELD_ROLE_CODE, defaultValue)
@@ -126,7 +126,7 @@ Private Function CanReadUsers() As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_USR_USER) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CanReadUsers", _
@@ -225,7 +225,7 @@ Public Function GetUserLanguageCode(ByVal UserId As String, Optional ByVal defau
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_USR_USER & "];", dbOpenSnapshot)
 
     If Not modDaoHelper.RecordsetHasField(rs, FIELD_LANGUAGE_CODE) Then

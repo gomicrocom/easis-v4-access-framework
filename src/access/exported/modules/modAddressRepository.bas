@@ -54,7 +54,7 @@ Public Function CreateAddress( _
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset(TABLE_ADR_ADDRESS, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
@@ -111,7 +111,7 @@ Public Function AddressExists(ByVal addressId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", dbOpenSnapshot)
 
     AddressExists = Not (rs.BOF And rs.EOF)
@@ -148,7 +148,7 @@ Public Function GetAddressDisplayName(ByVal addressId As Long, Optional ByVal de
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", dbOpenSnapshot)
 
     If rs.BOF And rs.EOF Then
@@ -191,7 +191,7 @@ Private Function CanReadAddresses() As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_ADR_ADDRESS) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CanReadAddresses", _
@@ -228,7 +228,7 @@ Public Function GetAddressCountryCode(ByVal addressId As Long, Optional ByVal de
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset( _
         "SELECT [" & FIELD_COUNTRY_CODE & "] FROM [" & TABLE_ADR_ADDRESS & "] " & _
         "WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", _

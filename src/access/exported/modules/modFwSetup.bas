@@ -22,7 +22,10 @@ Public Function EnsureOrderSchema() As Boolean
     Dim workingDb As DAO.Database
 
     EnsureOrderSchema = False
-    Set workingDb = currentDb
+    Set workingDb = modDb.GetSystemDatabase()
+    If workingDb Is Nothing Then
+        Exit Function
+    End If
 
     If Not modBasicModuleSchema.EnsureOrderPhase1Schema() Then
         Exit Function
@@ -66,7 +69,10 @@ Public Sub SeedTranslations()
     On Error GoTo ErrorHandler
 
     Dim db As DAO.Database
-    Set db = currentDb
+    Set db = modDb.GetSystemDatabase()
+    If db Is Nothing Then
+        Exit Sub
+    End If
 
     ' ===== EN =====
     InsertTranslation db, "EN", "MSG_REQUIRED_FIELDS_MISSING", "Please fill in all required fields.", True
@@ -186,7 +192,7 @@ Public Sub EnsureTranslationTagGeneratorTranslations(Optional ByVal db As DAO.Da
     Dim workingDb As DAO.Database
 
     If db Is Nothing Then
-        Set workingDb = currentDb
+        Set workingDb = modDb.GetSystemDatabase()
     Else
         Set workingDb = db
     End If
@@ -292,7 +298,7 @@ Public Sub EnsureAddressCockpitTranslations(Optional ByVal db As DAO.Database = 
     Dim workingDb As DAO.Database
 
     If db Is Nothing Then
-        Set workingDb = currentDb
+        Set workingDb = modDb.GetSystemDatabase()
     Else
         Set workingDb = db
     End If
@@ -455,7 +461,7 @@ Public Sub EnsureOrderDetailTranslations(Optional ByVal db As DAO.Database = Not
     Dim workingDb As DAO.Database
 
     If db Is Nothing Then
-        Set workingDb = currentDb
+        Set workingDb = modDb.GetSystemDatabase()
     Else
         Set workingDb = db
     End If
@@ -568,7 +574,7 @@ Public Sub EnsureOrderLinesTranslations(Optional ByVal db As DAO.Database = Noth
     Dim workingDb As DAO.Database
 
     If db Is Nothing Then
-        Set workingDb = currentDb
+        Set workingDb = modDb.GetSystemDatabase()
     Else
         Set workingDb = db
     End If
@@ -1755,17 +1761,19 @@ End Function
 Public Sub NormalizeLanguageCodeData()
     On Error GoTo ErrorHandler
 
-    Dim db As DAO.Database
+    Dim systemDb As DAO.Database
+    Dim tenantDb As DAO.Database
     Dim workspace As DAO.Workspace
 
-    Set db = currentDb
+    Set systemDb = modDb.GetSystemDatabase()
+    Set tenantDb = modDb.GetCurrentTenantDatabase()
     Set workspace = DBEngine.Workspaces(0)
 
     workspace.BeginTrans
 
-    NormalizeFwTranslationLanguageCodes db
-    NormalizeLanguageCodesForTable db, "adr_address", "language_code", Array("address_id")
-    NormalizeLanguageCodesForTable db, "ref_language", "language_code", Array()
+    NormalizeFwTranslationLanguageCodes systemDb
+    NormalizeLanguageCodesForTable systemDb, "ref_language", "language_code", Array()
+    NormalizeLanguageCodesForTable tenantDb, "adr_address", "language_code", Array("address_id")
 
     If Not modBasicModuleSchema.EnsureSystemLanguageReferenceSchema() Then
         modLoggingHandler.LogWarning MODULE_NAME & ".NormalizeLanguageCodeData", _

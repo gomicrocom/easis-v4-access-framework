@@ -66,31 +66,25 @@ Public Function ApplyPaymentTermsMigration() As Boolean
 
     Dim frontendDb As DAO.Database
     Dim backendDb As DAO.Database
+    Dim systemDb As DAO.Database
     Dim backendPath As String
     Dim workspace As DAO.Workspace
     Dim transactionStarted As Boolean
-    Dim tenPaymentTermLinked As Boolean
 
     ApplyPaymentTermsMigration = False
     ResetMigrationCounters
 
-    Set frontendDb = CurrentDb
-    backendPath = ResolveBusinessBackendPath(frontendDb)
-    tenPaymentTermLinked = IsLinkedAccessTable(frontendDb, TABLE_TEN_PAYMENT_TERM)
+    Set frontendDb = modDb.GetFrontendDatabase()
+    Set backendDb = modDb.GetCurrentTenantDatabase()
+    Set systemDb = modDb.GetSystemDatabase()
+    backendPath = modDb.GetCurrentTenantBackendPath()
 
-    If tenPaymentTermLinked And LenB(backendPath) = 0 Then
+    If backendDb Is Nothing Then
         Err.Raise vbObjectError + 6520, MODULE_NAME & ".ApplyPaymentTermsMigration", _
-            "Linked table '" & TABLE_TEN_PAYMENT_TERM & "' has no resolvable backend path."
+            "Tenant backend for payment-term migration could not be resolved."
     End If
 
-    If LenB(backendPath) > 0 And StrComp(NormalizePath(frontendDb.Name), NormalizePath(backendPath), vbTextCompare) <> 0 Then
-        Set backendDb = DBEngine.OpenDatabase(backendPath)
-    Else
-        Set backendDb = frontendDb
-        backendPath = frontendDb.Name
-    End If
-
-    LogMigrationExecutionPath frontendDb, backendDb, backendPath, tenPaymentTermLinked
+    LogMigrationExecutionPath frontendDb, backendDb, backendPath, True
 
     EnsureDocDocumentFields backendDb
     EnsureTenPaymentTermTable backendDb
@@ -101,7 +95,7 @@ Public Function ApplyPaymentTermsMigration() As Boolean
     transactionStarted = True
 
     MigrateLegacyPaymentTermCodeReferences backendDb
-    EnsureCanonicalPaymentTermTranslationSeeds frontendDb
+    EnsureCanonicalPaymentTermTranslationSeeds systemDb
     ConsolidateTenPaymentTerms backendDb
 
     workspace.CommitTrans
@@ -137,11 +131,9 @@ ErrorHandler:
 
 CleanExit:
     On Error Resume Next
-    If Not backendDb Is Nothing Then
-        If StrComp(NormalizePath(backendDb.Name), NormalizePath(frontendDb.Name), vbTextCompare) <> 0 Then
-            backendDb.Close
-        End If
-    End If
+    If Not systemDb Is Nothing Then systemDb.Close
+    If Not backendDb Is Nothing Then backendDb.Close
+    Set systemDb = Nothing
     Set backendDb = Nothing
     Set frontendDb = Nothing
 End Function
@@ -738,20 +730,6 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "RemoveTenPaymentTermLegacyFields", Err
 End Sub
 
-Private Function ResolveBusinessBackendPath(ByVal db As DAO.Database) As String
-    If db Is Nothing Then
-        Exit Function
-    End If
-
-    ResolveBusinessBackendPath = GetBackendPathForLinkedTable(db, TABLE_TEN_PAYMENT_TERM)
-    If LenB(ResolveBusinessBackendPath) = 0 Then
-        ResolveBusinessBackendPath = GetBackendPathForLinkedTable(db, TABLE_DOC_DOCUMENT)
-    End If
-    If LenB(ResolveBusinessBackendPath) = 0 Then
-        ResolveBusinessBackendPath = GetBackendPathForLinkedTable(db, TABLE_ORD_ORDER)
-    End If
-End Function
-
 Private Sub LogMigrationExecutionPath( _
     ByVal frontendDb As DAO.Database, _
     ByVal backendDb As DAO.Database, _
@@ -881,28 +859,6 @@ Private Function GetBackendPathForLinkedTable(ByVal db As DAO.Database, ByVal ta
 
 ErrorHandler:
     GetBackendPathForLinkedTable = vbNullString
-End Function
-
-Private Function IsLinkedAccessTable(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
-    On Error GoTo ErrorHandler
-
-    Dim connectText As String
-    Const DATABASE_MARKER As String = ";DATABASE="
-
-    If db Is Nothing Then
-        Exit Function
-    End If
-
-    If Not modDbSchema.TableExists(db, tableName) Then
-        Exit Function
-    End If
-
-    connectText = Trim$(modDaoHelper.NzString(db.TableDefs(tableName).Connect, vbNullString))
-    IsLinkedAccessTable = (InStr(1, connectText, DATABASE_MARKER, vbTextCompare) > 0)
-    Exit Function
-
-ErrorHandler:
-    IsLinkedAccessTable = False
 End Function
 
 Private Sub EnsureLinkedBackendTable( _

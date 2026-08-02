@@ -11,7 +11,6 @@ Option Explicit
 
 Private Const MODULE_NAME As String = "modBasicModuleSchema"
 Private Const ACCESS_CONNECT_PREFIX As String = ";DATABASE="
-Private Const SYSTEM_BACKEND_PATH As String = "C:\easis\Data\sys_be.accdb"
 Private Const TABLE_REF_LANGUAGE As String = "ref_language"
 
 Public Sub CreateBasicModuleTables(Optional ByVal backendPath As String = vbNullString)
@@ -170,31 +169,19 @@ Private Function OpenSchemaDatabase( _
     Dim frontendDb As DAO.Database
     Dim targetBackendPath As String
 
-    Set frontendDb = currentDb
+    Set frontendDb = modDb.GetFrontendDatabase()
     targetBackendPath = Trim$(explicitBackendPath)
     modLoggingHandler.LogInfo MODULE_NAME & ".OpenSchemaDatabase", "frontend_db=" & ResolveDatabasePath(frontendDb)
 
-    If LenB(targetBackendPath) = 0 Then
-        If modDbSchema.TableExists(frontendDb, "ord_order") Then
-            If IsLinkedAccessTable(frontendDb, "ord_order") Then
-                targetBackendPath = ResolveLinkedTableBackendPath(frontendDb, "ord_order")
-            End If
-        Else
-            targetBackendPath = Trim$(modDb.GetBackendPath())
-        End If
-    End If
-
-    modLoggingHandler.LogInfo MODULE_NAME & ".OpenSchemaDatabase", "requested_backend_path=" & targetBackendPath
-
     If LenB(targetBackendPath) > 0 Then
-        If StrComp(NormalizePath(frontendDb.Name), NormalizePath(targetBackendPath), vbTextCompare) <> 0 Then
-            Set resolvedDb = DBEngine.OpenDatabase(targetBackendPath)
-            shouldCloseDb = True
-        Else
-            Set resolvedDb = frontendDb
-        End If
+        modLoggingHandler.LogInfo MODULE_NAME & ".OpenSchemaDatabase", "requested_backend_path=" & targetBackendPath
+        Set resolvedDb = OpenOrCreateAccessDatabase(targetBackendPath)
+        shouldCloseDb = Not (resolvedDb Is Nothing)
     Else
-        Set resolvedDb = frontendDb
+        targetBackendPath = Trim$(modDb.GetCurrentTenantBackendPath())
+        modLoggingHandler.LogInfo MODULE_NAME & ".OpenSchemaDatabase", "requested_backend_path=" & targetBackendPath
+        Set resolvedDb = modDb.GetCurrentTenantDatabase()
+        shouldCloseDb = Not (resolvedDb Is Nothing)
     End If
 
     If Not resolvedDb Is Nothing Then
@@ -449,21 +436,18 @@ Private Sub UpsertRefLanguage( _
     If rs.BOF And rs.EOF Then
         rs.AddNew
         rs.Fields("language_code").Value = languageCode
+        rs.Fields("language_name").Value = languageName
+        rs.Fields("iso_language_code").Value = isoLanguageCode
+        rs.Fields("country_code").Value = countryCode
+        rs.Fields("is_default").Value = isDefault
+        rs.Fields("is_active").Value = isActive
+        rs.Fields("sort_order").Value = sortOrder
         rs.Fields("created_at").Value = Now()
         rs.Fields("created_by").Value = "SYSTEM"
-        rs.Fields("is_active").Value = isActive
-    Else
-        rs.Edit
+        rs.Fields("updated_at").Value = Now()
+        rs.Fields("updated_by").Value = "SYSTEM"
+        rs.Update
     End If
-
-    rs.Fields("language_name").Value = languageName
-    rs.Fields("iso_language_code").Value = isoLanguageCode
-    rs.Fields("country_code").Value = countryCode
-    rs.Fields("is_default").Value = isDefault
-    rs.Fields("sort_order").Value = sortOrder
-    rs.Fields("updated_at").Value = Now()
-    rs.Fields("updated_by").Value = "SYSTEM"
-    rs.Update
 
 CleanExit:
     On Error Resume Next
@@ -699,10 +683,11 @@ Public Function EnsureSystemLanguageReferenceSchema(Optional ByVal sysBackendPat
 
     effectiveBackendPath = Trim$(sysBackendPath)
     If LenB(effectiveBackendPath) = 0 Then
-        effectiveBackendPath = SYSTEM_BACKEND_PATH
+        effectiveBackendPath = modDb.GetSystemBackendPath()
+        Set backendDb = modDb.GetSystemDatabase()
+    Else
+        Set backendDb = OpenOrCreateAccessDatabase(effectiveBackendPath)
     End If
-
-    Set backendDb = OpenOrCreateAccessDatabase(effectiveBackendPath)
     CreateRefLanguage backendDb
     If Not EnsureRefLanguageSchema(backendDb) Then GoTo CleanExit
     If Not SeedRefLanguageData(backendDb) Then GoTo CleanExit

@@ -31,7 +31,7 @@ Public Function GetTenantParameter(ByVal ParameterKey As String, Optional ByVal 
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_PARAMETER & "];", dbOpenSnapshot)
 
     GetTenantParameter = ResolveTenantParameterValue(rs, ParameterKey, defaultValue)
@@ -65,7 +65,7 @@ Public Function HasTenantParameter(ByVal ParameterKey As String) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_PARAMETER & "];", dbOpenSnapshot)
 
     HasTenantParameter = (LenB(ResolveTenantParameterValue(rs, ParameterKey, vbNullString)) > 0)
@@ -92,7 +92,7 @@ Private Function CanReadTenantParameters() As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_TEN_PARAMETER) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CanReadTenantParameters", _

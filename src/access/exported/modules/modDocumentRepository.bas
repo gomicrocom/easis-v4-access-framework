@@ -78,7 +78,7 @@ Public Function CreateDocumentHeader( _
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CreateDocumentHeader", _
@@ -155,7 +155,7 @@ Public Function DeleteDocumentPositions(ByVal DocumentId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT_POSITION) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".DeleteDocumentPositions", _
@@ -214,7 +214,7 @@ Public Function CreateDocumentPosition( _
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT_POSITION) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CreateDocumentPosition", _
@@ -295,7 +295,7 @@ Public Function UpdateDocumentTotals(ByVal DocumentId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Or Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT_POSITION) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".UpdateDocumentTotals", _
@@ -385,7 +385,7 @@ Public Function DocumentExists(ByVal DocumentId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".DocumentExists", _
@@ -495,7 +495,7 @@ Public Function AssignDocumentNumber(ByVal DocumentId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".AssignDocumentNumber", _
@@ -576,7 +576,7 @@ Public Function SetDocumentStatus(ByVal DocumentId As Long, ByVal StatusCode As 
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".SetDocumentStatus", _
@@ -625,7 +625,7 @@ Public Function CountDocumentPositions(ByVal DocumentId As Long) As Long
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT_POSITION) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CountDocumentPositions", _
@@ -681,7 +681,7 @@ Private Function ResolveDocumentFieldValue(ByVal DocumentId As Long, ByVal field
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         Exit Function
@@ -728,7 +728,7 @@ Private Function ResolveDocumentLongValue(ByVal DocumentId As Long, ByVal fieldN
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_DOC_DOCUMENT) Then
         Exit Function

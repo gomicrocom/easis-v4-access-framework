@@ -41,7 +41,7 @@ Public Function CreateContact( _
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset(TABLE_ADR_CONTACT, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
@@ -93,7 +93,7 @@ Public Function GetPrimaryContactValue(ByVal addressId As Long, ByVal contactTyp
     End If
 
     targetType = UCase$(Trim$(contactTypeCode))
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_CONTACT & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", dbOpenSnapshot)
 
     If rs.BOF And rs.EOF Then
@@ -140,7 +140,7 @@ Public Function ContactExists(ByVal ContactId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_CONTACT & "] WHERE [" & FIELD_CONTACT_ID & "]=" & CStr(ContactId) & ";", dbOpenSnapshot)
 
     ContactExists = Not (rs.BOF And rs.EOF)
@@ -167,7 +167,7 @@ Private Function CanReadContacts() As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_ADR_CONTACT) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CanReadContacts", _

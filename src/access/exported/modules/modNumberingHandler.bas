@@ -125,7 +125,7 @@ Private Function ResolvePrefix(ByVal DocumentTypeCode As String, ByVal FiscalYea
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_NUMBERRANGE & "];", dbOpenSnapshot)
 
     ResolvePrefix = ResolveTextField(rs, DocumentTypeCode, FiscalYear, FIELD_PREFIX, ResolvePrefix)
@@ -154,7 +154,7 @@ Private Function ResolveFormatMask(ByVal DocumentTypeCode As String, ByVal Fisca
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_NUMBERRANGE & "];", dbOpenSnapshot)
 
     ResolveFormatMask = ResolveTextField(rs, DocumentTypeCode, FiscalYear, FIELD_FORMAT_MASK, ResolveFormatMask)

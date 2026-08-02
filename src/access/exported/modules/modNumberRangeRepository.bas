@@ -29,7 +29,7 @@ Public Function GetCurrentNumberValue(ByVal DocumentTypeCode As String, ByVal Fi
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_NUMBERRANGE & "];", dbOpenDynaset)
 
     GetCurrentNumberValue = ResolveCurrentValue(rs, DocumentTypeCode, FiscalYear)
@@ -58,7 +58,7 @@ Public Function IncrementNumberValue(ByVal DocumentTypeCode As String, ByVal Fis
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_NUMBERRANGE & "];", dbOpenDynaset)
 
     If Not FindNumberRangeRow(rs, DocumentTypeCode, FiscalYear) Then
@@ -100,7 +100,7 @@ Public Function NumberRangeExists(ByVal DocumentTypeCode As String, ByVal Fiscal
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
     Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_TEN_NUMBERRANGE & "];", dbOpenSnapshot)
 
     NumberRangeExists = FindNumberRangeRow(rs, DocumentTypeCode, FiscalYear)
@@ -127,7 +127,7 @@ Private Function CanReadNumberRanges() As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_TEN_NUMBERRANGE) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".CanReadNumberRanges", _

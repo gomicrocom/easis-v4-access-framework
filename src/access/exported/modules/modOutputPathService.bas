@@ -42,7 +42,7 @@ Public Function GetTenantDocumentRootPath() As String
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_TEN_PARAMETER) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".GetTenantDocumentRootPath", _

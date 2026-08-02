@@ -237,10 +237,10 @@ Private Function LoadTranslationsFromTable() As Long
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetSystemDatabase()
     If db Is Nothing Then
         Err.Raise vbObjectError + 2800, MODULE_NAME & ".LoadTranslationsFromTable", _
-            "Current database could not be resolved."
+            "System database could not be resolved."
     End If
 
     sqlStatement = "SELECT * FROM [" & TABLE_FW_TRANSLATIONS & "];"
@@ -516,10 +516,10 @@ Private Function TranslationTableExists(ByVal tableName As String) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetSystemDatabase()
     If db Is Nothing Then
         Err.Raise vbObjectError + 2802, MODULE_NAME & ".TranslationTableExists", _
-            "Current database could not be resolved."
+            "System database could not be resolved."
     End If
 
     For Each tableDef In db.TableDefs

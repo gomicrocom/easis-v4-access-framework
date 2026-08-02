@@ -38,7 +38,7 @@ Public Sub LogSystemSnapshot(ByVal contextName As String)
         "; active_form=" & SafeToken(ResolveActiveFormName()) & _
         "; workspace_source_object=" & SafeToken(ResolveShellSourceObject(WORKSPACE_SUBFORM_CONTROL)) & _
         "; navigation_source_object=" & SafeToken(ResolveShellSourceObject(NAVIGATION_SUBFORM_CONTROL)) & _
-        "; backend_path=" & SafeToken(modDb.GetBackendPath()) & _
+        "; backend_path=" & SafeToken(modDb.GetCurrentTenantBackendPath()) & _
         "; log_level=" & SafeToken(CurrentLogLevel) & _
         "; environment=" & SafeToken(CurrentEnvironment)
 End Sub
@@ -330,7 +330,10 @@ Private Function ResolveTranslationCount() As Long
     Dim db As DAO.Database
     Dim rs As DAO.Recordset
 
-    Set db = currentDb
+    Set db = modDb.GetSystemDatabase()
+    If db Is Nothing Then
+        Exit Function
+    End If
     Set rs = db.OpenRecordset("SELECT Count(*) AS row_count FROM fw_translation", dbOpenSnapshot)
     If Not rs Is Nothing Then
         If Not rs.EOF Then
@@ -338,6 +341,7 @@ Private Function ResolveTranslationCount() As Long
         End If
         rs.Close
     End If
+    db.Close
 End Function
 
 Private Function ResolveRecordsetState(ByVal formInstance As Access.Form) As String

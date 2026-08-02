@@ -33,8 +33,6 @@ Public Sub ApplyTranslations(ByVal TargetObject As Object)
     Dim objectKind As String
     Dim resolvedCount As Long
     Dim missingCount As Long
-    Dim rawCaption As String
-    Dim translatedCaption As String
     Dim ctl As Control
 
     ' Current runtime behavior is shared for forms and reports at a generic
@@ -49,27 +47,17 @@ Public Sub ApplyTranslations(ByVal TargetObject As Object)
     objectName = GetTargetObjectName(TargetObject)
     objectKind = GetTargetObjectKind(TargetObject)
 
-    rawCaption = GetCaptionValue(TargetObject)
-    translatedCaption = ResolveCaptionText(rawCaption, GetTagValue(TargetObject), languageCode)
-
-    If StrComp(translatedCaption, rawCaption, vbBinaryCompare) <> 0 Then
-        If SetCaptionValue(TargetObject, translatedCaption) Then
-            resolvedCount = resolvedCount + 1
+    If Not ApplyTranslationToTarget(TargetObject, languageCode, resolvedCount, missingCount) Then
+        If IsTransientUnavailableError(Err.Number) Then
+            Err.Clear
+            Exit Sub
         End If
-    ElseIf HasAnyTranslationMarker(rawCaption, GetTagValue(TargetObject)) Then
-        missingCount = missingCount + 1
     End If
 
     For Each ctl In TargetObject.Controls
-        rawCaption = GetCaptionValue(ctl)
-        translatedCaption = ResolveCaptionText(rawCaption, GetTagValue(ctl), languageCode)
-
-        If StrComp(translatedCaption, rawCaption, vbBinaryCompare) <> 0 Then
-            If SetCaptionValue(ctl, translatedCaption) Then
-                resolvedCount = resolvedCount + 1
-            End If
-        ElseIf HasAnyTranslationMarker(rawCaption, GetTagValue(ctl)) Then
-            missingCount = missingCount + 1
+        ApplyTranslationToTarget ctl, languageCode, resolvedCount, missingCount
+        If IsTransientUnavailableError(Err.Number) Then
+            Err.Clear
         End If
     Next ctl
 
@@ -83,6 +71,10 @@ Public Sub ApplyTranslations(ByVal TargetObject As Object)
     Exit Sub
 
 ErrorHandler:
+    If IsTransientUnavailableError(Err.Number) Then
+        Err.Clear
+        Exit Sub
+    End If
     modErrorHandler.HandleError MODULE_NAME, "ApplyTranslations", Err
 End Sub
 
@@ -109,7 +101,11 @@ Public Function ResolveTranslation(ByVal translationKey As String, Optional ByVa
         normalizedLanguageCode = GetCurrentLanguageCode()
     End If
 
-    Set db = currentDb
+    Set db = modDb.GetSystemDatabase()
+    If db Is Nothing Then
+        ResolveTranslation = originalValue
+        Exit Function
+    End If
     If Not modDbSchema.TableExists(db, TABLE_FW_TRANSLATIONS) Then
         modLoggingHandler.LogWarning MODULE_NAME & ".ResolveTranslation", _
             "Translation table not found: " & TABLE_FW_TRANSLATIONS & "."
@@ -206,7 +202,11 @@ Public Function ResolveText( _
         normalizedLanguageCode = GetCurrentLanguageCode()
     End If
 
-    Set db = currentDb
+    Set db = modDb.GetSystemDatabase()
+    If db Is Nothing Then
+        ResolveText = NzString(fallbackText)
+        Exit Function
+    End If
     If Not modDbSchema.TableExists(db, TABLE_FW_TRANSLATIONS) Then
         ResolveText = NzString(fallbackText)
         Exit Function
@@ -651,6 +651,46 @@ Private Function SetCaptionValue(ByVal target As Object, ByVal CaptionValue As S
 
 SafeExit:
     SetCaptionValue = False
+End Function
+
+Private Function ApplyTranslationToTarget( _
+    ByVal target As Object, _
+    ByVal languageCode As String, _
+    ByRef resolvedCount As Long, _
+    ByRef missingCount As Long) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim rawCaption As String
+    Dim translatedCaption As String
+    Dim tagText As String
+
+    rawCaption = GetCaptionValue(target)
+    tagText = GetTagValue(target)
+    translatedCaption = ResolveCaptionText(rawCaption, tagText, languageCode)
+
+    If StrComp(translatedCaption, rawCaption, vbBinaryCompare) <> 0 Then
+        If SetCaptionValue(target, translatedCaption) Then
+            resolvedCount = resolvedCount + 1
+        End If
+    ElseIf HasAnyTranslationMarker(rawCaption, tagText) Then
+        missingCount = missingCount + 1
+    End If
+
+    ApplyTranslationToTarget = True
+    Exit Function
+
+ErrorHandler:
+    If IsTransientUnavailableError(Err.Number) Then
+        Exit Function
+    End If
+    modErrorHandler.HandleError MODULE_NAME, "ApplyTranslationToTarget", Err
+End Function
+
+Private Function IsTransientUnavailableError(ByVal errNumber As Long) As Boolean
+    Select Case errNumber
+        Case 2467, 2455
+            IsTransientUnavailableError = True
+    End Select
 End Function
 
 Private Function GetTargetObjectName(ByVal TargetObject As Object) As String

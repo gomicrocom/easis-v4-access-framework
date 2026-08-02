@@ -25,6 +25,8 @@ Private Const HISTORY_KEY_TIMESTAMP As String = "timestamp"
 
 Private m_workspaceHistory As Collection
 Private m_isRestoringHistory As Boolean
+Private m_pendingWorkspaceFormName As String
+Private m_pendingWorkspaceOpenArgs As String
 
 Public Function OpenWorkspaceForm( _
     ByVal shellForm As Access.Form, _
@@ -99,6 +101,8 @@ Public Function OpenWorkspaceForm( _
         "'; where_condition='" & Replace(where_condition, "'", "''") & _
         "'; open_args='" & Replace(open_args, "'", "''") & "'."
 
+    SetPendingWorkspaceOpenArgs targetFormName, open_args
+
     workspaceHost.sourceObject = vbNullString
     workspaceHost.sourceObject = targetSourceObject
 
@@ -122,6 +126,15 @@ Public Function OpenWorkspaceForm( _
         ApplyWorkspaceOpenArgs loadedWorkspaceForm, open_args, targetFormName
     End If
 
+    currentSourceObject = ResolveCurrentWorkspaceSourceObject(workspaceHost)
+    If IsWorkspaceNavigationSuperseded(currentSourceObject, targetFormName, targetSourceObject) Then
+        loadSucceeded = True
+        OpenWorkspaceForm = True
+        modLoggingHandler.LogInfo MODULE_NAME & ".OpenWorkspaceForm", _
+            "Workspace navigation to '" & targetFormName & "' was superseded by current_source_object='" & currentSourceObject & "'."
+        Exit Function
+    End If
+
     SetWorkspaceFocus workspaceHost
 
     If LenB(historyItemText) > 0 Then
@@ -138,8 +151,18 @@ Public Function OpenWorkspaceForm( _
     Exit Function
 
 ErrorHandler:
-    OpenWorkspaceForm = False
     currentSourceObject = ResolveCurrentWorkspaceSourceObject(workspaceHost)
+    If IsWorkspaceNavigationSuperseded(currentSourceObject, targetFormName, targetSourceObject) Then
+        loadSucceeded = True
+        OpenWorkspaceForm = True
+        ClearPendingWorkspaceOpenArgs targetFormName
+        modLoggingHandler.LogInfo MODULE_NAME & ".OpenWorkspaceForm", _
+            "Workspace navigation to '" & targetFormName & "' ended after the user navigated away to '" & currentSourceObject & "'."
+        Exit Function
+    End If
+
+    OpenWorkspaceForm = False
+    ClearPendingWorkspaceOpenArgs targetFormName
     modLoggingHandler.LogWarning MODULE_NAME & ".OpenWorkspaceForm", _
         "Workspace load failed. target_form_name='" & targetFormName & _
         "'; previous_source_object='" & previousSourceObject & _
@@ -150,6 +173,30 @@ ErrorHandler:
         RecoverWorkspaceAfterLoadFailure hostForm, workspaceHost, previousSourceObject, previousWorkspaceState, targetFormName
     End If
     modErrorHandler.HandleError MODULE_NAME, "OpenWorkspaceForm", Err
+End Function
+
+Private Function IsWorkspaceNavigationSuperseded( _
+    ByVal currentSourceObject As String, _
+    ByVal targetFormName As String, _
+    ByVal targetSourceObject As String) As Boolean
+
+    currentSourceObject = Trim$(currentSourceObject)
+    targetFormName = Trim$(targetFormName)
+    targetSourceObject = Trim$(targetSourceObject)
+
+    If LenB(currentSourceObject) = 0 Then
+        Exit Function
+    End If
+
+    If StrComp(currentSourceObject, targetFormName, vbTextCompare) = 0 Then
+        Exit Function
+    End If
+
+    If StrComp(currentSourceObject, targetSourceObject, vbTextCompare) = 0 Then
+        Exit Function
+    End If
+
+    IsWorkspaceNavigationSuperseded = True
 End Function
 
 Public Function PushWorkspaceState(ByVal workspaceForm As Access.Form) As Boolean
@@ -250,6 +297,14 @@ Public Function PeekWorkspaceHistory() As String
     End If
 End Function
 
+Public Function ConsumePendingWorkspaceOpenArgs(ByVal form_name As String) As String
+    If StrComp(Trim$(form_name), Trim$(m_pendingWorkspaceFormName), vbTextCompare) = 0 Then
+        ConsumePendingWorkspaceOpenArgs = m_pendingWorkspaceOpenArgs
+        m_pendingWorkspaceFormName = vbNullString
+        m_pendingWorkspaceOpenArgs = vbNullString
+    End If
+End Function
+
 Private Sub ApplyWorkspaceOpenArgs(ByVal workspaceForm As Access.Form, ByVal openArgs As String, ByVal FormName As String)
     On Error GoTo ErrorHandler
 
@@ -261,6 +316,7 @@ Private Sub ApplyWorkspaceOpenArgs(ByVal workspaceForm As Access.Form, ByVal ope
 
     Set formObject = workspaceForm
     CallByName formObject, "ApplyWorkspaceOpenArgs", VbMethod, openArgs
+    ClearPendingWorkspaceOpenArgs FormName
 
     modLoggingHandler.LogInfo MODULE_NAME & ".ApplyWorkspaceOpenArgs", _
         "Applied workspace OpenArgs to '" & FormName & "'."
@@ -276,6 +332,24 @@ ErrorHandler:
             "; err_description='" & Replace(Err.Description, "'", "''") & "'."
         modErrorHandler.HandleError MODULE_NAME, "ApplyWorkspaceOpenArgs", Err
         Err.Raise Err.Number, Err.Source, Err.Description
+    End If
+End Sub
+
+Private Sub SetPendingWorkspaceOpenArgs(ByVal form_name As String, ByVal openArgs As String)
+    m_pendingWorkspaceFormName = Trim$(form_name)
+    m_pendingWorkspaceOpenArgs = openArgs
+End Sub
+
+Private Sub ClearPendingWorkspaceOpenArgs(ByVal form_name As String)
+    If LenB(Trim$(form_name)) = 0 Then
+        m_pendingWorkspaceFormName = vbNullString
+        m_pendingWorkspaceOpenArgs = vbNullString
+        Exit Sub
+    End If
+
+    If StrComp(Trim$(form_name), Trim$(m_pendingWorkspaceFormName), vbTextCompare) = 0 Then
+        m_pendingWorkspaceFormName = vbNullString
+        m_pendingWorkspaceOpenArgs = vbNullString
     End If
 End Sub
 

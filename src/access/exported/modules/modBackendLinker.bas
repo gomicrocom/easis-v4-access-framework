@@ -17,7 +17,8 @@ Public Function RelinkBackendTables() As Boolean
 
     Dim db As DAO.Database
     Dim tdf As DAO.tableDef
-    Dim backendPath As String
+    Dim systemBackendPath As String
+    Dim tenantBackendPath As String
     Dim relinkedCount As Long
 
     If Not modDb.ValidateBackendConfiguration() Then
@@ -26,8 +27,9 @@ Public Function RelinkBackendTables() As Boolean
         Exit Function
     End If
 
-    backendPath = GetBackendPath()
-    Set db = GetCurrentDatabase()
+    systemBackendPath = modDb.GetSystemBackendPath()
+    tenantBackendPath = modDb.GetCurrentTenantBackendPath()
+    Set db = modDb.GetFrontendDatabase()
 
     For Each tdf In db.TableDefs
         If ShouldSkipTable(tdf.Name) Then
@@ -35,7 +37,7 @@ Public Function RelinkBackendTables() As Boolean
         End If
 
         If IsLinkedAccessTable(tdf) Then
-            If RelinkTable(tdf, backendPath) Then
+            If RelinkTable(tdf, ResolveBackendPathForTable(tdf.Name, systemBackendPath, tenantBackendPath)) Then
                 relinkedCount = relinkedCount + 1
             End If
         End If
@@ -60,7 +62,7 @@ Public Function GetLinkedTableCount() As Long
     Dim db As DAO.Database
     Dim tdf As DAO.tableDef
 
-    Set db = GetCurrentDatabase()
+    Set db = modDb.GetFrontendDatabase()
 
     For Each tdf In db.TableDefs
         If Not ShouldSkipTable(tdf.Name) Then
@@ -77,6 +79,41 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "GetLinkedTableCount", Err
 End Function
 
+Private Function ResolveBackendPathForTable( _
+    ByVal tableName As String, _
+    ByVal systemBackendPath As String, _
+    ByVal tenantBackendPath As String) As String
+    Dim normalizedName As String
+
+    normalizedName = UCase$(Trim$(tableName))
+    If LenB(normalizedName) = 0 Then
+        Exit Function
+    End If
+
+    If IsSystemTableName(normalizedName) Then
+        ResolveBackendPathForTable = Trim$(systemBackendPath)
+    Else
+        ResolveBackendPathForTable = Trim$(tenantBackendPath)
+    End If
+End Function
+
+Private Function IsSystemTableName(ByVal normalizedTableName As String) As Boolean
+    If Left$(normalizedTableName, 3) = "FW_" Then
+        IsSystemTableName = True
+        Exit Function
+    End If
+
+    If Left$(normalizedTableName, 4) = "REF_" Then
+        IsSystemTableName = True
+        Exit Function
+    End If
+
+    Select Case normalizedTableName
+        Case "REF_LANGUAGE"
+            IsSystemTableName = True
+    End Select
+End Function
+
 Private Function IsLinkedAccessTable(ByVal tableDef As DAO.tableDef) As Boolean
     Dim connectText As String
 
@@ -90,6 +127,12 @@ End Function
 
 Private Function RelinkTable(ByVal tableDef As DAO.tableDef, ByVal backendPath As String) As Boolean
     On Error GoTo ErrorHandler
+
+    If LenB(Trim$(backendPath)) = 0 Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".RelinkTable", _
+            "Skipped relink for table '" & tableDef.Name & "' because no backend path was resolved."
+        Exit Function
+    End If
 
     tableDef.Connect = ACCESS_CONNECT_PREFIX & backendPath
     tableDef.RefreshLink

@@ -33,7 +33,7 @@ Public Function EnsureArticleGroupTable() As Boolean
 
     Dim db As DAO.Database
 
-    Set db = modDb.GetCurrentDatabase()
+    Set db = modDb.GetCurrentTenantDatabase()
 
     If Not modDbSchema.TableExists(db, TABLE_ARTICLE_GROUP) Then
         ExecuteSql "CREATE TABLE " & TABLE_ARTICLE_GROUP & " (" & _
