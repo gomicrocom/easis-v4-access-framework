@@ -1,0 +1,13 @@
+area,access_native,framework_mechanism,assessment,decision,notes
+Form opening,"DoCmd.OpenForm, OpenArgs, WhereCondition","Workspace SourceObject switch + pending payload","Framework adds host integration but loses native OpenArgs timing","KEEP_AND_SIMPLIFY","Main pain point for complex detail forms"
+Record loading,"RecordSource, Filter, Bookmark, RecordsetClone","Runtime RecordSource swap, ApplyWorkspaceFormState, later payload binding","Framework duplicates native binding lifecycle","USE_ACCESS_NATIVE","Prefer native open/bind whenever not hosted"
+New/Edit mode,"NewRecord, DataEntry, BeforeInsert, primary key","Payload types, lifecycle flags, temp session flags","Some extra state is business-required, some duplicates Access","KEEP_AND_SIMPLIFY","Temporary edit sessions need business state, not UI shadow state"
+Parent/Subform,"LinkMasterFields, LinkChildFields, automatic foreign key propagation","Runtime SourceObject, manual visibility, manual ID propagation","Framework currently interferes more than needed","USE_ACCESS_NATIVE","Keep subform linking native wherever possible"
+Command dispatch,"Button Click -> form code","Shell command slots -> ExecuteWorkspaceCommand","Good UI abstraction if shell only delegates","KEEP","Shell should not own form state"
+Leave handling,"Dirty, Undo, BeforeUpdate, Unload","CanLeaveWorkspace + navigation gating","Current API mixes permission with cleanup side effects","KEEP_AND_SIMPLIFY","Separate decision from destruction"
+History,"None by default beyond Access window stack","Serialized workspace history with filter/order/state","Useful app feature, not native duplication","KEEP","Scope should remain navigation only"
+Localization,"Design captions or runtime caption updates","ApplyTranslations + ResolveText","Strong additive framework feature","KEEP","Must not alter record lifecycle"
+List search/filter,"Filter, FilterOn, Requery optional","Shell QuickSearch + delegated list methods","Generally additive","KEEP","Use native Filter where possible"
+Header refresh,"Refresh, Requery, bound control updates","Repeated RefreshShellStatus and command bar refresh","Partly redundant and chatty","KEEP_AND_SIMPLIFY","Reduce cascading refreshes"
+Runtime event wiring,"Design-time event bindings","Setting OnAfterUpdate in code","Framework compensates import drift but is fragile","REMOVE","Prefer correct form object import / manual layout discipline"
+Temporary edit sessions,"Bound live tables or temp local tables","tmp_order/tmp_order_line + commit service","Business requirement, not native duplication","KEEP","Good separation if form logic stays simple"

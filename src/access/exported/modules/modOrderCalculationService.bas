@@ -19,7 +19,6 @@ Private Const TABLE_TMP_ORDER_LINE As String = "tmp_order_line"
 Private Const FIELD_ORDER_ID As String = "order_id"
 Private Const FIELD_ORDER_LINE_ID As String = "order_line_id"
 Private Const FIELD_TMP_ORDER_ID As String = "tmp_order_id"
-Private Const FIELD_TMP_ORDER_LINE_ID As String = "tmp_order_line_id"
 Private Const FIELD_LINE_NO As String = "line_no"
 Private Const FIELD_QUANTITY As String = "quantity"
 Private Const FIELD_UNIT_PRICE As String = "unit_price"
@@ -70,7 +69,7 @@ Public Function CalculateTemporaryOrderLineAmounts(ByVal tmpOrderLineId As Long)
         TABLE_TMP_ORDER, _
         TABLE_TMP_ORDER_LINE, _
         FIELD_TMP_ORDER_ID, _
-        FIELD_TMP_ORDER_LINE_ID, _
+        FIELD_ORDER_LINE_ID, _
         FIELD_TMP_ORDER_ID)
 End Function
 
@@ -89,7 +88,7 @@ Public Function CalculateTemporaryOrderLineAmountsByOrderAndLineNo(ByVal tmpOrde
         lineNo, _
         TABLE_TMP_ORDER_LINE, _
         FIELD_TMP_ORDER_ID, _
-        FIELD_TMP_ORDER_LINE_ID)
+        FIELD_ORDER_LINE_ID)
 End Function
 
 Public Function CalculateOrderTotals(ByVal OrderId As Long) As Boolean
@@ -126,7 +125,7 @@ Public Function RecalculateTemporaryOrder(ByVal tmpOrderId As Long) As Boolean
         TABLE_TMP_ORDER, _
         TABLE_TMP_ORDER_LINE, _
         FIELD_TMP_ORDER_ID, _
-        FIELD_TMP_ORDER_LINE_ID, _
+        FIELD_ORDER_LINE_ID, _
         FIELD_TMP_ORDER_ID)
 End Function
 
@@ -167,7 +166,7 @@ Private Function CalculateLineAmountsForContext( _
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentTenantDatabase()
+    Set db = ResolveDatabaseForTable(lineTableName)
     If db Is Nothing Then
         Exit Function
     End If
@@ -264,7 +263,7 @@ Private Function CalculateLineAmountsByParentAndLineNo( _
         Exit Function
     End If
 
-    If StrComp(lineKeyField, FIELD_TMP_ORDER_LINE_ID, vbTextCompare) = 0 Then
+    If StrComp(lineTableName, TABLE_TMP_ORDER_LINE, vbTextCompare) = 0 Then
         CalculateLineAmountsByParentAndLineNo = CalculateTemporaryOrderLineAmounts(resolvedLineId)
     Else
         CalculateLineAmountsByParentAndLineNo = CalculateOrderLineAmounts(resolvedLineId)
@@ -284,16 +283,35 @@ Private Function ResolveLineIdByParentAndLineNo( _
     ByVal lineKeyField As String) As Long
     On Error GoTo ErrorHandler
 
-    ResolveLineIdByParentAndLineNo = modDaoHelper.NzLong( _
-        DMax( _
-            lineKeyField, _
-            lineTableName, _
-            "[" & lineParentField & "]=" & CStr(parentId) & " AND [" & FIELD_LINE_NO & "]=" & CStr(lineNo)), _
-        0)
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim sqlStatement As String
+
+    Set db = ResolveDatabaseForTable(lineTableName)
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    sqlStatement = "SELECT MAX([" & lineKeyField & "]) AS resolved_line_id " & _
+                   "FROM [" & lineTableName & "] " & _
+                   "WHERE [" & lineParentField & "]=" & CStr(parentId) & " " & _
+                   "AND [" & FIELD_LINE_NO & "]=" & CStr(lineNo) & ";"
+    Set rs = db.OpenRecordset(sqlStatement, dbOpenSnapshot)
+
+    If Not (rs.BOF And rs.EOF) Then
+        ResolveLineIdByParentAndLineNo = modDaoHelper.NzLong(rs.Fields("resolved_line_id").Value, 0)
+    End If
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
     Exit Function
 
 ErrorHandler:
     ResolveLineIdByParentAndLineNo = 0
+    Resume CleanExit
 End Function
 
 Private Function CalculateTotalsForContext( _
@@ -322,7 +340,7 @@ Private Function CalculateTotalsForContext( _
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentTenantDatabase()
+    Set db = ResolveDatabaseForTable(headerTableName)
     If db Is Nothing Then
         Exit Function
     End If
@@ -402,7 +420,7 @@ Private Function RecalculateForContext( _
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentTenantDatabase()
+    Set db = ResolveDatabaseForTable(lineTableName)
     If db Is Nothing Then
         Exit Function
     End If
@@ -476,7 +494,7 @@ Private Function ResolveOrderVatModeForContext( _
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentTenantDatabase()
+    Set db = ResolveDatabaseForTable(headerTableName)
     If db Is Nothing Then
         Exit Function
     End If
@@ -545,6 +563,22 @@ Private Function GetRecordsetLongValue(ByVal rs As DAO.Recordset, ByVal fieldNam
     Else
         GetRecordsetLongValue = defaultValue
     End If
+End Function
+
+Private Function ResolveDatabaseForTable(ByVal tableName As String) As DAO.Database
+    On Error GoTo ErrorHandler
+
+    Select Case UCase$(Trim$(tableName))
+        Case UCase$(TABLE_TMP_ORDER), UCase$(TABLE_TMP_ORDER_LINE)
+            Set ResolveDatabaseForTable = modDb.GetFrontendDatabase()
+        Case Else
+            Set ResolveDatabaseForTable = modDb.GetCurrentTenantDatabase()
+    End Select
+    Exit Function
+
+ErrorHandler:
+    modErrorHandler.HandleError MODULE_NAME, "ResolveDatabaseForTable", Err
+    Set ResolveDatabaseForTable = Nothing
 End Function
 
 Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal fieldValue As Variant)

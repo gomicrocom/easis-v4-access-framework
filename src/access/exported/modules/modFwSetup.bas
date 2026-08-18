@@ -524,6 +524,12 @@ Public Sub EnsureOrderDetailTranslations(Optional ByVal db As DAO.Database = Not
     EnsureTranslationSeed workingDb, "de-CH", "FORM.FRMORDERDETAIL.INTERNAL_NOTES_TEXT", "Interne Notizen", "FORM", 363
     EnsureTranslationSeed workingDb, "en-US", "FORM.FRMORDERDETAIL.INTERNAL_NOTES_TEXT", "Internal notes", "FORM", 363
     EnsureTranslationSeed workingDb, "fr-CH", "FORM.FRMORDERDETAIL.INTERNAL_NOTES_TEXT", "Notes internes", "FORM", 363
+    EnsureTranslationSeed workingDb, "de-CH", "FORM.FRMORDERDETAILNEXT.FORM_TITLE_NEW", "Neue Bestellung", "FORM", 3631
+    EnsureTranslationSeed workingDb, "en-US", "FORM.FRMORDERDETAILNEXT.FORM_TITLE_NEW", "New order", "FORM", 3631
+    EnsureTranslationSeed workingDb, "fr-CH", "FORM.FRMORDERDETAILNEXT.FORM_TITLE_NEW", "Nouvelle commande", "FORM", 3631
+    EnsureTranslationSeed workingDb, "de-CH", "FORM.FRMORDERDETAILNEXT.FORM_TITLE_EDIT", "Bestellung bearbeiten", "FORM", 3632
+    EnsureTranslationSeed workingDb, "en-US", "FORM.FRMORDERDETAILNEXT.FORM_TITLE_EDIT", "Edit order", "FORM", 3632
+    EnsureTranslationSeed workingDb, "fr-CH", "FORM.FRMORDERDETAILNEXT.FORM_TITLE_EDIT", "Modifier la commande", "FORM", 3632
     EnsureTranslationSeed workingDb, "de-CH", "FORM.FRMORDERDETAIL.SUBTOTAL_NET_AMOUNT", "Zwischentotal netto", "FORM", 364
     EnsureTranslationSeed workingDb, "en-US", "FORM.FRMORDERDETAIL.SUBTOTAL_NET_AMOUNT", "Subtotal net", "FORM", 364
     EnsureTranslationSeed workingDb, "fr-CH", "FORM.FRMORDERDETAIL.SUBTOTAL_NET_AMOUNT", "Sous-total net", "FORM", 364
@@ -556,6 +562,9 @@ Public Sub EnsureOrderDetailTranslations(Optional ByVal db As DAO.Database = Not
     EnsureTranslationSeed workingDb, "de-CH", "COMMON.SAVE", "Speichern", "COMMON", 373
     EnsureTranslationSeed workingDb, "en-US", "COMMON.SAVE", "Save", "COMMON", 373
     EnsureTranslationSeed workingDb, "fr-CH", "COMMON.SAVE", "Enregistrer", "COMMON", 373
+    EnsureTranslationSeed workingDb, "de-CH", "COMMON.APPLY", "Uebernehmen", "COMMON", 3731
+    EnsureTranslationSeed workingDb, "en-US", "COMMON.APPLY", "Apply", "COMMON", 3731
+    EnsureTranslationSeed workingDb, "fr-CH", "COMMON.APPLY", "Appliquer", "COMMON", 3731
     EnsureTranslationSeed workingDb, "de-CH", "COMMON.CANCEL", "Abbrechen", "COMMON", 374
     EnsureTranslationSeed workingDb, "en-US", "COMMON.CANCEL", "Cancel", "COMMON", 374
     EnsureTranslationSeed workingDb, "fr-CH", "COMMON.CANCEL", "Annuler", "COMMON", 374

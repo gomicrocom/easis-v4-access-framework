@@ -20,6 +20,7 @@ Private Const TABLE_TEN_NUMBERRANGE As String = "ten_numberrange"
 Private Const FIELD_ORDER_ID As String = "order_id"
 Private Const FIELD_TMP_ORDER_ID As String = "tmp_order_id"
 Private Const FIELD_SESSION_ID As String = "session_id"
+Private Const FIELD_SOURCE_ORDER_ID As String = "source_order_id"
 Private Const FIELD_ORDER_NO As String = "order_no"
 Private Const FIELD_ORDER_TYPE_CODE As String = "order_type_code"
 Private Const FIELD_ORDER_STATUS_CODE As String = "order_status_code"
@@ -101,6 +102,12 @@ Public Function EnsureOrderRepositoryReady() As Boolean
 
     EnsureOrderRepositoryReady = False
 
+    If Not EnsureOrderRuntimeContext() Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".EnsureOrderRepositoryReady", _
+            "Order repository initialization skipped because runtime context could not be initialized."
+        Exit Function
+    End If
+
     If Not modDb.ValidateBackendConfiguration() Then
         modLoggingHandler.LogWarning MODULE_NAME & ".EnsureOrderRepositoryReady", _
             "Order repository initialization skipped because backend configuration is not valid."
@@ -122,6 +129,29 @@ Public Function EnsureOrderRepositoryReady() As Boolean
 ErrorHandler:
     EnsureOrderRepositoryReady = False
     modErrorHandler.HandleError MODULE_NAME, "EnsureOrderRepositoryReady", Err
+End Function
+
+Private Function EnsureOrderRuntimeContext() As Boolean
+    On Error GoTo ErrorHandler
+
+    If IsBootstrapped Then
+        EnsureOrderRuntimeContext = True
+        Exit Function
+    End If
+
+    If LenB(Trim$(ConfigFilePath)) > 0 And modTenantContext.IsTenantInitialized Then
+        EnsureOrderRuntimeContext = True
+        Exit Function
+    End If
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".EnsureOrderRuntimeContext", _
+        "Runtime context not initialized. Triggering bootstrap for repository access."
+    EnsureOrderRuntimeContext = modBootstrap.EnsureBootstrapped()
+    Exit Function
+
+ErrorHandler:
+    EnsureOrderRuntimeContext = False
+    modErrorHandler.HandleError MODULE_NAME, "EnsureOrderRuntimeContext", Err
 End Function
 
 Public Function EnsureSalesOrderNumberRange(Optional ByVal FiscalYear As Long = 0) As Boolean
@@ -534,9 +564,10 @@ End Function
 Public Function CreateTemporarySalesOrderForAddress(ByVal addressId As Long) As Long
     On Error GoTo ErrorHandler
 
-    Dim db As DAO.Database
+    Dim frontendDb As DAO.Database
     Dim rs As DAO.Recordset
     Dim defaults As Object
+    Dim tenantBackendPath As String
 
     CreateTemporarySalesOrderForAddress = 0
 
@@ -553,12 +584,16 @@ Public Function CreateTemporarySalesOrderForAddress(ByVal addressId As Long) As 
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentTenantDatabase()
-    Set rs = db.OpenRecordset(TABLE_TMP_ORDER, dbOpenDynaset, dbAppendOnly)
+    Set frontendDb = modDb.GetFrontendDatabase()
+    tenantBackendPath = modDb.GetCurrentTenantBackendPath()
+    modLoggingHandler.LogInfo MODULE_NAME & ".CreateTemporarySalesOrderForAddress", _
+        "address_id=" & CStr(addressId) & "; tenant_backend_path=" & tenantBackendPath & "; frontend_db_name=" & SafeDatabaseName(frontendDb) & "; insert_started=True."
+    Set rs = frontendDb.OpenRecordset(TABLE_TMP_ORDER, dbOpenDynaset, dbAppendOnly)
 
     rs.AddNew
     SetRecordsetValue rs, FIELD_SESSION_ID, ResolveTemporarySessionId()
     SetRecordsetValue rs, FIELD_ORDER_ID, 0
+    SetRecordsetValue rs, FIELD_SOURCE_ORDER_ID, Null
     SetRecordsetValue rs, FIELD_ORDER_NO, vbNullString
     SetRecordsetValue rs, FIELD_CUSTOMER_ADDRESS_ID, GetDictionaryLong(defaults, FIELD_CUSTOMER_ADDRESS_ID, 0)
     SetRecordsetValue rs, FIELD_INVOICE_ADDRESS_ID, GetDictionaryLong(defaults, FIELD_INVOICE_ADDRESS_ID, 0)
@@ -581,12 +616,27 @@ Public Function CreateTemporarySalesOrderForAddress(ByVal addressId As Long) As 
 
     rs.Bookmark = rs.LastModified
     CreateTemporarySalesOrderForAddress = modDaoHelper.NzLong(rs.Fields(FIELD_TMP_ORDER_ID).Value, 0)
+    If CreateTemporarySalesOrderForAddress <= 0 Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".CreateTemporarySalesOrderForAddress", _
+            "Insert completed without positive tmp_order_id. address_id=" & CStr(addressId) & "; frontend_db_name=" & SafeDatabaseName(frontendDb) & "."
+        Exit Function
+    End If
+
+    If Not TemporaryOrderExistsInDatabase(frontendDb, CreateTemporarySalesOrderForAddress) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".CreateTemporarySalesOrderForAddress", _
+            "Inserted tmp_order could not be verified in the same frontend database. tmp_order_id=" & CStr(CreateTemporarySalesOrderForAddress) & "; frontend_db_name=" & SafeDatabaseName(frontendDb) & "."
+        CreateTemporarySalesOrderForAddress = 0
+        Exit Function
+    End If
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".CreateTemporarySalesOrderForAddress", _
+        "Insert verified. tmp_order_id=" & CStr(CreateTemporarySalesOrderForAddress) & "; customer_address_id=" & CStr(GetDictionaryLong(defaults, FIELD_CUSTOMER_ADDRESS_ID, 0)) & "; source_order_id=<null>; frontend_db_name=" & SafeDatabaseName(frontendDb) & "."
 
 CleanExit:
     On Error Resume Next
     If Not rs Is Nothing Then rs.Close
     Set rs = Nothing
-    Set db = Nothing
+    Set frontendDb = Nothing
     Exit Function
 
 ErrorHandler:
@@ -595,27 +645,163 @@ ErrorHandler:
     Resume CleanExit
 End Function
 
+Public Function CreateTemporarySalesOrderForExistingOrder(ByVal OrderId As Long) As Long
+    On Error GoTo ErrorHandler
+
+    Dim tenantDb As DAO.Database
+    Dim frontendDb As DAO.Database
+    Dim rsSourceOrder As DAO.Recordset
+    Dim rsSourceLines As DAO.Recordset
+    Dim rsTmpOrder As DAO.Recordset
+    Dim rsTmpLines As DAO.Recordset
+    Dim tmpOrderId As Long
+
+    CreateTemporarySalesOrderForExistingOrder = 0
+
+    If OrderId <= 0 Then
+        Exit Function
+    End If
+
+    If Not EnsureOrderRepositoryReady() Then
+        Exit Function
+    End If
+
+    If Not OrderExists(OrderId) Then
+        Exit Function
+    End If
+
+    Set tenantDb = modDb.GetCurrentTenantDatabase()
+    Set frontendDb = modDb.GetFrontendDatabase()
+    Set rsSourceOrder = tenantDb.OpenRecordset( _
+        "SELECT * FROM [" & TABLE_ORD_ORDER & "] WHERE [" & FIELD_ORDER_ID & "]=" & CStr(OrderId) & ";", _
+        dbOpenSnapshot)
+
+    If rsSourceOrder.BOF And rsSourceOrder.EOF Then
+        GoTo CleanExit
+    End If
+
+    Set rsTmpOrder = frontendDb.OpenRecordset(TABLE_TMP_ORDER, dbOpenDynaset, dbAppendOnly)
+    rsTmpOrder.AddNew
+    SetRecordsetValue rsTmpOrder, FIELD_SESSION_ID, ResolveTemporarySessionId()
+    SetRecordsetValue rsTmpOrder, FIELD_ORDER_ID, OrderId
+    SetRecordsetValue rsTmpOrder, FIELD_SOURCE_ORDER_ID, OrderId
+    SetRecordsetValue rsTmpOrder, FIELD_ORDER_NO, GetRecordsetStringValue(rsSourceOrder, FIELD_ORDER_NO, vbNullString)
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_CUSTOMER_ADDRESS_ID
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_INVOICE_ADDRESS_ID
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_DELIVERY_ADDRESS_ID
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_CUSTOMER_NAME
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_ORDER_TYPE_CODE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_ORDER_STATUS_CODE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_ORDER_DATE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_DELIVERY_DATE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_VALID_UNTIL
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_REFERENCE_TEXT
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_EXTERNAL_REFERENCE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_LANGUAGE_CODE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_CURRENCY_CODE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_PAYMENT_TERM_CODE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_VAT_MODE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_VAT_CODE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_VAT_RATE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_HEADER_DISCOUNT_TYPE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_HEADER_DISCOUNT_VALUE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_HEADER_DISCOUNT_AMOUNT
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_HEADER_SURCHARGE_TYPE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_HEADER_SURCHARGE_VALUE
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_HEADER_SURCHARGE_AMOUNT
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_SUBTOTAL_NET_AMOUNT
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_NET_AMOUNT
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_VAT_AMOUNT
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_GROSS_AMOUNT
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_NOTES_TEXT
+    CopyHeaderField rsSourceOrder, rsTmpOrder, FIELD_INTERNAL_NOTES_TEXT
+    SetCreatedAuditFields rsTmpOrder
+    SetUpdatedAuditFields rsTmpOrder
+    rsTmpOrder.Update
+
+    rsTmpOrder.Bookmark = rsTmpOrder.LastModified
+    tmpOrderId = modDaoHelper.NzLong(rsTmpOrder.Fields(FIELD_TMP_ORDER_ID).Value, 0)
+    If tmpOrderId <= 0 Then
+        GoTo CleanExit
+    End If
+
+    Set rsSourceLines = tenantDb.OpenRecordset( _
+        "SELECT * FROM [" & TABLE_ORD_ORDER_LINE & "] WHERE [" & FIELD_ORDER_ID & "]=" & CStr(OrderId) & _
+        " ORDER BY [" & FIELD_LINE_NO & "], [" & FIELD_SORT_ORDER & "], [" & FIELD_ORDER_LINE_ID & "];", _
+        dbOpenSnapshot)
+    Set rsTmpLines = frontendDb.OpenRecordset(TABLE_TMP_ORDER_LINE, dbOpenDynaset, dbAppendOnly)
+
+    If Not (rsSourceLines.BOF And rsSourceLines.EOF) Then
+        rsSourceLines.MoveFirst
+        Do Until rsSourceLines.EOF
+            rsTmpLines.AddNew
+            SetRecordsetValue rsTmpLines, FIELD_ORDER_LINE_ID, GetRecordsetLongValue(rsSourceLines, FIELD_ORDER_LINE_ID, 0)
+            SetRecordsetValue rsTmpLines, FIELD_ORDER_ID, OrderId
+            SetRecordsetValue rsTmpLines, FIELD_TMP_ORDER_ID, tmpOrderId
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_LINE_NO
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_ARTICLE_ID
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_ARTICLE_NO
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_LINE_TYPE_CODE
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_DESCRIPTION_TEXT
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_QUANTITY
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_UNIT_CODE
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_UNIT_PRICE
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_DISCOUNT_TYPE
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_DISCOUNT_VALUE
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_LINE_DISCOUNT_AMOUNT
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_SURCHARGE_TYPE
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_SURCHARGE_VALUE
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_LINE_SURCHARGE_AMOUNT
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_VAT_CODE
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_VAT_RATE
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_LINE_BASE_AMOUNT
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_LINE_NET_AMOUNT
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_LINE_VAT_AMOUNT
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_LINE_GROSS_AMOUNT
+            CopyLineField rsSourceLines, rsTmpLines, FIELD_SORT_ORDER
+            SetCreatedAuditFields rsTmpLines
+            SetUpdatedAuditFields rsTmpLines
+            rsTmpLines.Update
+            rsSourceLines.MoveNext
+        Loop
+    End If
+
+    CreateTemporarySalesOrderForExistingOrder = tmpOrderId
+
+CleanExit:
+    On Error Resume Next
+    If Not rsTmpLines Is Nothing Then rsTmpLines.Close
+    If Not rsTmpOrder Is Nothing Then rsTmpOrder.Close
+    If Not rsSourceLines Is Nothing Then rsSourceLines.Close
+    If Not rsSourceOrder Is Nothing Then rsSourceOrder.Close
+    Set rsTmpLines = Nothing
+    Set rsTmpOrder = Nothing
+    Set rsSourceLines = Nothing
+    Set rsSourceOrder = Nothing
+    Set frontendDb = Nothing
+    Set tenantDb = Nothing
+    Exit Function
+
+ErrorHandler:
+    CreateTemporarySalesOrderForExistingOrder = 0
+    modErrorHandler.HandleError MODULE_NAME, "CreateTemporarySalesOrderForExistingOrder", Err
+    Resume CleanExit
+End Function
+
 Public Function TemporaryOrderExists(ByVal tmpOrderId As Long) As Boolean
     On Error GoTo ErrorHandler
 
-    Dim db As DAO.Database
-    Dim rs As DAO.Recordset
+    Dim frontendDb As DAO.Database
 
     If tmpOrderId <= 0 Then
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentTenantDatabase()
-    Set rs = db.OpenRecordset( _
-        "SELECT [" & FIELD_TMP_ORDER_ID & "] FROM [" & TABLE_TMP_ORDER & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", _
-        dbOpenSnapshot)
-    TemporaryOrderExists = Not (rs.BOF And rs.EOF)
+    Set frontendDb = modDb.GetFrontendDatabase()
+    TemporaryOrderExists = TemporaryOrderExistsInDatabase(frontendDb, tmpOrderId)
 
 CleanExit:
-    On Error Resume Next
-    If Not rs Is Nothing Then rs.Close
-    Set rs = Nothing
-    Set db = Nothing
+    Set frontendDb = Nothing
     Exit Function
 
 ErrorHandler:
@@ -627,7 +813,7 @@ End Function
 Public Function DeleteTemporaryOrder(ByVal tmpOrderId As Long) As Boolean
     On Error GoTo ErrorHandler
 
-    Dim db As DAO.Database
+    Dim frontendDb As DAO.Database
 
     DeleteTemporaryOrder = False
 
@@ -636,9 +822,9 @@ Public Function DeleteTemporaryOrder(ByVal tmpOrderId As Long) As Boolean
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentTenantDatabase()
-    db.Execute "DELETE FROM [" & TABLE_TMP_ORDER_LINE & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", dbFailOnError
-    db.Execute "DELETE FROM [" & TABLE_TMP_ORDER & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", dbFailOnError
+    Set frontendDb = modDb.GetFrontendDatabase()
+    frontendDb.Execute "DELETE FROM [" & TABLE_TMP_ORDER_LINE & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", dbFailOnError
+    frontendDb.Execute "DELETE FROM [" & TABLE_TMP_ORDER & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", dbFailOnError
     DeleteTemporaryOrder = True
     Exit Function
 
@@ -647,10 +833,96 @@ ErrorHandler:
     modErrorHandler.HandleError MODULE_NAME, "DeleteTemporaryOrder", Err
 End Function
 
+Public Function CommitTemporaryOrderHeader(ByVal tmpOrderId As Long) As Long
+    On Error GoTo ErrorHandler
+
+    Dim frontendDb As DAO.Database
+    Dim tenantDb As DAO.Database
+    Dim rsTmpOrder As DAO.Recordset
+    Dim rsOrder As DAO.Recordset
+    Dim OrderId As Long
+    Dim sourceOrderId As Long
+    Dim orderNo As String
+    Dim paymentTermCode As String
+
+    CommitTemporaryOrderHeader = 0
+
+    If tmpOrderId <= 0 Then
+        Exit Function
+    End If
+
+    If Not TemporaryOrderExists(tmpOrderId) Then
+        Exit Function
+    End If
+
+    Set frontendDb = modDb.GetFrontendDatabase()
+    Set tenantDb = modDb.GetCurrentTenantDatabase()
+    Set rsTmpOrder = frontendDb.OpenRecordset( _
+        "SELECT * FROM [" & TABLE_TMP_ORDER & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", _
+        dbOpenDynaset)
+
+    If rsTmpOrder.BOF And rsTmpOrder.EOF Then
+        GoTo CleanExit
+    End If
+
+    sourceOrderId = GetRecordsetLongValue(rsTmpOrder, FIELD_SOURCE_ORDER_ID, 0)
+    paymentTermCode = ResolveEffectivePaymentTermCode(rsTmpOrder)
+
+    If sourceOrderId > 0 Then
+        Set rsOrder = tenantDb.OpenRecordset( _
+            "SELECT * FROM [" & TABLE_ORD_ORDER & "] WHERE [" & FIELD_ORDER_ID & "]=" & CStr(sourceOrderId) & ";", _
+            dbOpenDynaset)
+        If rsOrder.BOF And rsOrder.EOF Then
+            GoTo CleanExit
+        End If
+
+        orderNo = GetRecordsetStringValue(rsOrder, FIELD_ORDER_NO, vbNullString)
+        rsOrder.Edit
+        ApplyOrderHeaderValues rsTmpOrder, rsOrder, orderNo, paymentTermCode, False
+        rsOrder.Update
+        OrderId = sourceOrderId
+    Else
+        orderNo = GetNextSalesOrderNumber(GetRecordsetDateValue(rsTmpOrder, FIELD_ORDER_DATE, Date))
+        Set rsOrder = tenantDb.OpenRecordset(TABLE_ORD_ORDER, dbOpenDynaset, dbAppendOnly)
+        rsOrder.AddNew
+        ApplyOrderHeaderValues rsTmpOrder, rsOrder, orderNo, paymentTermCode, True
+        rsOrder.Update
+        rsOrder.Bookmark = rsOrder.LastModified
+        OrderId = modDaoHelper.NzLong(rsOrder.Fields(FIELD_ORDER_ID).Value, 0)
+        If OrderId <= 0 Then
+            GoTo CleanExit
+        End If
+    End If
+
+    rsTmpOrder.Edit
+    SetRecordsetValue rsTmpOrder, FIELD_ORDER_ID, OrderId
+    SetRecordsetValue rsTmpOrder, FIELD_ORDER_NO, orderNo
+    SetUpdatedAuditFields rsTmpOrder
+    rsTmpOrder.Update
+
+    CommitTemporaryOrderHeader = OrderId
+
+CleanExit:
+    On Error Resume Next
+    If Not rsOrder Is Nothing Then rsOrder.Close
+    If Not rsTmpOrder Is Nothing Then rsTmpOrder.Close
+    Set rsOrder = Nothing
+    Set rsTmpOrder = Nothing
+    Set tenantDb = Nothing
+    Set frontendDb = Nothing
+    Exit Function
+
+ErrorHandler:
+    CommitTemporaryOrderHeader = 0
+    modErrorHandler.HandleError MODULE_NAME, "CommitTemporaryOrderHeader", Err
+    Resume CleanExit
+End Function
+
 Public Function PersistTemporaryOrder(ByVal tmpOrderId As Long) As Long
     On Error GoTo ErrorHandler
 
-    Dim db As DAO.Database
+    Dim frontendDb As DAO.Database
+    Dim tenantDb As DAO.Database
     Dim rsTmpOrder As DAO.Recordset
     Dim rsTmpLines As DAO.Recordset
     Dim rsOrder As DAO.Recordset
@@ -670,8 +942,9 @@ Public Function PersistTemporaryOrder(ByVal tmpOrderId As Long) As Long
         Exit Function
     End If
 
-    Set db = modDb.GetCurrentTenantDatabase()
-    Set rsTmpOrder = db.OpenRecordset( _
+    Set frontendDb = modDb.GetFrontendDatabase()
+    Set tenantDb = modDb.GetCurrentTenantDatabase()
+    Set rsTmpOrder = frontendDb.OpenRecordset( _
         "SELECT * FROM [" & TABLE_TMP_ORDER & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", _
         dbOpenDynaset)
 
@@ -680,47 +953,12 @@ Public Function PersistTemporaryOrder(ByVal tmpOrderId As Long) As Long
     End If
 
     orderNo = GetNextSalesOrderNumber(GetRecordsetDateValue(rsTmpOrder, FIELD_ORDER_DATE, Date))
-    paymentTermCode = Trim$(GetRecordsetStringValue(rsTmpOrder, FIELD_PAYMENT_TERM_CODE, vbNullString))
-    If LenB(paymentTermCode) = 0 Then
-        paymentTermCode = Trim$(modTenantRepository.GetTenantParameter("PAYMENT_TERM_CODE", vbNullString))
-    End If
+    paymentTermCode = ResolveEffectivePaymentTermCode(rsTmpOrder)
 
-    Set rsOrder = db.OpenRecordset(TABLE_ORD_ORDER, dbOpenDynaset, dbAppendOnly)
+    Set rsOrder = tenantDb.OpenRecordset(TABLE_ORD_ORDER, dbOpenDynaset, dbAppendOnly)
 
     rsOrder.AddNew
-    SetRecordsetValue rsOrder, FIELD_ORDER_NO, orderNo
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_ORDER_TYPE_CODE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_ORDER_STATUS_CODE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_CUSTOMER_ADDRESS_ID
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_INVOICE_ADDRESS_ID
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_DELIVERY_ADDRESS_ID
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_CUSTOMER_NAME
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_ORDER_DATE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_DELIVERY_DATE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VALID_UNTIL
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_REFERENCE_TEXT
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_EXTERNAL_REFERENCE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_LANGUAGE_CODE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_CURRENCY_CODE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_PAYMENT_TERM_CODE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VAT_MODE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VAT_CODE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VAT_RATE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_DISCOUNT_TYPE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_DISCOUNT_VALUE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_DISCOUNT_AMOUNT
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_SURCHARGE_TYPE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_SURCHARGE_VALUE
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_SURCHARGE_AMOUNT
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_SUBTOTAL_NET_AMOUNT
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_NET_AMOUNT
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VAT_AMOUNT
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_GROSS_AMOUNT
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_NOTES_TEXT
-    CopyHeaderField rsTmpOrder, rsOrder, FIELD_INTERNAL_NOTES_TEXT
-    SetRecordsetValue rsOrder, FIELD_PAYMENT_TERM_CODE, paymentTermCode
-    SetCreatedAuditFields rsOrder
-    SetUpdatedAuditFields rsOrder
+    ApplyOrderHeaderValues rsTmpOrder, rsOrder, orderNo, paymentTermCode, True
     rsOrder.Update
 
     rsOrder.Bookmark = rsOrder.LastModified
@@ -729,11 +967,11 @@ Public Function PersistTemporaryOrder(ByVal tmpOrderId As Long) As Long
         GoTo CleanExit
     End If
 
-    Set rsTmpLines = db.OpenRecordset( _
+    Set rsTmpLines = frontendDb.OpenRecordset( _
         "SELECT * FROM [" & TABLE_TMP_ORDER_LINE & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & _
-        " ORDER BY [" & FIELD_LINE_NO & "], [" & FIELD_SORT_ORDER & "], [" & FIELD_TMP_ORDER_LINE_ID & "];", _
+        " ORDER BY [" & FIELD_LINE_NO & "], [" & FIELD_SORT_ORDER & "], [" & FIELD_ORDER_LINE_ID & "];", _
         dbOpenSnapshot)
-    Set rsOrderLines = db.OpenRecordset(TABLE_ORD_ORDER_LINE, dbOpenDynaset, dbAppendOnly)
+    Set rsOrderLines = tenantDb.OpenRecordset(TABLE_ORD_ORDER_LINE, dbOpenDynaset, dbAppendOnly)
 
     If Not (rsTmpLines.BOF And rsTmpLines.EOF) Then
         rsTmpLines.MoveFirst
@@ -787,7 +1025,8 @@ CleanExit:
     Set rsTmpLines = Nothing
     Set rsOrder = Nothing
     Set rsTmpOrder = Nothing
-    Set db = Nothing
+    Set tenantDb = Nothing
+    Set frontendDb = Nothing
     Exit Function
 
 ErrorHandler:
@@ -960,6 +1199,40 @@ Public Function GetAddressRowSourceSql() As String
         "ORDER BY IIf(Nz(a.company_name,'')<>'', Nz(a.company_name,''), Trim(Nz(a.first_name,'') & ' ' & Nz(a.last_name,''))), Nz(a.city,''), a.address_id;"
 End Function
 
+Public Function GetPaymentTermRowSourceSql(Optional ByVal languageCode As String = "") As String
+    Dim effectiveLanguageCode As String
+
+    effectiveLanguageCode = Trim$(languageCode)
+    If LenB(effectiveLanguageCode) = 0 Then
+        effectiveLanguageCode = modFwTranslationRuntime.GetCurrentLanguageCode()
+    End If
+
+    GetPaymentTermRowSourceSql = _
+        "SELECT payment_term_code, " & _
+        "ResolveText('PAYMENT_TERM.' & Nz([payment_term_code],'') & '.TITLE', Nz([payment_term_code],''), " & _
+        SqlText(effectiveLanguageCode) & ") AS payment_term_title " & _
+        "FROM ten_payment_term " & _
+        "WHERE Len(Trim(Nz([payment_term_code], ''))) > 0 " & _
+        "AND Nz([is_active], True)=True " & _
+        "ORDER BY Nz([sort_order], 0), Nz([payment_term_code], '');"
+End Function
+
+Public Function GetCurrencyRowSourceSql() As String
+    GetCurrencyRowSourceSql = _
+        "SELECT currency_code " & _
+        "FROM ref_currency " & _
+        "WHERE Nz(is_active, True)=True " & _
+        "ORDER BY currency_code;"
+End Function
+
+Public Function GetLanguageRowSourceSql() As String
+    GetLanguageRowSourceSql = _
+        "SELECT language_code, language_name " & _
+        "FROM ref_language " & _
+        "WHERE Nz(is_active, True)=True " & _
+        "ORDER BY Nz(sort_order, 0), Nz(language_name, '');"
+End Function
+
 Public Function GetVatCodeRowSourceSql() As String
     GetVatCodeRowSourceSql = _
         "SELECT v.vat_code, " & _
@@ -1042,6 +1315,54 @@ Private Sub CopyHeaderField(ByVal rsSource As DAO.Recordset, ByVal rsTarget As D
     End If
 End Sub
 
+Private Sub ApplyOrderHeaderValues( _
+    ByVal rsTmpOrder As DAO.Recordset, _
+    ByVal rsOrder As DAO.Recordset, _
+    ByVal orderNo As String, _
+    ByVal paymentTermCode As String, _
+    ByVal isNewRecord As Boolean)
+
+    If LenB(Trim$(orderNo)) > 0 Then
+        SetRecordsetValue rsOrder, FIELD_ORDER_NO, Trim$(orderNo)
+    End If
+
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_ORDER_TYPE_CODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_ORDER_STATUS_CODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_CUSTOMER_ADDRESS_ID
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_INVOICE_ADDRESS_ID
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_DELIVERY_ADDRESS_ID
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_CUSTOMER_NAME
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_ORDER_DATE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_DELIVERY_DATE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VALID_UNTIL
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_REFERENCE_TEXT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_EXTERNAL_REFERENCE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_LANGUAGE_CODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_CURRENCY_CODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_PAYMENT_TERM_CODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VAT_MODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VAT_CODE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VAT_RATE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_DISCOUNT_TYPE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_DISCOUNT_VALUE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_DISCOUNT_AMOUNT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_SURCHARGE_TYPE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_SURCHARGE_VALUE
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_HEADER_SURCHARGE_AMOUNT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_SUBTOTAL_NET_AMOUNT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_NET_AMOUNT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_VAT_AMOUNT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_GROSS_AMOUNT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_NOTES_TEXT
+    CopyHeaderField rsTmpOrder, rsOrder, FIELD_INTERNAL_NOTES_TEXT
+    SetRecordsetValue rsOrder, FIELD_PAYMENT_TERM_CODE, paymentTermCode
+
+    If isNewRecord Then
+        SetCreatedAuditFields rsOrder
+    End If
+    SetUpdatedAuditFields rsOrder
+End Sub
+
 Private Sub CopyLineField(ByVal rsSource As DAO.Recordset, ByVal rsTarget As DAO.Recordset, ByVal fieldName As String)
     If modDaoHelper.RecordsetHasField(rsSource, fieldName) Then
         SetRecordsetValue rsTarget, fieldName, rsSource.Fields(fieldName).Value
@@ -1052,6 +1373,13 @@ Private Function ResolveCurrencyCode(ByVal explicitValue As String) As String
     ResolveCurrencyCode = Trim$(explicitValue)
     If LenB(ResolveCurrencyCode) = 0 Then
         ResolveCurrencyCode = modTenantRepository.GetTenantParameter("CURRENCY_CODE", "CHF")
+    End If
+End Function
+
+Private Function ResolveEffectivePaymentTermCode(ByVal rsTmpOrder As DAO.Recordset) As String
+    ResolveEffectivePaymentTermCode = Trim$(GetRecordsetStringValue(rsTmpOrder, FIELD_PAYMENT_TERM_CODE, vbNullString))
+    If LenB(ResolveEffectivePaymentTermCode) = 0 Then
+        ResolveEffectivePaymentTermCode = Trim$(modTenantRepository.GetTenantParameter("PAYMENT_TERM_CODE", vbNullString))
     End If
 End Function
 
@@ -1346,6 +1674,54 @@ Private Function ResolveAuditUserName() As String
     End If
     If LenB(ResolveAuditUserName) = 0 Then
         ResolveAuditUserName = "SYSTEM"
+    End If
+End Function
+
+Private Function TemporaryOrderExistsInDatabase(ByVal db As DAO.Database, ByVal tmpOrderId As Long) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim rs As DAO.Recordset
+
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    If tmpOrderId <= 0 Then
+        Exit Function
+    End If
+
+    Set rs = db.OpenRecordset( _
+        "SELECT [" & FIELD_TMP_ORDER_ID & "] FROM [" & TABLE_TMP_ORDER & "] WHERE [" & FIELD_TMP_ORDER_ID & "]=" & CStr(tmpOrderId) & ";", _
+        dbOpenSnapshot)
+    TemporaryOrderExistsInDatabase = Not (rs.BOF And rs.EOF)
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Exit Function
+
+ErrorHandler:
+    TemporaryOrderExistsInDatabase = False
+    modErrorHandler.HandleError MODULE_NAME, "TemporaryOrderExistsInDatabase", Err
+    Resume CleanExit
+End Function
+
+Private Function SafeDatabaseName(ByVal db As DAO.Database) As String
+    On Error GoTo SafeExit
+
+    If db Is Nothing Then
+        SafeDatabaseName = "<nothing>"
+    Else
+        SafeDatabaseName = Trim$(db.Name)
+        If LenB(SafeDatabaseName) = 0 Then
+            SafeDatabaseName = "<empty>"
+        End If
+    End If
+
+SafeExit:
+    If LenB(SafeDatabaseName) = 0 Then
+        SafeDatabaseName = "<unavailable>"
     End If
 End Function
 

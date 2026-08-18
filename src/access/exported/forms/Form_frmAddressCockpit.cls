@@ -19,7 +19,6 @@ Option Explicit
 '===============================================================================
 
 Private Const MODULE_NAME As String = "Form_frmAddressCockpit"
-Private Const FORM_ORDER_DETAIL As String = "frmOrderDetail"
 Private Const DASHBOARD_FORM_NAME As String = "frmAppDashboard"
 
 Private Sub Form_Load()
@@ -233,7 +232,6 @@ Private Sub CreateNewSalesOrder()
     On Error GoTo ErrorHandler
 
     Dim addressId As Long
-    Dim openArgs As String
 
     addressId = GetCurrentAddressId()
     If addressId <= 0 Then
@@ -241,18 +239,9 @@ Private Sub CreateNewSalesOrder()
         Exit Sub
     End If
 
-    openArgs = modAddressCockpitService.CreateTemporarySalesOrderWorkspaceArgs(addressId)
-    If LenB(openArgs) = 0 Then
+    If Not modOrderEditSessionService.OpenOrderDetailNextWorkspaceForAddress(Me, addressId) Then
         MsgBox modFwTranslationRuntime.ResolveText("MSG.ADDRESS_COCKPIT_ORDER_CREATE_FAILED", "Die Bestellung konnte nicht erstellt werden."), vbExclamation, MODULE_NAME
         Exit Sub
-    End If
-
-    If FormExists(FORM_ORDER_DETAIL) Then
-        If Not modAppWorkspaceService.OpenWorkspaceForm(Me, FORM_ORDER_DETAIL, vbNullString, acFormPropertySettings, openArgs) Then
-            Err.Raise vbObjectError + 5320, MODULE_NAME & ".CreateNewSalesOrder", "Workspace navigation to frmOrderDetail failed."
-        End If
-    Else
-        MsgBox modFwTranslationRuntime.ResolveText("MSG.ADDRESS_COCKPIT_ORDER_DETAIL_MISSING", "frmOrderDetail ist nicht verfuegbar."), vbInformation, MODULE_NAME
     End If
     Exit Sub
 

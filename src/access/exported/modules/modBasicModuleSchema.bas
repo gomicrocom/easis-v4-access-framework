@@ -71,7 +71,7 @@ Public Function EnsureOrderPhase1Schema(Optional ByVal backendPath As String = v
 
     EnsureOrderPhase1Schema = EnsureOrderPhase1SchemaForDatabase(db)
     If EnsureOrderPhase1Schema Then
-        Set frontendDb = CurrentDb
+        Set frontendDb = modDb.GetFrontendDatabase()
         If Not EnsureTemporaryOrderWorkspaceSchema(frontendDb) Then
             EnsureOrderPhase1Schema = False
         End If
@@ -692,7 +692,7 @@ Public Function EnsureSystemLanguageReferenceSchema(Optional ByVal sysBackendPat
     If Not EnsureRefLanguageSchema(backendDb) Then GoTo CleanExit
     If Not SeedRefLanguageData(backendDb) Then GoTo CleanExit
 
-    Set frontendDb = CurrentDb
+    Set frontendDb = modDb.GetFrontendDatabase()
     If Not EnsureLinkedAccessTable(frontendDb, effectiveBackendPath, TABLE_REF_LANGUAGE) Then GoTo CleanExit
 
     EnsureSystemLanguageReferenceSchema = True
@@ -718,6 +718,7 @@ Private Sub CreateTmpOrders(ByVal db As DAO.Database)
     SqlText = SqlText & "tmp_order_id AUTOINCREMENT CONSTRAINT pk_tmp_order PRIMARY KEY, "
     SqlText = SqlText & "session_id TEXT(100), "
     SqlText = SqlText & "order_id LONG, "
+    SqlText = SqlText & "source_order_id LONG, "
     SqlText = SqlText & "order_no TEXT(50), "
     SqlText = SqlText & "customer_address_id LONG, "
     SqlText = SqlText & "invoice_address_id LONG, "
@@ -924,6 +925,7 @@ Private Function EnsureTemporaryOrderHeaderSchema(ByVal db As DAO.Database) As B
 
     If Not EnsureTextField(db, "tmp_order", "session_id", 100, vbNullString, False) Then GoTo ErrorHandler
     If Not EnsureLongField(db, "tmp_order", "order_id", 0, False) Then GoTo ErrorHandler
+    If Not EnsureLongField(db, "tmp_order", "source_order_id", 0, False) Then GoTo ErrorHandler
     If Not EnsureTextField(db, "tmp_order", "order_no", 50, vbNullString, False) Then GoTo ErrorHandler
     If Not EnsureLongField(db, "tmp_order", "customer_address_id", 0, False) Then GoTo ErrorHandler
     If Not EnsureLongField(db, "tmp_order", "invoice_address_id", 0, False) Then GoTo ErrorHandler
@@ -1110,6 +1112,8 @@ Private Function EnsureTemporaryOrderHeaderIndexes(ByVal db As DAO.Database) As 
 
     EnsureIndexWhenFieldExists db, "tmp_order", "session_id", "ix_tmp_order_session_id", _
         "CREATE INDEX ix_tmp_order_session_id ON tmp_order (session_id);"
+    EnsureIndexWhenFieldExists db, "tmp_order", "source_order_id", "ix_tmp_order_source_order_id", _
+        "CREATE INDEX ix_tmp_order_source_order_id ON tmp_order (source_order_id);"
     EnsureIndexWhenFieldExists db, "tmp_order", "customer_address_id", "ix_tmp_order_customer_address_id", _
         "CREATE INDEX ix_tmp_order_customer_address_id ON tmp_order (customer_address_id);"
 
