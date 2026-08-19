@@ -1,0 +1,14 @@
+command_or_button,visible_caption_current,handler,line_reference,save_header,recalculate_lines,recalculate_totals,persist_tmp_to_ord,navigation,close_or_keep,temp_cleanup,notes
+L1 Home,Home,NavigateHome,1212-1230,No,No,No,No,Dashboard,Close current,No,Standard navigation
+L2 Zurueck,Zurueck,NavigateBack -> ReturnToPreviousWorkspace,1232-1264,No,No,No,No,GoBack or Dashboard,Close current,Indirect via CanLeaveWorkspace,History driven
+R3 temp,Aktualisieren,DetailApply -> ApplyCurrentRecord,487-489 785-818,If Dirty,Yes via RecalculateTemporaryOrder,Yes,No,No,Keep open,No,Semantically not just refresh but apply plus totals
+R3 persisted,Uebernehmen,DetailApply -> ApplyCurrentRecord,487-489 785-818,If Dirty,Yes via RecalculateOrder,Yes,No,No,Keep open,No,Apply semantics
+R2 temp,Abbrechen,DetailCancel -> CancelCurrentEdit,491-492 820-862,No,No,No,No,ReturnToPreviousWorkspace,Close,Yes,Deletes temp data
+R2 persisted,Abbrechen,DetailCancel -> CancelCurrentEdit,491-492 820-862,Undo only,No,No,No,ReturnToPreviousWorkspace,Close,No,Only header Me.Undo no explicit child undo handling
+R1 temp,Bestellung speichern,DetailSave -> PersistTemporaryOrderAndReload,479-485 1079-1105,If Dirty,Repository recalc after copy,Yes after persisted recalc,Yes,Open frmOrderDetail persisted,Reopen persisted,Yes after commit,Does not return to previous workspace
+R1 persisted,Speichern,DetailSave -> ApplyCurrentRecord -> ReturnToPreviousWorkspace,479-485 785-818 1242-1264,If Dirty,Yes,Yes,No,GoBack or Dashboard,Close,No,Save-and-close semantics
+cmdSave local,hidden,cmdSave_Click -> DetailSave,161-169,See DetailSave,See DetailSave,See DetailSave,See DetailSave,See DetailSave,See DetailSave,See DetailSave,Local button only delegates
+cmdApply local,hidden,cmdApply_Click -> DetailApply,181-189,See DetailApply,See DetailApply,See DetailApply,No,No,Keep open,No,Local button only delegates
+cmdCancel local,hidden,cmdCancel_Click -> DetailCancel,171-179,No,No,No,No,ReturnToPreviousWorkspace,Close,temp mode yes,Local button only delegates
+workspace leave temp,dialog Aenderungen verwerfen?,CanLeaveWorkspace,239-269,No,No,No,No,Caller dependent,Leave if yes,Yes,Deletes temp data before outer navigation fully settles
+workspace leave persisted,dialog Aenderungen verwerfen?,CanLeaveWorkspace,239-269,Undo only,No,No,No,Caller dependent,Leave if yes,No,Only header undo path

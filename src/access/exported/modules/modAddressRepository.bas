@@ -1,0 +1,252 @@
+Attribute VB_Name = "modAddressRepository"
+Option Compare Database
+Option Explicit
+
+'===============================================================================
+' Module    : modAddressRepository
+' Purpose   : DAO repository helpers for address master data.
+' Author    : Codex
+' Version   : 0.1.0
+'===============================================================================
+
+Private Const MODULE_NAME As String = "modAddressRepository"
+Private Const TABLE_ADR_ADDRESS As String = "adr_address"
+
+Private Const FIELD_ADDRESS_ID As String = "address_id"
+Private Const FIELD_ADDRESS_TYPE_CODE As String = "address_type_code"
+Private Const FIELD_COMPANY_NAME As String = "company_name"
+Private Const FIELD_FIRST_NAME As String = "first_name"
+Private Const FIELD_LAST_NAME As String = "last_name"
+Private Const FIELD_STREET As String = "street"
+Private Const FIELD_HOUSE_NO As String = "house_no"
+Private Const FIELD_ZIP_CODE As String = "zip_code"
+Private Const FIELD_CITY As String = "city"
+Private Const FIELD_COUNTRY_CODE As String = "country_code"
+Private Const FIELD_LANGUAGE_CODE As String = "language_code"
+Private Const FIELD_SALUTATION_CODE As String = "salutation_code"
+Private Const FIELD_ADDRESSING_MODE_CODE As String = "addressing_mode_code"
+Private Const FIELD_PREFERRED_NAME As String = "preferred_name"
+Private Const FIELD_IS_ACTIVE As String = "is_active"
+Private Const FIELD_CREATED_AT As String = "created_at"
+Private Const FIELD_CREATED_BY As String = "created_by"
+
+Public Function CreateAddress( _
+    ByVal addressTypeCode As String, _
+    Optional ByVal CompanyName As String = "", _
+    Optional ByVal FirstName As String = "", _
+    Optional ByVal LastName As String = "", _
+    Optional ByVal street As String = "", _
+    Optional ByVal HouseNo As String = "", _
+    Optional ByVal zipCode As String = "", _
+    Optional ByVal city As String = "", _
+    Optional ByVal countryCode As String = "", _
+    Optional ByVal languageCode As String = "", _
+    Optional ByVal salutationCode As String = "", _
+    Optional ByVal addressingModeCode As String = "", _
+    Optional ByVal preferredName As String = "" _
+) As Long
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+
+    If Not CanWriteAddresses() Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentTenantDatabase()
+    Set rs = db.OpenRecordset(TABLE_ADR_ADDRESS, dbOpenDynaset, dbAppendOnly)
+
+    rs.AddNew
+    SetRecordsetValue rs, FIELD_ADDRESS_TYPE_CODE, UCase$(Trim$(addressTypeCode))
+    SetRecordsetValue rs, FIELD_COMPANY_NAME, Trim$(CompanyName)
+    SetRecordsetValue rs, FIELD_FIRST_NAME, Trim$(FirstName)
+    SetRecordsetValue rs, FIELD_LAST_NAME, Trim$(LastName)
+    SetRecordsetValue rs, FIELD_STREET, Trim$(street)
+    SetRecordsetValue rs, FIELD_HOUSE_NO, Trim$(HouseNo)
+    SetRecordsetValue rs, FIELD_ZIP_CODE, Trim$(zipCode)
+    SetRecordsetValue rs, FIELD_CITY, Trim$(city)
+    SetRecordsetValue rs, FIELD_COUNTRY_CODE, UCase$(Trim$(countryCode))
+    SetRecordsetValue rs, FIELD_LANGUAGE_CODE, Trim$(languageCode)
+    SetRecordsetValue rs, FIELD_SALUTATION_CODE, UCase$(Trim$(salutationCode))
+    SetRecordsetValue rs, FIELD_ADDRESSING_MODE_CODE, UCase$(Trim$(addressingModeCode))
+    SetRecordsetValue rs, FIELD_PREFERRED_NAME, Trim$(preferredName)
+    SetRecordsetValue rs, FIELD_IS_ACTIVE, True
+    SetRecordsetValue rs, FIELD_CREATED_AT, Now()
+    SetRecordsetValue rs, FIELD_CREATED_BY, modSessionContext.ResolveCreatedBy()
+    rs.Update
+
+    rs.Bookmark = rs.LastModified
+    If modDaoHelper.RecordsetHasField(rs, FIELD_ADDRESS_ID) Then
+        CreateAddress = modDaoHelper.NzLong(rs.Fields(FIELD_ADDRESS_ID).Value, 0)
+    End If
+
+    modLoggingHandler.LogInfo MODULE_NAME & ".CreateAddress", _
+        "Address created. AddressId=" & CStr(CreateAddress) & "."
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    CreateAddress = 0
+    modErrorHandler.HandleError MODULE_NAME, "CreateAddress", Err
+    Resume CleanExit
+End Function
+
+Public Function AddressExists(ByVal addressId As Long) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+
+    If addressId <= 0 Then
+        Exit Function
+    End If
+
+    If Not CanReadAddresses() Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentTenantDatabase()
+    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", dbOpenSnapshot)
+
+    AddressExists = Not (rs.BOF And rs.EOF)
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    AddressExists = False
+    modErrorHandler.HandleError MODULE_NAME, "AddressExists", Err
+    Resume CleanExit
+End Function
+
+Public Function GetAddressDisplayName(ByVal addressId As Long, Optional ByVal defaultValue As String = "") As String
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim CompanyName As String
+    Dim FirstName As String
+    Dim LastName As String
+
+    GetAddressDisplayName = defaultValue
+
+    If addressId <= 0 Then
+        Exit Function
+    End If
+
+    If Not CanReadAddresses() Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentTenantDatabase()
+    Set rs = db.OpenRecordset("SELECT * FROM [" & TABLE_ADR_ADDRESS & "] WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", dbOpenSnapshot)
+
+    If rs.BOF And rs.EOF Then
+        Exit Function
+    End If
+
+    CompanyName = modDaoHelper.ResolveFieldValue(rs, FIELD_COMPANY_NAME, vbNullString)
+    If LenB(Trim$(CompanyName)) > 0 Then
+        GetAddressDisplayName = Trim$(CompanyName)
+        GoTo CleanExit
+    End If
+
+    FirstName = modDaoHelper.ResolveFieldValue(rs, FIELD_FIRST_NAME, vbNullString)
+    LastName = modDaoHelper.ResolveFieldValue(rs, FIELD_LAST_NAME, vbNullString)
+    GetAddressDisplayName = Trim$(FirstName & " " & LastName)
+
+    If LenB(GetAddressDisplayName) = 0 Then
+        GetAddressDisplayName = defaultValue
+    End If
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    GetAddressDisplayName = defaultValue
+    modErrorHandler.HandleError MODULE_NAME, "GetAddressDisplayName", Err
+    Resume CleanExit
+End Function
+
+Private Function CanReadAddresses() As Boolean
+    Dim db As DAO.Database
+
+    If Not modDb.ValidateBackendConfiguration() Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".CanReadAddresses", _
+            "Backend configuration is not ready for address lookup."
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentTenantDatabase()
+
+    If Not modDbSchema.TableExists(db, TABLE_ADR_ADDRESS) Then
+        modLoggingHandler.LogWarning MODULE_NAME & ".CanReadAddresses", _
+            "Table '" & TABLE_ADR_ADDRESS & "' is not available yet."
+        Exit Function
+    End If
+
+    CanReadAddresses = True
+End Function
+
+Private Function CanWriteAddresses() As Boolean
+    CanWriteAddresses = CanReadAddresses()
+End Function
+
+Private Sub SetRecordsetValue(ByVal rs As DAO.Recordset, ByVal fieldName As String, ByVal fieldValue As Variant)
+    If modDaoHelper.RecordsetHasField(rs, fieldName) Then
+        rs.Fields(fieldName).Value = fieldValue
+    End If
+End Sub
+
+Public Function GetAddressCountryCode(ByVal addressId As Long, Optional ByVal defaultValue As String = "") As String
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+
+    GetAddressCountryCode = UCase$(Trim$(defaultValue))
+
+    If addressId <= 0 Then
+        Exit Function
+    End If
+
+    If Not CanReadAddresses() Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentTenantDatabase()
+    Set rs = db.OpenRecordset( _
+        "SELECT [" & FIELD_COUNTRY_CODE & "] FROM [" & TABLE_ADR_ADDRESS & "] " & _
+        "WHERE [" & FIELD_ADDRESS_ID & "]=" & CStr(addressId) & ";", _
+        dbOpenSnapshot)
+
+    If Not (rs.BOF And rs.EOF) Then
+        GetAddressCountryCode = UCase$(Trim$(modDaoHelper.ResolveFieldValue(rs, FIELD_COUNTRY_CODE, GetAddressCountryCode)))
+    End If
+
+CleanExit:
+    On Error Resume Next
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    GetAddressCountryCode = UCase$(Trim$(defaultValue))
+    modErrorHandler.HandleError MODULE_NAME, "GetAddressCountryCode", Err
+    Resume CleanExit
+End Function

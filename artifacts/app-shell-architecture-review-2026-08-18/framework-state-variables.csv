@@ -1,0 +1,23 @@
+location,variable,role,duplicates_access_native_state,assessment,decision
+modAppWorkspaceService,m_workspaceHistory,workspace back stack,no,valuable app behavior,KEEP
+modAppWorkspaceService,m_isRestoringHistory,history recursion guard,no,technical safeguard,KEEP
+modAppWorkspaceService,m_pendingWorkspaceFormName,pending hosted payload target,partly,host workaround,KEEP_AND_SIMPLIFY
+modAppWorkspaceService,m_pendingWorkspaceOpenArgs,pending hosted payload,partly,host workaround,KEEP_AND_SIMPLIFY
+modAppShell,m_lastWorkspaceFormName,quicksearch reset trigger,partly,UI helper not native duplicate,KEEP
+frmAddressList,m_currentSearchText,current filter text,partly,UI convenience around Filter,KEEP
+frmOrderDetail,m_workspaceOpenArgsApplied,host init flag,yes,compensates delayed hosted payload,KEEP_AND_SIMPLIFY
+frmOrderDetail,m_isTemporaryOrder,business edit mode,no,temporary session semantics,KEEP
+frmOrderDetail,m_temporaryOrderId,business temp id,no,temporary session semantics,KEEP
+frmOrderDetail,m_temporaryOrderDisposed,cleanup tracking,partly,cleanup control,KEEP_AND_SIMPLIFY
+frmOrderDetail,m_lastAppliedWorkspaceOpenArgs,payload dedupe,partly,host workaround,KEEP_AND_SIMPLIFY
+frmOrderDetailNext,m_lifecycleState,loading/saving/cancelling state,yes,partly duplicates Access Dirty/NewRecord/lifecycle,KEEP_AND_SIMPLIFY
+frmOrderDetailNext,m_initializedTmpOrderId,current temp session id,no,business temp session identity,KEEP
+frmOrderDetailNext,m_lastAppliedPayload,payload dedupe,partly,host workaround,KEEP_AND_SIMPLIFY
+frmOrderDetailNext,m_sessionInitialized,session ready flag,partly,needed because payload arrives late,KEEP_AND_SIMPLIFY
+frmOrderDetailNext,m_deleteSessionOnClose,cleanup flag,no but dangerous in leave flow,MANUAL_REVIEW
+frmOrderDetailNext,m_cleanupCompleted,cleanup idempotence,no,technical safeguard,KEEP
+frmOrderDetailNext,m_committedOrderId,post-commit identity,no,business result state,KEEP
+sfrmOrderLines,m_pendingDeleteOrderId,pending line delete recalculation,partly,workaround around delete event order,KEEP_AND_SIMPLIFY
+sfrmOrderLines,m_lineTableName,dynamic table binding,yes,subform runtime abstraction over Access binding,USE_ACCESS_NATIVE
+sfrmOrderLines,m_parentKeyFieldName,dynamic parent field binding,yes,subform runtime abstraction over Access linking,USE_ACCESS_NATIVE
+sfrmOrderLines,m_lineKeyFieldName,dynamic line key binding,yes,subform runtime abstraction over Access binding,USE_ACCESS_NATIVE

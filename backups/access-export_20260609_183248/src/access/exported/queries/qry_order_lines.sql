@@ -1,0 +1,29 @@
+SELECT
+    l.order_line_id,
+    l.order_id,
+    l.line_no,
+    l.article_id,
+    l.article_no,
+    l.line_type_code,
+    l.description_text,
+    l.quantity,
+    l.unit_code,
+    l.unit_price,
+    l.discount_type,
+    l.discount_value,
+    l.line_discount_amount,
+    l.surcharge_type,
+    l.surcharge_value,
+    l.line_surcharge_amount,
+    l.vat_code,
+    l.vat_rate,
+    l.line_base_amount,
+    l.line_net_amount,
+    l.line_vat_amount,
+    l.line_gross_amount
+FROM
+    ord_order_line AS l
+ORDER BY
+    l.order_id,
+    l.line_no,
+    l.order_line_id;

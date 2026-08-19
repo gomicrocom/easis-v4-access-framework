@@ -1,0 +1,21 @@
+context,table_or_object,primary_key,parent_link,created_when,used_by,deleted_when,notes
+address selection,adr_address,address_id,,before cockpit open,frmAddressList frmAddressCockpit,,Source context for new order
+temporary header,tmp_order,tmp_order_id,,modOrderRepository.CreateTemporarySalesOrderForAddress,frmOrderDetail temp mode modOrderRepository.PersistTemporaryOrder,DeleteTemporaryOrder or after successful persist,Physical temp record exists immediately
+temporary line,tmp_order_line,tmp_order_line_id,tmp_order_id,first line insert in sfrmOrderLines,sfrmOrderLines modOrderCalculationService modOrderRepository.PersistTemporaryOrder,DeleteTemporaryOrder or after successful persist,Child rows depend on tmp_order_id
+persisted header,ord_order,order_id,,modOrderRepository.PersistTemporaryOrder,frmOrderDetail persisted mode modOrderCalculationService,,Receives generated order number only at persist time
+persisted line,ord_order_line,order_line_id,order_id,modOrderRepository.PersistTemporaryOrder or existing order usage,sfrmOrderLines modOrderCalculationService,,Child rows for persisted order
+workspace open args,new order pseudo payload,TMP_ORDER;<tmp_order_id>,,frmAddressCockpit.CreateNewSalesOrder,modAppWorkspaceService frmOrderDetail,,Carries temp id not order id
+workspace open args,persisted payload,order_id,,PersistTemporaryOrderAndReload or external caller,modAppWorkspaceService frmOrderDetail,,Carries persisted id only
+workspace state temp,serialized state,tmp_order_id,,frmOrderDetail.GetWorkspaceState,modAppWorkspaceService history restore,,Used instead of real OpenArgs on back navigation
+workspace state persisted,serialized state,order_id,,frmOrderDetail.GetWorkspaceState,modAppWorkspaceService history restore,,Same key channel different id domain
+customer link,tmp_order.customer_address_id,address_id,,CreateTemporarySalesOrderForAddress,frmOrderDetail defaults VAT logic,,Also copied to ord_order.customer_address_id
+invoice link,tmp_order.invoice_address_id,address_id,,CreateTemporarySalesOrderForAddress,frmOrderDetail address combos,,Defaults to customer address
+delivery link,tmp_order.delivery_address_id,address_id,,CreateTemporarySalesOrderForAddress,frmOrderDetail address combos VAT context,,Defaults to customer address
+customer snapshot,tmp_order.customer_name,,,"CreateTemporarySalesOrderForAddress / GetNewSalesOrderDefaults",Header caption persist mapping,,Snapshot text not lookup key
+vat header temp,tmp_order.vat_mode vat_code vat_rate,,,"CreateTemporarySalesOrderForAddress / delivery address changes",frmOrderDetail sfrmOrderLines default source modOrderCalculationService,,Source of defaults for new lines
+vat header persisted,ord_order.vat_mode vat_code vat_rate,,,"PersistTemporaryOrder or edit persisted order",frmOrderDetail sfrmOrderLines modOrderCalculationService,,Source for persisted line calc
+child parent id temp,sfrmOrderLines current row,tmp_order_id,tmp_order_id,Form_BeforeInsert,EnsureNewLineDefaults Calc services,,Meaning differs from persisted mode
+child parent id persisted,sfrmOrderLines current row,order_id,order_id,Form_BeforeInsert existing row,EnsureNewLineDefaults Calc services,,Normal persisted child link
+header totals temp,tmp_order subtotal_net_amount net_amount vat_amount gross_amount,,after Apply or specific header recalc,frmOrderDetail RefreshCalculatedTotals persist mapping,DeleteTemporaryOrder if temp discarded,Not updated on every line field edit
+header totals persisted,ord_order subtotal_net_amount net_amount vat_amount gross_amount,,after persisted recalc,frmOrderDetail queries reports,,Stored totals can lag behind UI line edits until apply/save
+transition temp to persisted,memory and database,tmp_order_id -> order_id,,PersistTemporaryOrderAndReload,frmOrderDetail reopened as persisted,DeleteTemporaryOrder after repository commit,Two form lifecycles can overlap during workspace transition

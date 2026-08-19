@@ -1,0 +1,568 @@
+﻿"procedure_name","module_name","start_line","end_line","visibility","signature","uses_currentdb","uses_explicit_dao_database","has_error_handling","return_behavior","empty_name_handling","missing_behavior","actual_call_count","body"
+"TableExists","modAddressRepository","205","228","Private","Private Function TableExists(ByVal tableName As String) As Boolean","False","False","True","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","1","Private Function TableExists(ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim tdf As DAO.tableDef
+
+    Set db = modDb.GetCurrentDatabase()
+    For Each tdf In db.TableDefs
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
+            TableExists = True
+            Exit For
+        End If
+    Next tdf
+
+CleanExit:
+    Set tdf = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+    modErrorHandler.HandleError MODULE_NAME, ""TableExists"", Err
+    Resume CleanExit
+End Function"
+"TableExists","modAppNavigationService","668","686","Private","Private Function TableExists(ByVal table_name As String) As Boolean","True","False","False","Assigns True explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","2","Private Function TableExists(ByVal table_name As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim db As DAO.Database
+    Dim tdf As DAO.tableDef
+
+    Set db = currentDb
+
+    For Each tdf In db.TableDefs
+        If StrComp(tdf.Name, table_name, vbTextCompare) = 0 Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tdf
+
+SafeExit:
+    Set tdf = Nothing
+    Set db = Nothing
+End Function"
+"FieldExists","modAppNavigationService","688","709","Private","Private Function FieldExists(ByVal table_name As String, ByVal field_name As String) As Boolean","True","False","False","Assigns True explicitly","No explicit empty-name guard","Traverses TableDefs/Fields; returns False when not found","1","Private Function FieldExists(ByVal table_name As String, ByVal field_name As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim db As DAO.Database
+    Dim tdf As DAO.tableDef
+    Dim fld As DAO.Field
+
+    Set db = currentDb
+    Set tdf = db.TableDefs(table_name)
+
+    For Each fld In tdf.Fields
+        If StrComp(fld.Name, field_name, vbTextCompare) = 0 Then
+            FieldExists = True
+            Exit Function
+        End If
+    Next fld
+
+SafeExit:
+    Set fld = Nothing
+    Set tdf = Nothing
+    Set db = Nothing
+End Function"
+"TableExists","modArticleGroupService","338","355","Private","Private Function TableExists(ByVal tableName As String) As Boolean","True","False","False","Assigns True explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","1","Private Function TableExists(ByVal tableName As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim db As DAO.Database
+    Dim tableDefinition As DAO.tableDef
+
+    Set db = currentDb
+    For Each tableDefinition In db.TableDefs
+        If StrComp(tableDefinition.Name, tableName, vbTextCompare) = 0 Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tableDefinition
+
+SafeExit:
+    Set tableDefinition = Nothing
+    Set db = Nothing
+End Function"
+"FieldExists","modArticleGroupService","357","377","Private","Private Function FieldExists(ByVal tableName As String, ByVal fieldName As String) As Boolean","True","False","False","Assigns True explicitly","No explicit empty-name guard","Traverses TableDefs/Fields; returns False when not found","1","Private Function FieldExists(ByVal tableName As String, ByVal fieldName As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim db As DAO.Database
+    Dim tableDefinition As DAO.tableDef
+    Dim fieldDefinition As DAO.Field
+
+    Set db = currentDb
+    Set tableDefinition = db.TableDefs(tableName)
+    For Each fieldDefinition In tableDefinition.Fields
+        If StrComp(fieldDefinition.Name, fieldName, vbTextCompare) = 0 Then
+            FieldExists = True
+            Exit Function
+        End If
+    Next fieldDefinition
+
+SafeExit:
+    Set fieldDefinition = Nothing
+    Set tableDefinition = Nothing
+    Set db = Nothing
+End Function"
+"TableExists","modBasicModuleSchema","1157","1172","Private","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","10","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+
+    For Each tdf In db.TableDefs
+        If StrComp(Trim$(tdf.Name), Trim$(tableName), vbTextCompare) = 0 Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tdf
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+End Function"
+"FieldExists","modBasicModuleSchema","1174","1192","Private","Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Traverses TableDefs/Fields; returns False when not found","20","Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+    Dim fld As DAO.Field
+
+    RefreshTableDefinition db, tableName
+    Set tdf = db.TableDefs(tableName)
+    For Each fld In tdf.Fields
+        If StrComp(Trim$(fld.Name), Trim$(fieldName), vbTextCompare) = 0 Then
+            FieldExists = True
+            Exit Function
+        End If
+    Next fld
+    Exit Function
+
+ErrorHandler:
+    FieldExists = False
+End Function"
+"TableExists","modContactRepository","181","204","Private","Private Function TableExists(ByVal tableName As String) As Boolean","False","False","True","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","1","Private Function TableExists(ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim tdf As DAO.tableDef
+
+    Set db = modDb.GetCurrentDatabase()
+    For Each tdf In db.TableDefs
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
+            TableExists = True
+            Exit For
+        End If
+    Next tdf
+
+CleanExit:
+    Set tdf = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+    modErrorHandler.HandleError MODULE_NAME, ""TableExists"", Err
+    Resume CleanExit
+End Function"
+"TableExists","modDemoDataSeeder","1269","1285","Private","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","6","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+
+    For Each tdf In db.TableDefs
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tdf
+
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+End Function"
+"FieldExists","modDemoDataSeeder","1287","1297","Private","Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Traverses TableDefs/Fields; returns False when not found","4","Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tmp As String
+    tmp = db.TableDefs(tableName).Fields(fieldName).Name
+    FieldExists = True
+    Exit Function
+
+ErrorHandler:
+    FieldExists = False
+End Function"
+"TableExists","modDocumentCalculationService","576","592","Private","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","2","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+
+    For Each tdf In db.TableDefs
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tdf
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+    modErrorHandler.HandleError MODULE_NAME, ""TableExists"", Err
+End Function"
+"FieldExists","modDocumentCalculationService","594","613","Private","Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Traverses TableDefs/Fields; returns False when not found","2","Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+    Dim fld As DAO.Field
+
+    Set tdf = db.TableDefs(tableName)
+
+    For Each fld In tdf.Fields
+        If UCase$(Trim$(fld.Name)) = UCase$(Trim$(fieldName)) Then
+            FieldExists = True
+            Exit Function
+        End If
+    Next fld
+    Exit Function
+
+ErrorHandler:
+    FieldExists = False
+    modErrorHandler.HandleError MODULE_NAME, ""FieldExists"", Err
+End Function"
+"TableExists","modDocumentRepository","650","674","Private","Private Function TableExists(ByVal tableName As String) As Boolean","False","False","True","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","10","Private Function TableExists(ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim tdf As DAO.tableDef
+
+    Set db = modDb.GetCurrentDatabase()
+
+    For Each tdf In db.TableDefs
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
+            TableExists = True
+            Exit For
+        End If
+    Next tdf
+
+CleanExit:
+    Set tdf = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+    modErrorHandler.HandleError MODULE_NAME, ""TableExists"", Err
+    Resume CleanExit
+End Function"
+"TableExists","modFwComposerService","1370","1390","Private","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","2","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    For Each tdf In db.TableDefs
+        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tdf
+
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+End Function"
+"TableExists","modFwTranslationAuditService","931","946","Private","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","10","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tableDefinition As DAO.tableDef
+
+    For Each tableDefinition In db.TableDefs
+        If StrComp(tableDefinition.Name, tableName, vbTextCompare) = 0 Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tableDefinition
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+End Function"
+"TableExists","modFwTranslationEditService","457","471","Private","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean","False","True","False","Assigns True explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","1","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
+    On Error GoTo SafeExit
+
+    Dim tableDefinition As DAO.tableDef
+
+    For Each tableDefinition In db.TableDefs
+        If StrComp(tableDefinition.Name, tableName, vbTextCompare) = 0 Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tableDefinition
+
+SafeExit:
+    Set tableDefinition = Nothing
+End Function"
+"TableExists","modFwTranslationRuntime","681","701","Private","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","2","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    For Each tdf In db.TableDefs
+        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tdf
+
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+End Function"
+"TableExists","modFwTranslationTagGeneratorService","555","575","Private","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","3","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    For Each tdf In db.TableDefs
+        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tdf
+
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+End Function"
+"TableExists","modMigrationPaymentTerms","413","433","Private","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","9","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    For Each tdf In db.TableDefs
+        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tdf
+
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+End Function"
+"FieldExists","modMigrationPaymentTerms","435","462","Private","Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Traverses TableDefs/Fields; returns False when not found","3","Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+    Dim fld As DAO.Field
+
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    If Not TableExists(db, tableName) Then
+        Exit Function
+    End If
+
+    Set tdf = db.TableDefs(tableName)
+
+    For Each fld In tdf.Fields
+        If StrComp(fld.Name, fieldName, vbTextCompare) = 0 Then
+            FieldExists = True
+            Exit Function
+        End If
+    Next fld
+
+    Exit Function
+
+ErrorHandler:
+    FieldExists = False
+End Function"
+"TableExists","modMigrationTranslations","266","286","Private","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","2","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    For Each tdf In db.TableDefs
+        If StrComp(tdf.Name, tableName, vbTextCompare) = 0 Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tdf
+
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+End Function"
+"FieldExists","modMigrationTranslations","288","315","Private","Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Traverses TableDefs/Fields; returns False when not found","3","Private Function FieldExists(ByVal db As DAO.Database, ByVal tableName As String, ByVal fieldName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+    Dim fld As DAO.Field
+
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    If Not TableExists(db, tableName) Then
+        Exit Function
+    End If
+
+    Set tdf = db.TableDefs(tableName)
+
+    For Each fld In tdf.Fields
+        If StrComp(fld.Name, fieldName, vbTextCompare) = 0 Then
+            FieldExists = True
+            Exit Function
+        End If
+    Next fld
+
+    Exit Function
+
+ErrorHandler:
+    FieldExists = False
+End Function"
+"TableExists","modNumberRangeRepository","137","160","Private","Private Function TableExists(ByVal tableName As String) As Boolean","False","False","True","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","1","Private Function TableExists(ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim tdf As DAO.tableDef
+
+    Set db = modDb.GetCurrentDatabase()
+    For Each tdf In db.TableDefs
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
+            TableExists = True
+            Exit For
+        End If
+    Next tdf
+
+CleanExit:
+    Set tdf = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+    modErrorHandler.HandleError MODULE_NAME, ""TableExists"", Err
+    Resume CleanExit
+End Function"
+"TableExists","modOrderRepository","1362","1377","Private","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean","False","True","False","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","1","Private Function TableExists(ByVal db As DAO.Database, ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim tdf As DAO.tableDef
+
+    For Each tdf In db.TableDefs
+        If StrComp(Trim$(tdf.Name), Trim$(tableName), vbTextCompare) = 0 Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tdf
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+End Function"
+"TableExists","modOutputPathService","253","284","Private","Private Function TableExists(ByVal tableName As String) As Boolean","False","False","True","Assigns True/False explicitly","Checks empty/trimmed input and exits early","Iterates DAO TableDefs; returns False when not found","1","Private Function TableExists(ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim tdf As DAO.tableDef
+
+    If LenB(Trim$(tableName)) = 0 Then
+        Exit Function
+    End If
+
+    Set db = modDb.GetCurrentDatabase()
+    If db Is Nothing Then
+        Exit Function
+    End If
+
+    For Each tdf In db.TableDefs
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
+            TableExists = True
+            Exit Function
+        End If
+    Next tdf
+
+CleanExit:
+    Set tdf = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+    modErrorHandler.HandleError MODULE_NAME, ""TableExists"", Err
+    Resume CleanExit
+End Function"
+"TableExists","modTenantRepository","102","126","Private","Private Function TableExists(ByVal tableName As String) As Boolean","False","False","True","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","1","Private Function TableExists(ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim tdf As DAO.tableDef
+
+    Set db = modDb.GetCurrentDatabase()
+
+    For Each tdf In db.TableDefs
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
+            TableExists = True
+            Exit For
+        End If
+    Next tdf
+
+CleanExit:
+    Set tdf = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+    modErrorHandler.HandleError MODULE_NAME, ""TableExists"", Err
+    Resume CleanExit
+End Function"
+"TableExists","modUserRepository","136","160","Private","Private Function TableExists(ByVal tableName As String) As Boolean","False","False","True","Assigns True/False explicitly","No explicit empty-name guard","Iterates DAO TableDefs; returns False when not found","1","Private Function TableExists(ByVal tableName As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim tdf As DAO.tableDef
+
+    Set db = modDb.GetCurrentDatabase()
+
+    For Each tdf In db.TableDefs
+        If UCase$(Trim$(tdf.Name)) = UCase$(Trim$(tableName)) Then
+            TableExists = True
+            Exit For
+        End If
+    Next tdf
+
+CleanExit:
+    Set tdf = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    TableExists = False
+    modErrorHandler.HandleError MODULE_NAME, ""TableExists"", Err
+    Resume CleanExit
+End Function"

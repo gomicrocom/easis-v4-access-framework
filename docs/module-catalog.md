@@ -28,3 +28,10 @@ Intended for wine-related operations such as inventory, classification, movement
 ## Future Additions
 
 Additional modules can be added to the catalog once their business boundaries, licensing needs, and backend model extensions are defined.
+
+## Framework Runtime Components
+
+- modFormRuntime (UI + validation)
+- modTranslationService (i18n)
+- modModuleManager (module activation)
+- modSessionContext / modTenantContext

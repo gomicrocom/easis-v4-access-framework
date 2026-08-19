@@ -1,0 +1,11 @@
+location,call_type,current_use,classification,reason,recommendation
+modAppWorkspaceService.ApplyWorkspaceFormState,targetForm.Requery,"applies where_condition after workspace load","gefährlich","Can rerun form lifecycle after delayed payload","Avoid for hosted details where possible"
+modAppWorkspaceService.ApplyWorkspaceFormState,DoCmd.GoToRecord acNewRec,"forces add mode from host","ersetzt Access-native Aktualisierung","Host takes over record navigation","Move add-mode semantics closer to form/open path"
+frmAddressCockpit.RefreshCockpitData,Me.Requery,"refresh cockpit summary","erforderlich","Simple read-only cockpit refresh","Keep"
+frmAddressList.RefreshListData,Me.Requery,"refresh list data","erforderlich","Standard list refresh","Keep"
+frmAddressDetail.RefreshCurrentRecord,Me.Requery,"detail refresh button","manuell akzeptabel","Explicit user refresh","Keep"
+frmOrderDetailNext.RefreshCalculatedTotals,Me.Refresh,"show recalculated header values","vertretbar","Refreshes bound values without full requery","Keep"
+sfrmOrderLinesNext.RecalculateCurrentLineAndOrder,Me.Refresh,"show recalculated current line values","vertretbar aber sensibel","No cursor jump intended","Keep with caution"
+frmAppNavigation.Load/Refresh,Me.Requery,"reload navigation row source","erforderlich","Navigation tree reflects seed/expand state","Keep"
+frmFwTranslationAudit,RecordSource reassignment + Requery,"dynamic audit source","gefährlich","Form becomes controller + query builder","Manual review"
+frmFwTagComposer,subform RecordSource + Requery,"temporary editing session UI","framework-driven","Nonstandard tool workflow, not typical business form","Keep separate from mainstream form rules"
